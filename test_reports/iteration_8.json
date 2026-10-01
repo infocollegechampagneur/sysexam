@@ -1,0 +1,33 @@
+{
+  "summary": "Comprehensive backend + frontend testing of admin-only account provisioning (v8). All 17 backend pytest tests passed (register removed→404, admin CRUD users, self-protection on demote/deactivate, forced password change, deactivation blocks login + existing sessions, teacher 403 on /api/admin/*, reset-password sets must_change_password). All frontend flows verified: /connexion shows no-register-notice and no tab-register; admin login → nav-users-link visible → /enseignant/comptes table loads; new teacher creation flow captures temp password + toast shows it; role toggle (Enseignant·e ↔ Admin badge), deactivate→'Désactivé', reactivate; self-row role+active buttons disabled; teacher first login redirects to /enseignant/mot-de-passe, navigating to /enseignant redirects back; after password change teacher lands on /enseignant with no 'Comptes' nav link; teacher visiting /enseignant/comptes directly redirects to /enseignant.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CreateDialog / ProfileDialog", "issues": ["Radix DialogContent missing aria-describedby (a11y console warning only, not blocking)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_examsecure_v8_admin.py",
+    "/app/test_reports/pytest/pytest_v8.xml"
+  ],
+  "action_items": [
+    "(Optional) Add DialogDescription or aria-describedby={undefined} suppression on DialogContent for Create user & Profile dialogs to silence Radix a11y warning.",
+    "(Optional) Users table shows legacy TEST_* accounts from previous iterations (10 rows) — consider a cleanup script to remove inactive test users."
+  ],
+  "critical_code_review_comments": [
+    "server.py line 219 public_user: good, excludes password_hash via projection. OK.",
+    "change_password returns {**user, must_change_password: False} — user dict comes from current_teacher which already strips password_hash. OK.",
+    "admin_update_user: 'if upd' guards empty updates but silently returns 200 on no-op — acceptable.",
+    "No rate limit on admin endpoints (not required, admin-only).",
+    "ProtectedRoute correctly forces /enseignant/mot-de-passe when must_change_password; Users.jsx also client-side guards non-admin via <Navigate to='/enseignant'>."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v8_admin.py"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (all flows verified)"},
+  "test_credentials": "Admin lynchs2757@gmail.com / Enseignant2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Each test run creates one TEST_v8 teacher via admin endpoint; left deactivated at teardown.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v8 admin provisioning fully working. Regression file is test_examsecure_v8_admin.py (parallel-safe via session-scoped fixture). Previous v1-v7 regression files still present for exam/student flows."
+}

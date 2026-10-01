@@ -152,6 +152,13 @@ Le fichier `.htaccess` est déjà inclus : il permet aux adresses comme `/examen
 ### 5.4 Tester
 Ouvrez `https://examen.votredomaine.com`, cliquez sur **Espace enseignant**, puis connectez-vous avec `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Trois examens d'exemple sont créés automatiquement au premier démarrage.
 
+### 5.5 Créer les comptes des enseignants
+Il n'y a **pas d'inscription publique** : seuls les administrateurs créent les comptes.
+1. Connecté avec `ADMIN_EMAIL`, cliquez sur **Comptes** dans la barre du haut.
+2. **Nouveau compte** → nom, courriel, mot de passe temporaire (bouton *Générer*), rôle *Enseignant·e* ou *Administrateur·trice*.
+3. Transmettez le mot de passe temporaire à la personne : elle devra en choisir un nouveau à sa première connexion.
+4. Depuis la même page : nommer d'autres administrateurs, désactiver un compte (départ d'un enseignant) ou réinitialiser un mot de passe oublié.
+
 ---
 
 ## 6. Application Windows

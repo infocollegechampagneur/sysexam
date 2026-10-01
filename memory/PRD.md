@@ -53,3 +53,10 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - ExamIntro : guide Antidote en 5 étapes si Antidote permis.
 - Section « Production écrite » avec compteur de mots (SessionDetail + export CopyContent), compteur sur réponses longues.
 - Testé : iteration_7.json (70/70 backend, E2E OK).
+
+## 2026-06 — Comptes gérés par l'admin
+- Inscription publique supprimée (`/auth/register` retiré). `ADMIN_EMAIL` = rôle `admin` (forcé au démarrage).
+- Page `/enseignant/comptes` (admins) : créer des comptes (mot de passe temporaire généré), nommer/retirer admin, désactiver/réactiver, réinitialiser le mot de passe. Protections : pas d'auto-rétrogradation/désactivation.
+- Changement de mot de passe obligatoire à la 1re connexion (`must_change_password`, page `/enseignant/mot-de-passe`), aussi accessible via icône clé dans la nav.
+- Comptes désactivés : 403 au login et sur toutes les routes.
+- Testé : iteration_8.json (17/17 backend, E2E OK).
