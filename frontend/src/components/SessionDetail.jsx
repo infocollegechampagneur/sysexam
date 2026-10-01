@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyContent } from "@/components/CopyContent";
 import { UnlockDialog } from "@/components/UnlockDialog";
 import { ActivitySummary } from "@/components/ActivitySummary";
+import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
 import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
@@ -104,6 +105,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           <p className="text-sm text-slate-500">{session.student_number || "Sans matricule"} · {session.teacher_name ? `Enseignant : ${session.teacher_name} · ` : ""}{SESSION_LABELS[session.status]} · Début {fmtTime(session.started_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {session.status === "in_progress" && <SendMessageDialog session={session} onDone={onChanged} />}
           {session.status === "locked" && <Button onClick={unlock} variant="outline" className="border-rose-300 text-rose-700" data-testid="unlock-session-top-btn"><Unlock className="mr-1.5 h-4 w-4" />Débloquer</Button>}
           <Button variant="outline" onClick={() => exportPdf(printRef.current, fname)} data-testid="export-pdf-report-btn"><FileDown className="mr-1.5 h-4 w-4" />PDF</Button>
           <Button variant="outline" onClick={() => exportWord(printRef.current, fname)} data-testid="export-word-report-btn"><FileType2 className="mr-1.5 h-4 w-4" />Word</Button>
@@ -118,6 +120,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations + (session.allowance || 0)} signalement(s)</span></p>
         <ActivitySummary events={session.events || []} />
+        <div className="mb-2"><MessageStatus msg={session.teacher_message} /></div>
         <Timeline events={session.events || []} />
       </section>
 

@@ -1,6 +1,6 @@
 import { ClipboardCopy, ClipboardPaste, Globe, AppWindow, Minimize, Keyboard, MousePointerClick, Clock } from "lucide-react";
 
-const CATS = [
+export const CATS = [
   { key: "copy", label: "Copier / couper", icon: ClipboardCopy, types: ["copy_attempt", "cut_attempt"] },
   { key: "paste", label: "Coller", icon: ClipboardPaste, types: ["paste_attempt"] },
   { key: "tab", label: "Autre onglet ou site web", icon: Globe, types: ["tab_hidden"] },

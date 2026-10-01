@@ -106,6 +106,10 @@ class ExtraTimeIn(BaseModel):
     extra_minutes: float = 0
 
 
+class ExtraMsgIn(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
 class JoinIn(BaseModel):
     code: str
     student_name: str
@@ -387,6 +391,21 @@ async def unlock_session(session_id: str, body: UnlockIn = UnlockIn(), user: dic
         detail += f" · Message : « {msg} »"
     ev = {"type": "unlocked", "detail": detail, "at": ts, "counted": False}
     await db.sessions.update_one({"id": session_id}, {"$set": upd, "$push": {"events": ev}})
+    return {"ok": True}
+
+
+@api.post("/sessions/{session_id}/message")
+async def send_session_message(session_id: str, body: ExtraMsgIn, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Le message est vide")
+    ts = now_iso()
+    ev = {"type": "teacher_message", "detail": f"Avertissement envoyé : « {text} »", "at": ts, "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": {"teacher_message": {"text": text, "at": ts, "read": False}}, "$push": {"events": ev}})
     return {"ok": True}
 
 

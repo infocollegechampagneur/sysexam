@@ -83,10 +83,14 @@ export default function StudentExam() {
   }, [phase, status, sapi]);
 
   useEffect(() => {
-    if (phase !== "exam" || status !== "in_progress" || !deadline) return;
-    const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => setDeadline(d.deadline)).catch(() => {}), 30000);
+    if (phase !== "exam" || status !== "in_progress") return;
+    const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => {
+      setDeadline(d.deadline);
+      showMessageIfAny(d.session);
+      if (d.session.status !== "in_progress") setStatus(d.session.status);
+    }).catch(() => {}), 5000);
     return () => clearInterval(iv);
-  }, [phase, status, sapi, deadline]);
+  }, [phase, status, sapi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (status !== "locked") return;

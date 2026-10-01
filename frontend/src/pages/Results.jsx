@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert } from "lucide-react";
+import { SurveillanceReport } from "@/components/SurveillanceReport";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TeacherLayout } from "@/components/TeacherLayout";
@@ -54,6 +55,7 @@ export default function Results() {
   const current = sessions.find((s) => s.id === sel);
   const counts = ["in_progress", "locked", "submitted"].map((k) => [k, sessions.filter((s) => s.status === k).length]);
   const groupRef = useRef(null);
+  const reportRef = useRef(null);
   const groupName = `${slug(exam?.title)}_toutes_les_copies`;
   const groupExport = (fn) => { if (!sessions.length) return toast.error("Aucune copie à exporter"); fn(groupRef.current, groupName); };
 
@@ -69,6 +71,7 @@ export default function Results() {
         <Button variant="outline" size="sm" onClick={load} data-testid="results-refresh-btn"><RefreshCw className="mr-1.5 h-4 w-4" />Actualiser</Button>
         <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />Toutes (PDF)</Button>
         <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />Toutes (Word)</Button>
+        <Button size="sm" onClick={() => { if (!sessions.length) return toast.error("Aucune copie"); exportPdf(reportRef.current, `${slug(exam?.title)}_rapport_surveillance`); }} className="bg-rose-700 hover:bg-rose-800" data-testid="export-surveillance-report-btn"><ShieldAlert className="mr-1.5 h-4 w-4" />Rapport de surveillance (PDF)</Button>
       </div>
       <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
@@ -110,6 +113,7 @@ export default function Results() {
               </div>
             ))}
           </div>
+          <div ref={reportRef} className="mt-10"><SurveillanceReport exam={exam} sessions={sessions} /></div>
         </div>
       )}
     </TeacherLayout>
