@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { UserPlus, ShieldCheck, KeyRound, Ban, CheckCircle2 } from "lucide-react";
+import { UserPlus, ShieldCheck, KeyRound, Ban, CheckCircle2, Users as UsersIcon, Mail, MailX, History } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeacherLayout } from "@/components/TeacherLayout";
+import { ImportUsersDialog } from "@/components/ImportUsersDialog";
+import { AdminJournal } from "@/components/AdminJournal";
 import { useAuth } from "@/context/AuthContext";
 import { api, formatErr } from "@/lib/api";
 import { fmtTime } from "@/lib/tools";
@@ -24,8 +27,8 @@ const CreateDialog = ({ open, onOpenChange, onDone }) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post("/admin/users", f);
-      toast.success(`Compte créé pour ${f.name}. Transmettez-lui le mot de passe temporaire : ${f.password}`, { duration: 15000 });
+      const { data } = await api.post("/admin/users", f);
+      toast.success(data.email_sent ? `Compte créé pour ${f.name}. Un courriel de bienvenue avec le mot de passe temporaire lui a été envoyé.` : `Compte créé pour ${f.name}. Transmettez-lui le mot de passe temporaire : ${f.password}`, { duration: 15000 });
       onDone();
       onOpenChange(false);
     } catch (err) { toast.error(formatErr(err)); } finally { setSaving(false); }
@@ -71,8 +74,8 @@ const UserRow = ({ u, me, onChanged, i }) => {
     const pwd = genPassword();
     if (!window.confirm(`Réinitialiser le mot de passe de ${u.name} ?`)) return;
     try {
-      await api.post(`/admin/users/${u.id}/reset-password`, { password: pwd });
-      toast.success(`Nouveau mot de passe temporaire pour ${u.name} : ${pwd}`, { duration: 20000 });
+      const { data } = await api.post(`/admin/users/${u.id}/reset-password`, { password: pwd });
+      toast.success(data.email_sent ? `Mot de passe réinitialisé. ${u.name} a reçu le nouveau mot de passe temporaire par courriel.` : `Nouveau mot de passe temporaire pour ${u.name} : ${pwd}`, { duration: 20000 });
       onChanged();
     } catch (e) { toast.error(formatErr(e)); }
   };
@@ -111,8 +114,11 @@ export default function Users() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [tab, setTab] = useState("comptes");
+  const [mail, setMail] = useState(null);
   const load = useCallback(() => api.get("/admin/users").then((r) => setUsers(r.data)).catch((e) => toast.error(formatErr(e))), []);
-  useEffect(() => { if (user?.role === "admin") load(); }, [user, load]);
+  useEffect(() => { if (user?.role === "admin") { load(); api.get("/admin/mail-status").then((r) => setMail(r.data)).catch(() => {}); } }, [user, load]);
   if (user && user.role !== "admin") return <Navigate to="/enseignant" replace />;
   return (
     <TeacherLayout>
@@ -122,15 +128,30 @@ export default function Users() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Comptes enseignants</h1>
           <p className="mt-1 text-sm text-slate-500">Seuls les administrateurs créent les comptes. Les élèves n'ont pas de compte : ils rejoignent un examen avec son code.</p>
         </div>
+        <Button variant="outline" onClick={() => setImportOpen(true)} data-testid="import-users-btn"><UsersIcon className="mr-1.5 h-4 w-4" />Importer une liste</Button>
         <Button onClick={() => setOpen(true)} className="bg-blue-900 hover:bg-blue-800" data-testid="create-user-btn"><UserPlus className="mr-1.5 h-4 w-4" />Nouveau compte</Button>
       </div>
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white p-4">
-        <table className="w-full text-sm" data-testid="users-table">
-          <thead><tr className="text-left text-xs uppercase tracking-wider text-slate-500"><th className="pb-2 pr-3">Personne</th><th className="pb-2 pr-3">Rôle</th><th className="pb-2 pr-3">État</th><th className="pb-2 text-right">Actions</th></tr></thead>
-          <tbody>{users.map((u, i) => <UserRow key={u.id} u={u} i={i} me={user} onChanged={load} />)}</tbody>
-        </table>
-      </div>
+      {mail && (
+        <p className={`mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${mail.configured ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`} data-testid="mail-status">
+          {mail.configured ? <><Mail className="h-4 w-4" />Courriels de bienvenue envoyés automatiquement depuis <strong>{mail.sender}</strong> (mot de passe temporaire + lien du site).</> : <><MailX className="h-4 w-4" />Messagerie non configurée : les mots de passe temporaires s'affichent à l'écran, à transmettre vous-même.</>}
+        </p>
+      )}
+      <Tabs value={tab} onValueChange={setTab} className="mt-6">
+        <TabsList>
+          <TabsTrigger value="comptes" data-testid="tab-comptes"><UsersIcon className="mr-1.5 h-4 w-4" />Comptes</TabsTrigger>
+          <TabsTrigger value="journal" data-testid="tab-journal"><History className="mr-1.5 h-4 w-4" />Journal d'activité</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {tab === "comptes" ? (
+        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-4">
+          <table className="w-full text-sm" data-testid="users-table">
+            <thead><tr className="text-left text-xs uppercase tracking-wider text-slate-500"><th className="pb-2 pr-3">Personne</th><th className="pb-2 pr-3">Rôle</th><th className="pb-2 pr-3">État</th><th className="pb-2 text-right">Actions</th></tr></thead>
+            <tbody>{users.map((u, i) => <UserRow key={u.id} u={u} i={i} me={user} onChanged={load} />)}</tbody>
+          </table>
+        </div>
+      ) : <div className="mt-4"><AdminJournal /></div>}
       <CreateDialog open={open} onOpenChange={setOpen} onDone={load} />
+      <ImportUsersDialog open={importOpen} onOpenChange={setImportOpen} onDone={load} />
     </TeacherLayout>
   );
 }

@@ -8,6 +8,7 @@ import os
 import re
 import io
 import uuid
+import secrets
 import random
 import string
 import asyncio
@@ -24,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
                   decode_token, set_auth_cookies, extract_token)
+from mailer import send_welcome, mail_configured
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorGridFSBucket
 from seed import sample_exams
@@ -105,6 +107,16 @@ class UserUpdateIn(BaseModel):
 
 class ResetPasswordIn(BaseModel):
     password: str = Field(min_length=8)
+
+
+class ImportUsersIn(BaseModel):
+    text: str = Field(min_length=1, max_length=20000)
+    role: str = "teacher"
+
+
+def gen_password() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(12))
 
 
 class Question(BaseModel):
@@ -291,6 +303,7 @@ async def login(body: LoginIn, request: Request, response: Response):
         raise HTTPException(status_code=403, detail="Ce compte a été désactivé. Contactez l'administrateur.")
     await db.login_attempts.delete_many({"identifier": ident})
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
+    await db.login_log.insert_one({"user_id": user["id"], "email": email, "at": now_iso(), "ip": request.client.host if request.client else "", "ua": (request.headers.get("user-agent") or "")[:160]})
     set_auth_cookies(response, create_access_token(user["id"], email), create_refresh_token(user["id"]))
     return public_user(user)
 
@@ -325,7 +338,60 @@ async def admin_create_user(body: UserCreateIn, _: dict = Depends(current_admin)
     user = {"id": str(uuid.uuid4()), "email": email, "name": body.name.strip(), "role": body.role, "active": True,
             "must_change_password": True, "password_hash": hash_password(body.password), "created_at": now_iso()}
     await db.users.insert_one(user)
-    return public_user(user)
+    sent = await asyncio.to_thread(send_welcome, email, user["name"], body.password)
+    return {**public_user(user), "email_sent": sent}
+
+
+@api.post("/admin/users/import")
+async def admin_import_users(body: ImportUsersIn, _: dict = Depends(current_admin)):
+    if body.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=400, detail="Rôle invalide")
+    created, errors = [], []
+    for raw in body.text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in re.split(r"[;,\t]", line) if p.strip()]
+        email = next((p.lower() for p in parts if "@" in p), None)
+        name = " ".join(p for p in parts if "@" not in p).strip()
+        if not email or "." not in email.split("@")[-1]:
+            errors.append({"line": raw, "reason": "Courriel manquant ou invalide"})
+            continue
+        if not name:
+            name = email.split("@")[0].replace(".", " ").title()
+        if await db.users.find_one({"email": email}):
+            errors.append({"line": raw, "reason": "Courriel déjà utilisé"})
+            continue
+        pwd = gen_password()
+        user = {"id": str(uuid.uuid4()), "email": email, "name": name, "role": body.role, "active": True,
+                "must_change_password": True, "password_hash": hash_password(pwd), "created_at": now_iso()}
+        await db.users.insert_one(user)
+        sent = await asyncio.to_thread(send_welcome, email, name, pwd)
+        created.append({"id": user["id"], "name": name, "email": email, "password": pwd, "email_sent": sent})
+    return {"created": created, "errors": errors, "mail_configured": mail_configured()}
+
+
+@api.get("/admin/mail-status")
+async def admin_mail_status(_: dict = Depends(current_admin)):
+    return {"configured": mail_configured(), "sender": os.environ.get("MAIL_FROM", "")}
+
+
+@api.get("/admin/activity")
+async def admin_activity(_: dict = Depends(current_admin)):
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("name", 1).to_list(1000)
+    exams = await db.exams.find({}, {"_id": 0, "id": 1, "teacher_id": 1, "title": 1, "subject": 1, "status": 1, "exam_type": 1, "created_at": 1}).to_list(5000)
+    counts = {}
+    async for row in db.sessions.aggregate([{"$group": {"_id": "$exam_id", "n": {"$sum": 1}, "submitted": {"$sum": {"$cond": [{"$eq": ["$status", "submitted"]}, 1, 0]}}}}]):
+        counts[row["_id"]] = {"sessions": row["n"], "submitted": row["submitted"]}
+    logins = {}
+    async for l in db.login_log.find({}, {"_id": 0}).sort("at", -1).limit(5000):
+        logins.setdefault(l["user_id"], []).append({"at": l["at"], "ip": l.get("ip", "")})
+    out = []
+    for u in users:
+        ex = sorted([{**e, **counts.get(e["id"], {"sessions": 0, "submitted": 0})} for e in exams if e["teacher_id"] == u["id"]], key=lambda e: e["created_at"], reverse=True)
+        lg = logins.get(u["id"], [])
+        out.append({**public_user(u), "exams": ex, "logins": lg[:20], "login_count": len(lg)})
+    return out
 
 
 @api.put("/admin/users/{user_id}")
@@ -353,10 +419,12 @@ async def admin_update_user(user_id: str, body: UserUpdateIn, admin: dict = Depe
 
 @api.post("/admin/users/{user_id}/reset-password")
 async def admin_reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(current_admin)):
-    r = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.password), "must_change_password": True}})
-    if not r.matched_count:
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
         raise HTTPException(status_code=404, detail="Compte introuvable")
-    return {"ok": True}
+    await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.password), "must_change_password": True}})
+    sent = await asyncio.to_thread(send_welcome, target["email"], target["name"], body.password, True)
+    return {"ok": True, "email_sent": sent}
 
 
 @api.post("/auth/logout")
