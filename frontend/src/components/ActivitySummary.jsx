@@ -1,4 +1,4 @@
-import { ClipboardCopy, ClipboardPaste, Globe, AppWindow, Minimize, Keyboard, MousePointerClick, Clock } from "lucide-react";
+import { ClipboardCopy, ClipboardPaste, Globe, AppWindow, Minimize, Keyboard, MousePointerClick, Clock, Bot } from "lucide-react";
 
 export const CATS = [
   { key: "copy", label: "Copier / couper", icon: ClipboardCopy, types: ["copy_attempt", "cut_attempt"] },
@@ -8,6 +8,7 @@ export const CATS = [
   { key: "fs", label: "Sortie du plein écran", icon: Minimize, types: ["fullscreen_exit"] },
   { key: "keys", label: "Raccourcis / outils dév. / capture", icon: Keyboard, types: ["shortcut", "devtools", "print_attempt"] },
   { key: "ctx", label: "Clic droit", icon: MousePointerClick, types: ["contextmenu"] },
+  { key: "forbidden", label: "Applications interdites (navigateur, IA…)", icon: Bot, types: ["forbidden_app"] },
 ];
 
 export const ActivitySummary = ({ events }) => {

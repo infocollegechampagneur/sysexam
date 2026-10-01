@@ -8,6 +8,7 @@ import { CopyContent } from "@/components/CopyContent";
 import { UnlockDialog } from "@/components/UnlockDialog";
 import { ActivitySummary } from "@/components/ActivitySummary";
 import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog";
+import { LockSessionButton, ReopenSessionButton } from "@/components/TeacherControls";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
 import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
@@ -106,6 +107,8 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
         </div>
         <div className="flex flex-wrap gap-2">
           {session.status === "in_progress" && <SendMessageDialog session={session} onDone={onChanged} />}
+          {session.status === "in_progress" && <LockSessionButton session={session} onDone={onChanged} />}
+          {session.status === "submitted" && <ReopenSessionButton session={session} onDone={onChanged} />}
           {session.status === "locked" && <Button onClick={unlock} variant="outline" className="border-rose-300 text-rose-700" data-testid="unlock-session-top-btn"><Unlock className="mr-1.5 h-4 w-4" />Débloquer</Button>}
           <Button variant="outline" onClick={() => exportPdf(printRef.current, fname)} data-testid="export-pdf-report-btn"><FileDown className="mr-1.5 h-4 w-4" />PDF</Button>
           <Button variant="outline" onClick={() => exportWord(printRef.current, fname)} data-testid="export-word-report-btn"><FileType2 className="mr-1.5 h-4 w-4" />Word</Button>

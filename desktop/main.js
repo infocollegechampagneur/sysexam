@@ -48,6 +48,11 @@ function createWindow() {
   win.webContents.on("did-create-window", lockTool);
 
   win.webContents.on("before-input-event", (e, input) => {
+    if (input.type === "keyDown" && input.control && input.alt && input.shift && (input.key || "").toLowerCase() === "u") {
+      e.preventDefault();
+      win.webContents.send("emergency-request");
+      return;
+    }
     if (!locked) return;
     const k = (input.key || "").toLowerCase();
     if (BLOCKED_KEYS.includes(input.key) || (input.alt && input.key === "F4") ||
@@ -76,6 +81,24 @@ ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
   if (locked) win.focus();
   return locked;
 });
+
+ipcMain.handle("forbidden-apps", () => new Promise((resolve) => {
+  if (process.platform !== "win32") return resolve([]);
+  execFile("tasklist", ["/v", "/fo", "csv", "/nh"], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+    if (err) return resolve([]);
+    const rows = out.split(/\r?\n/).map((l) => l.split('","').map((c) => c.replace(/^"|"$/g, "")));
+    const found = {};
+    for (const r of rows) {
+      const image = (r[0] || "").toLowerCase();
+      const title = r[r.length - 1] || "";
+      const app = (config.forbidden || []).find((f) => f.process.toLowerCase() === image);
+      if (app && title && title !== "N/A" && title !== "S/O") found[app.label] = title;
+    }
+    resolve(Object.entries(found).map(([label, title]) => ({ label, title })));
+  });
+}));
+
+ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
 
 ipcMain.handle("tools-running", () => new Promise((resolve) => {
   if (process.platform !== "win32") return resolve([]);

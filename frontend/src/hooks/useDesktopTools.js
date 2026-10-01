@@ -38,3 +38,22 @@ export function useDesktopTools({ active, allowed, onEvent }) {
 
   return { desktop, running, launch, desktopIds: ids };
 }
+
+export function useForbiddenApps({ active, onEvent }) {
+  const seen = useRef(new Set());
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+  useEffect(() => {
+    if (!window.monExam?.forbiddenApps || !active) return;
+    const check = async () => {
+      const apps = await window.monExam.forbiddenApps();
+      const now = new Set(apps.map((a) => a.label));
+      apps.filter((a) => !seen.current.has(a.label)).forEach((a) =>
+        onEventRef.current("forbidden_app", `Application interdite ouverte sur le poste : ${a.label} (fenêtre « ${a.title.slice(0, 80)} »)`));
+      seen.current = now;
+    };
+    check();
+    const iv = setInterval(check, 10000);
+    return () => clearInterval(iv);
+  }, [active]);
+}

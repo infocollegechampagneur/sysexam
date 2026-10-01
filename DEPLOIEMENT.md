@@ -1,5 +1,29 @@
 # MonExamEnLigne : héberger l'application sans Emergent
 
+## 0. Ce qu'il vous faut (liste complète)
+
+**Comptes (gratuits)**
+- [ ] **GitHub** (https://github.com) : il reçoit le code et construit le `.msi`.
+- [ ] **MongoDB Atlas** (https://mongodb.com/atlas) : base de données et fichiers PDF/Word.
+- [ ] **Render** (https://render.com) : le serveur Python. Gratuit, ou environ 7 $ US/mois recommandé.
+- [ ] **UptimeRobot** (https://uptimerobot.com) : garde le serveur gratuit éveillé.
+- [ ] **SiteGround** (déjà en place) : le site web et la zone DNS de votre domaine.
+
+**Sur votre ordinateur (une fois)**
+- [ ] **Node.js 20 LTS** (https://nodejs.org), puis dans PowerShell : `corepack enable` (active Yarn).
+- [ ] Un **client FTP** (FileZilla) ou le Gestionnaire de fichiers de SiteGround.
+
+**Côté école (Windows Server)**
+- [ ] Un **partage réseau** lisible par les ordinateurs du domaine, par exemple `\\SERVEUR\Logiciels$`.
+- [ ] Les droits pour créer une **GPO** sur l'UO des postes élèves.
+- [ ] *(Facultatif)* Un certificat auto-signé pour signer le `.msi` (section 6.4).
+
+**Adresses à choisir**
+- `examen.votredomaine.com` → site web (SiteGround)
+- `api-examen.votredomaine.com` → serveur (Render)
+
+**Ordre des étapes :** 2. Atlas → 3. GitHub → 4. Render (et UptimeRobot) → 5. SiteGround → 6. `.msi` et GPO. Comptez environ 1 h 30 la première fois.
+
 ## 1. Vue d'ensemble
 
 | Élément | Où | Coût |
@@ -180,12 +204,30 @@ Quand ces logiciels sont permis dans l'examen, l'application Windows :
 
 > **À savoir :** WordQ et Lexibar fonctionnent au niveau de Windows et marchent dans les zones de texte de l'examen. Avec Antidote, les **dictionnaires et guides** fonctionnent toujours. La **correction directe** dans la zone de texte dépend des connecteurs d'Antidote : testez-la sur un poste, car elle passe parfois par le copier-coller, qui est bloqué pendant l'examen.
 
-### 6.6 Installer sur un seul poste (sans GPO)
+### 6.6 Applications interdites (navigateurs, IA, Discord)
+Pendant l'examen, l'application vérifie toutes les 10 secondes les programmes **ouverts avec une fenêtre visible** sur le poste : Chrome, Edge, Firefox, Opera, Brave, Vivaldi, ChatGPT, Copilot, Claude, Perplexity, Gemini, DeepSeek, Discord, Teams, WhatsApp, Messenger…
+- Chaque application détectée crée un **signalement compté**, par exemple « Application interdite ouverte sur le poste : Google Chrome (fenêtre « ChatGPT — Google Chrome ») ».
+- Le titre de la fenêtre aide souvent à savoir quel site était ouvert.
+- Les processus en arrière-plan, sans fenêtre (Edge en préchargement, par exemple), sont ignorés pour éviter les faux signalements.
+- La liste se modifie dans `config.json`, section `forbidden`, ou dans `C:\ProgramData\MonExamEnLigne\config.json`.
+
+### 6.7 Sortie d'urgence enseignant
+En cas de problème (poste figé, élève qui doit partir), l'enseignant peut quitter le mode kiosque :
+1. Sur le poste de l'élève, appuyez sur **Ctrl+Alt+Maj+U**, ou cliquez sur « Sortie d'urgence (enseignant) » sur l'écran « Examen bloqué ».
+2. Entrez le **code de sortie à 6 chiffres** de l'examen. Il est affiché dans l'onglet **3. Outils et sécurité** de l'examen, et le bouton « Nouveau code » permet de le changer.
+3. Le mode kiosque se désactive, l'application peut être fermée, et l'événement est noté dans l'historique.
+
+**Sans Internet :** si le serveur est injoignable, l'application accepte aussi un code de secours fixe, défini par le service informatique dans `C:\ProgramData\MonExamEnLigne\config.json` :
+```json
+{ "emergencyCode": "482915" }
+```
+
+### 6.8 Installer sur un seul poste (sans GPO)
 Lancez le `.exe` ou le `.msi`. Un raccourci « MonExamEnLigne » est créé.
 
 > Pour un `.exe` téléchargé et non signé, Windows SmartScreen peut afficher « Éditeur inconnu » : cliquez sur **Informations complémentaires → Exécuter quand même**.
 
-### 6.7 Exiger l'application pour un examen
+### 6.9 Exiger l'application pour un examen
 Dans l'examen, onglet **3. Outils et sécurité**, activez **« Application Windows obligatoire »**. Les élèves qui passent par le site web seront refusés. La fiche de chaque élève indique s'il a utilisé l'**Application Windows** ou le **Navigateur web**.
 
 ### Limites à connaître

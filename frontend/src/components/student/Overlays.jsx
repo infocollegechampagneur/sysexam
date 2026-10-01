@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const Shell = ({ children, testId }) => (
   <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/95 px-4 backdrop-blur-md" data-testid={testId}>
@@ -7,14 +10,31 @@ const Shell = ({ children, testId }) => (
   </div>
 );
 
-export const LockedOverlay = ({ violations }) => (
+export const LockedOverlay = ({ violations, byTeacher, onEmergency }) => (
   <Shell testId="locked-overlay">
     <Lock className="mx-auto h-10 w-10 text-rose-500" />
     <h2 className="mt-4 font-display text-2xl font-bold text-white">Examen bloqué</h2>
-    <p className="mt-2 text-slate-400">Vous avez atteint {violations} signalement(s). Votre enseignant·e a été averti·e et doit débloquer votre examen. Vos réponses sont sauvegardées.</p>
+    <p className="mt-2 text-slate-400" data-testid="locked-overlay-reason">
+      {byTeacher ? "Votre enseignant·e a bloqué votre examen." : `Vous avez atteint ${violations} signalement(s). Votre enseignant·e a été averti·e.`} Vos réponses sont sauvegardées.
+    </p>
     <p className="mt-6 text-xs text-slate-500">En attente de déblocage…</p>
+    {onEmergency && <button type="button" onClick={onEmergency} className="mt-4 text-xs text-slate-600 underline hover:text-slate-400" data-testid="emergency-exit-link">Sortie d'urgence (enseignant)</button>}
   </Shell>
 );
+
+export const EmergencyExitDialog = ({ open, onOpenChange, onSubmit }) => {
+  const [code, setCode] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); setCode(""); }}>
+      <DialogContent className="z-[60] max-w-sm" data-testid="emergency-exit-dialog">
+        <DialogHeader><DialogTitle>Sortie d'urgence — enseignant</DialogTitle></DialogHeader>
+        <p className="text-sm text-slate-500">Entrez le code de sortie de l'examen pour désactiver le mode kiosque. Cette action est enregistrée dans l'historique.</p>
+        <Input type="password" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code à 6 chiffres" data-testid="emergency-exit-code-input" />
+        <DialogFooter><Button onClick={() => onSubmit(code)} disabled={!code.trim()} className="bg-rose-600 hover:bg-rose-700" data-testid="emergency-exit-confirm-btn">Quitter le mode kiosque</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export const TeacherMessageOverlay = ({ text, onRead }) => (
   <Shell testId="teacher-message-overlay">

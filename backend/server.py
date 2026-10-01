@@ -54,7 +54,11 @@ app = FastAPI()
 api = APIRouter(prefix="/api")
 
 TOOLS = ["usito", "wordreference", "antidote", "wordq", "lexibar"]
-COUNTED_EVENTS = {"tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt"}
+COUNTED_EVENTS = {"tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt", "forbidden_app"}
+
+
+def new_exit_code():
+    return "".join(random.choices(string.digits, k=6))
 
 
 def now_iso():
@@ -93,6 +97,7 @@ class ExamSettings(BaseModel):
     block_clipboard: bool = True
     browser_spellcheck: bool = False
     require_desktop: bool = False
+    exit_code: str = ""
 
 
 class ExamIn(BaseModel):
@@ -209,6 +214,7 @@ def match_roster(students: list, name: str, number: str):
 def public_exam(exam: dict) -> dict:
     keys = ["id", "title", "subject", "instructions", "exam_type", "duration_minutes", "questions", "writing_prompt", "settings", "status", "doc_answer_mode"]
     out = {k: exam.get(k) for k in keys}
+    out["settings"] = {k: v for k, v in (exam.get("settings") or {}).items() if k != "exit_code"}
     f = exam.get("file")
     out["file"] = {"filename": f["filename"], "content_type": f["content_type"], "kind": f["kind"], "html": f.get("html")} if f else None
     return out
@@ -309,7 +315,9 @@ async def create_exam(body: ExamIn, user: dict = Depends(current_teacher)):
     code = new_code()
     while await db.exams.find_one({"code": code}):
         code = new_code()
-    exam = {**body.model_dump(), "id": str(uuid.uuid4()), "teacher_id": user["id"], "code": code, "file": None, "created_at": now_iso()}
+    data = body.model_dump()
+    data["settings"]["exit_code"] = data["settings"].get("exit_code") or new_exit_code()
+    exam = {**data, "id": str(uuid.uuid4()), "teacher_id": user["id"], "code": code, "file": None, "created_at": now_iso()}
     await db.exams.insert_one(exam)
     exam.pop("_id", None)
     return exam
@@ -323,7 +331,9 @@ async def get_exam(exam_id: str, user: dict = Depends(current_teacher)):
 @api.put("/exams/{exam_id}")
 async def update_exam(exam_id: str, body: ExamIn, user: dict = Depends(current_teacher)):
     await own_exam(exam_id, user)
-    await db.exams.update_one({"id": exam_id}, {"$set": body.model_dump()})
+    data = body.model_dump()
+    data["settings"]["exit_code"] = data["settings"].get("exit_code") or new_exit_code()
+    await db.exams.update_one({"id": exam_id}, {"$set": data})
     return await own_exam(exam_id, user)
 
 
@@ -401,10 +411,10 @@ async def unlock_session(session_id: str, body: UnlockIn = UnlockIn(), user: dic
     ts = now_iso()
     if body.mode == "grant":
         allowance = max(0, s["violations"] - exam["settings"].get("max_violations", 3)) + body.extra
-        upd = {"status": "in_progress", "allowance": allowance}
+        upd = {"status": "in_progress", "allowance": allowance, "locked_by": None}
         detail = f"Débloqué par l'enseignant : {body.extra} signalement(s) de plus accordé(s) (compteur conservé à {s['violations']})"
     else:
-        upd = {"status": "in_progress", "violations": 0, "allowance": 0}
+        upd = {"status": "in_progress", "violations": 0, "allowance": 0, "locked_by": None}
         detail = "Débloqué par l'enseignant : compteur remis à zéro"
     msg = body.message.strip()
     if msg:
@@ -413,6 +423,71 @@ async def unlock_session(session_id: str, body: UnlockIn = UnlockIn(), user: dic
     ev = {"type": "unlocked", "detail": detail, "at": ts, "counted": False}
     await db.sessions.update_one({"id": session_id}, {"$set": upd, "$push": {"events": ev}})
     return {"ok": True}
+
+
+class LockIn(BaseModel):
+    reason: str = Field(default="", max_length=300)
+
+
+@api.post("/sessions/{session_id}/lock")
+async def lock_session(session_id: str, body: LockIn = LockIn(), user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    if s["status"] != "in_progress":
+        raise HTTPException(status_code=400, detail="Seul un examen en cours peut être bloqué")
+    ts = now_iso()
+    detail = "Examen bloqué par l'enseignant" + (f" : « {body.reason.strip()} »" if body.reason.strip() else "")
+    await db.sessions.update_one({"id": session_id}, {"$set": {"status": "locked", "locked_at": ts, "locked_by": "teacher", "lock_reason": body.reason.strip()},
+                                                      "$push": {"events": {"type": "locked", "detail": detail, "at": ts, "counted": False}}})
+    return {"ok": True}
+
+
+@api.post("/sessions/{session_id}/reopen")
+async def reopen_session(session_id: str, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    if s["status"] != "submitted":
+        raise HTTPException(status_code=400, detail="Seule une copie remise peut être rouverte")
+    ev = {"type": "reopened", "detail": "Copie rouverte par l'enseignant : l'élève peut se reconnecter", "at": now_iso(), "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": {"status": "in_progress", "submitted_at": None}, "$push": {"events": ev}})
+    return {"ok": True}
+
+
+class BroadcastIn(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
+@api.post("/exams/{exam_id}/broadcast")
+async def broadcast(exam_id: str, body: BroadcastIn, user: dict = Depends(current_teacher)):
+    await own_exam(exam_id, user)
+    text, ts = body.text.strip(), now_iso()
+    ev = {"type": "teacher_message", "detail": f"Message à toute la classe : « {text} »", "at": ts, "counted": False}
+    r = await db.sessions.update_many({"exam_id": exam_id, "status": {"$in": ["in_progress", "locked"]}},
+                                      {"$set": {"teacher_message": {"text": text, "at": ts, "read": False}}, "$push": {"events": ev}})
+    return {"sent": r.modified_count}
+
+
+@api.post("/exams/{exam_id}/lock-all")
+async def lock_all(exam_id: str, user: dict = Depends(current_teacher)):
+    await own_exam(exam_id, user)
+    ts = now_iso()
+    ev = {"type": "locked", "detail": "Examen bloqué par l'enseignant (toute la classe)", "at": ts, "counted": False}
+    r = await db.sessions.update_many({"exam_id": exam_id, "status": "in_progress"},
+                                      {"$set": {"status": "locked", "locked_at": ts, "locked_by": "teacher", "lock_reason": ""}, "$push": {"events": ev}})
+    return {"count": r.modified_count}
+
+
+@api.post("/exams/{exam_id}/unlock-all")
+async def unlock_all(exam_id: str, user: dict = Depends(current_teacher)):
+    await own_exam(exam_id, user)
+    ev = {"type": "unlocked", "detail": "Débloqué par l'enseignant (toute la classe) : compteur remis à zéro", "at": now_iso(), "counted": False}
+    r = await db.sessions.update_many({"exam_id": exam_id, "status": "locked"},
+                                      {"$set": {"status": "in_progress", "violations": 0, "allowance": 0, "locked_by": None}, "$push": {"events": ev}})
+    return {"count": r.modified_count}
 
 
 @api.post("/sessions/{session_id}/message")
@@ -572,7 +647,7 @@ async def student_event(body: EventIn, s: dict = Depends(current_session)):
         st = exam["settings"]
         if st.get("lock_on_max") and violations >= limit:
             status = "locked"
-            upd["$set"] = {"status": "locked", "locked_at": now_iso()}
+            upd["$set"] = {"status": "locked", "locked_at": now_iso(), "locked_by": "auto"}
             upd["$push"] = {"events": {"$each": [ev, {"type": "locked", "detail": f"Examen bloqué après {violations} signalement(s)", "at": now_iso(), "counted": False}]}}
     await db.sessions.update_one({"id": s["id"]}, upd)
     return {"violations": violations, "status": status, "counted": counted, "limit": limit}
@@ -583,6 +658,23 @@ async def student_message_read(s: dict = Depends(current_session)):
     if s.get("teacher_message"):
         ev = {"type": "message_read", "detail": "L'élève a lu le message de l'enseignant", "at": now_iso(), "counted": False}
         await db.sessions.update_one({"id": s["id"]}, {"$set": {"teacher_message.read": True}, "$push": {"events": ev}})
+    return {"ok": True}
+
+
+class ExitIn(BaseModel):
+    code: str
+
+
+@api.post("/student/emergency-exit")
+async def student_emergency_exit(body: ExitIn, s: dict = Depends(current_session)):
+    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0, "settings": 1})
+    ok = bool(exam["settings"].get("exit_code")) and body.code.strip() == exam["settings"]["exit_code"]
+    ev = {"type": "emergency_exit" if ok else "emergency_exit_failed",
+          "detail": "Sortie d'urgence du mode kiosque avec le code enseignant" if ok else "Code de sortie d'urgence incorrect",
+          "at": now_iso(), "counted": False}
+    await db.sessions.update_one({"id": s["id"]}, {"$push": {"events": ev}})
+    if not ok:
+        raise HTTPException(status_code=403, detail="Code incorrect")
     return {"ok": True}
 
 
@@ -640,7 +732,10 @@ async def startup():
         await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pwd)}})
     if await db.exams.count_documents({"teacher_id": admin["id"]}) == 0:
         for ex in sample_exams():
+            ex["settings"]["exit_code"] = new_exit_code()
             await db.exams.insert_one({**ex, "id": str(uuid.uuid4()), "teacher_id": admin["id"], "file": None, "created_at": now_iso()})
+    async for e in db.exams.find({"$or": [{"settings.exit_code": {"$exists": False}}, {"settings.exit_code": ""}]}, {"id": 1}):
+        await db.exams.update_one({"id": e["id"]}, {"$set": {"settings.exit_code": new_exit_code()}})
 
 
 @app.on_event("shutdown")

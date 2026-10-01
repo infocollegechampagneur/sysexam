@@ -1,5 +1,6 @@
 import { Info, Globe, Monitor } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TOOLS } from "@/lib/tools";
@@ -36,6 +37,12 @@ export const SettingsPanel = ({ settings, onChange }) => {
           <Row title="Bloquer copier / coller" desc="Copier, couper, coller, glisser-déposer et clic droit désactivés." checked={settings.block_clipboard} onChange={(v) => set("block_clipboard", v)} testId="setting-block-clipboard" />
           <Row title="Correcteur du navigateur" desc="Autoriser le soulignement orthographique intégré au navigateur." checked={settings.browser_spellcheck} onChange={(v) => set("browser_spellcheck", v)} testId="setting-browser-spellcheck" />
           <Row title="Application Windows obligatoire" desc="Les élèves doivent utiliser l'application MonExamEnLigne pour Windows (mode kiosque, captures d'écran bloquées). Le site web sera refusé." checked={!!settings.require_desktop} onChange={(v) => set("require_desktop", v)} testId="setting-require-desktop" />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-4" data-testid="exit-code-panel">
+          <span className="text-sm text-slate-700">Code de sortie d'urgence (application Windows, <kbd className="rounded bg-slate-100 px-1 text-xs">Ctrl+Alt+Maj+U</kbd>) :</span>
+          <span className="font-mono text-lg font-bold tracking-[0.3em] text-blue-900" data-testid="exit-code-value">{settings.exit_code || "généré à l'enregistrement"}</span>
+          <Button type="button" size="sm" variant="ghost" onClick={() => set("exit_code", String(Math.floor(100000 + Math.random() * 900000)))} data-testid="exit-code-regenerate-btn">Nouveau code</Button>
+          <span className="w-full text-xs text-slate-500">Ne le donnez pas aux élèves. Chaque utilisation est notée dans l'historique.</span>
         </div>
         <div className="mt-4 rounded-xl border-2 border-rose-200 bg-rose-50/50 p-5" data-testid="violations-settings">
           <p className="font-semibold text-slate-900">Signalements et blocage</p>

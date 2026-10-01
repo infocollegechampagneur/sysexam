@@ -24,9 +24,10 @@ export const EVENT_LABELS = {
   fullscreen_exit_tool: "Plein écran (outil)", returned: "Retour dans l'examen", time_up: "Temps écoulé",
   locked: "Examen bloqué", extra_time: "Temps supp.", message_read: "Message lu", teacher_message: "Avertissement envoyé",
   tool_opened: "Logiciel permis ouvert", tool_closed: "Logiciel permis fermé", tool_launch: "Lancement d'un logiciel permis",
+  forbidden_app: "Application interdite", emergency_exit: "Sortie d'urgence", emergency_exit_failed: "Code d'urgence incorrect", reopened: "Copie rouverte",
 };
 
-export const COUNTED = new Set(["tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt"]);
+export const COUNTED = new Set(["tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt", "forbidden_app"]);
 
 export const stripHtml = (html) => {
   const d = document.createElement("div");

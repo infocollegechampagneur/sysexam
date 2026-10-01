@@ -4,11 +4,11 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, formatErr } from "@/lib/api";
 import { useAntiCheat } from "@/hooks/useAntiCheat";
-import { useDesktopTools } from "@/hooks/useDesktopTools";
+import { useDesktopTools, useForbiddenApps } from "@/hooks/useDesktopTools";
 import { ExamIntro } from "@/components/student/ExamIntro";
 import { ExamTopBar } from "@/components/student/ExamTopBar";
 import { ExamBody } from "@/components/student/ExamBody";
-import { LockedOverlay, FullscreenOverlay, SubmittedScreen, TeacherMessageOverlay } from "@/components/student/Overlays";
+import { LockedOverlay, FullscreenOverlay, SubmittedScreen, TeacherMessageOverlay, EmergencyExitDialog } from "@/components/student/Overlays";
 
 export default function StudentExam() {
   const token = sessionStorage.getItem("exam_token");
@@ -48,6 +48,22 @@ export default function StudentExam() {
   const settings = data?.exam?.settings;
   const [limit, setLimit] = useState(null);
   const [message, setMessage] = useState(null);
+  const [lockedBy, setLockedBy] = useState(null);
+  const [exitOpen, setExitOpen] = useState(false);
+
+  useEffect(() => window.monExam?.onEmergency?.(() => setExitOpen(true)), []);
+  useEffect(() => { if (data?.session) setLockedBy(data.session.locked_by); }, [data]);
+
+  const emergencyExit = async (code) => {
+    let ok = false;
+    try { await sapi.post("/student/emergency-exit", { code }); ok = true; } catch (e) {
+      if (!e.response) ok = await window.monExam?.checkLocalExit?.(code);
+    }
+    if (!ok) return toast.error("Code incorrect");
+    await window.monExam?.setLockdown(false);
+    setExitOpen(false);
+    toast.success("Mode kiosque désactivé. L'application peut être fermée.");
+  };
 
   const showMessageIfAny = (sess) => { if (sess.teacher_message && !sess.teacher_message.read) setMessage(sess.teacher_message.text); };
 
@@ -63,12 +79,14 @@ export default function StudentExam() {
       setViolations(r.violations);
       setStatus(r.status);
       setLimit(r.limit);
+      if (r.status === "locked") setLockedBy((v) => v || "auto");
       if (r.counted) toast.warning(`Signalement ${r.violations}/${r.limit} : ${detail}`, { duration: 6000 });
     } catch (e) { /* network issue: ignore */ }
   }, [sapi]);
 
   const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress", settings, onEvent });
   const desktopTools = useDesktopTools({ active: phase === "exam" && status === "in_progress", allowed: settings?.allowed_tools || [], onEvent });
+  useForbiddenApps({ active: phase === "exam" && status === "in_progress", onEvent });
 
   const setAnswer = (qid, v) => { setAnswers((a) => { const n = { ...a, [qid]: v }; latest.current.answers = n; return n; }); dirty.current = true; };
   const setEssayV = (v) => { setEssay(v); latest.current.essay_html = v; dirty.current = true; };
@@ -89,7 +107,7 @@ export default function StudentExam() {
     const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => {
       setDeadline(d.deadline);
       showMessageIfAny(d.session);
-      if (d.session.status !== "in_progress") setStatus(d.session.status);
+      if (d.session.status !== "in_progress") { setStatus(d.session.status); setLockedBy(d.session.locked_by); }
     }).catch(() => {}), 5000);
     return () => clearInterval(iv);
   }, [phase, status, sapi]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -140,7 +158,8 @@ export default function StudentExam() {
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} />
       )}
-      {status === "locked" && <LockedOverlay violations={violations} />}
+      {status === "locked" && <LockedOverlay violations={violations} byTeacher={lockedBy === "teacher"} onEmergency={window.monExam?.isDesktop ? () => setExitOpen(true) : null} />}
+      <EmergencyExitDialog open={exitOpen} onOpenChange={setExitOpen} onSubmit={emergencyExit} />
       {needFs && status !== "locked" && !message && <FullscreenOverlay toolOpen={toolOpen} onResume={enterFullscreen} onCloseTool={closeTool} />}
       {message && status !== "locked" && <TeacherMessageOverlay text={message} onRead={() => { readMessage(); if (settings.require_fullscreen) enterFullscreen(); }} />}
     </div>

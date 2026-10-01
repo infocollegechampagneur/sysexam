@@ -1,5 +1,26 @@
 {
   "appUrl": "https://examen.votredomaine.com",
+  "emergencyCode": "",
+  "forbidden": [
+    { "label": "Google Chrome", "process": "chrome.exe" },
+    { "label": "Microsoft Edge", "process": "msedge.exe" },
+    { "label": "Mozilla Firefox", "process": "firefox.exe" },
+    { "label": "Opera", "process": "opera.exe" },
+    { "label": "Brave", "process": "brave.exe" },
+    { "label": "Vivaldi", "process": "vivaldi.exe" },
+    { "label": "Internet Explorer", "process": "iexplore.exe" },
+    { "label": "ChatGPT", "process": "chatgpt.exe" },
+    { "label": "Microsoft Copilot", "process": "copilot.exe" },
+    { "label": "Microsoft 365 Copilot", "process": "m365copilot.exe" },
+    { "label": "Claude", "process": "claude.exe" },
+    { "label": "Perplexity", "process": "perplexity.exe" },
+    { "label": "Google Gemini", "process": "gemini.exe" },
+    { "label": "DeepSeek", "process": "deepseek.exe" },
+    { "label": "Discord", "process": "discord.exe" },
+    { "label": "Microsoft Teams", "process": "ms-teams.exe" },
+    { "label": "Snapchat / Messenger", "process": "messenger.exe" },
+    { "label": "WhatsApp", "process": "whatsapp.exe" }
+  ],
   "tools": {
     "antidote": {
       "label": "Antidote",
