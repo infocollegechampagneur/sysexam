@@ -36,6 +36,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged },
   });
   win.removeMenu();
+  win.webContents.setUserAgent(win.webContents.getUserAgent().replace(/ MonExamEnLigne\/\S+/i, "").replace(/ monexamenligne-desktop\/\S+/i, "").replace(/ Electron\/\S+/, ""));
   session.defaultSession.clearCache().finally(() => win.loadURL(APP_URL));
 
   win.webContents.on("did-fail-load", (e, code, desc, url, isMainFrame) => {
