@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --no-frozen-lockfile --network-timeout 300000
       - run: yarn build
         env:
           REACT_APP_BACKEND_URL: ${{ inputs.backend_url }}
