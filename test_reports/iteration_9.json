@@ -1,0 +1,32 @@
+{
+  "summary": "Tested v9 admin features: SMTP welcome/reset emails (email_sent flag), bulk user import (semi/comma/tab-separated, dedup, error reasons), mail-status endpoint + banner, admin activity journal (exams+logins+login_count), login_log recording. 9/9 backend tests pass. Frontend flows all working: mail-status banner displays sender, import dialog creates 2 and reports 2 errors with copy/close buttons, journal tab shows rows and expand reveals exams+logins. Admin seeded 3+ exams and login_count>=1 verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Import dialog", "issues": ["Two <th> columns both labeled 'Courriel' in result table header (second should be 'Statut courriel' or 'État')"]},
+      {"screen": "DialogContent", "issues": ["Missing aria-describedby (accessibility console warning) on CreateDialog and ImportUsersDialog"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_examsecure_v9_mail_import_journal.py", "/app/test_reports/pytest/pytest_v9.xml"],
+  "action_items": [
+    "Minor: rename second 'Courriel' <th> in ImportUsersDialog result table to clarify it's the send-status column",
+    "Minor: add DialogDescription or aria-describedby to Dialog components to silence a11y warnings",
+    "Note: @example.com SMTP sends currently return email_sent=true (SMTP2GO accepts them). Problem statement expected false; verify provider behavior or docs. Non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "server.py >900 lines - should be split into routers (admin, auth, exams, student) for maintainability",
+    "admin_import_users is sequential O(n) DB check per line - use bulk find + insert_many for larger lists",
+    "login_log never pruned - add TTL index or periodic cleanup; also no index on user_id/at (will slow activity endpoint with scale)",
+    "No index on users.email (unique) explicitly declared - rely on find_one duplicate check, could race",
+    "send_welcome uses to_thread with 20s timeout per message → bulk import of large lists will block the request; consider BackgroundTasks"
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v9_mail_import_journal.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin)",
+  "seed_data_creation": "Created @example.com test users and cleaned up after tests (14 total deleted).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v9 feature set is fully functional. Test file test_examsecure_v9_mail_import_journal.py can be re-run as regression. Admin may now have leftover 'TEST User' @example.com accounts from previous iterations visible in users list - safe to ignore or bulk delete."
+}

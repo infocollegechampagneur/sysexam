@@ -60,3 +60,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Changement de mot de passe obligatoire à la 1re connexion (`must_change_password`, page `/enseignant/mot-de-passe`), aussi accessible via icône clé dans la nav.
 - Comptes désactivés : 403 au login et sur toutes les routes.
 - Testé : iteration_8.json (17/17 backend, E2E OK).
+
+## 2026-06 — Courriel de bienvenue, import, journal admin
+- `mailer.py` : SMTP (smtp2go, STARTTLS 2525) via env SMTP_HOST/PORT/USERNAME/PASSWORD, MAIL_FROM(_NAME). Envoi à la création d'un compte et à la réinitialisation (`email_sent` dans la réponse). GET /admin/mail-status.
+- POST /admin/users/import (Nom;courriel par ligne) → comptes + mots de passe générés + courriels.
+- Journal : collection `login_log` (à chaque login) ; GET /admin/activity (examens par enseignant, connexions). Onglet « Journal d'activité » dans la page Comptes.
+- Testé : iteration_9.json.
