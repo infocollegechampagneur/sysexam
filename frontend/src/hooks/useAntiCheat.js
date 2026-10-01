@@ -7,6 +7,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   const popupRef = useRef(null);
   const graceRef = useRef(0);
   const lastCountedRef = useRef(0);
+  const awayRef = useRef(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
@@ -26,30 +27,44 @@ export function useAntiCheat({ active, settings, onEvent }) {
   useEffect(() => {
     if (!active || !settings) return;
     const block = settings.block_clipboard;
-    const names = { copy: "copier", cut: "couper", paste: "coller" };
-    const onClip = (e) => { if (!block) return; e.preventDefault(); emit(`${e.type}_attempt`, `Tentative de ${names[e.type]}`); };
+    const onClip = (e) => {
+      if (!block) return;
+      e.preventDefault();
+      const content = e.type === "paste" ? e.clipboardData?.getData("text") : String(window.getSelection() || "");
+      const snippet = (content || "").trim().replace(/\s+/g, " ").slice(0, 160);
+      const label = { copy: "A tenté de copier", cut: "A tenté de couper", paste: "A tenté de coller" }[e.type];
+      emit(`${e.type}_attempt`, snippet ? `${label} : « ${snippet}${content.length > 160 ? "…" : ""} »` : `${label} (aucun texte)`);
+    };
     const onCtx = (e) => { e.preventDefault(); emit("contextmenu", "Clic droit bloqué"); };
     const onDrag = (e) => e.preventDefault();
     const onKey = (e) => {
       const k = (e.key || "").toLowerCase();
       const mod = e.ctrlKey || e.metaKey;
-      if (e.key === "F12" || (mod && e.shiftKey && ["i", "j", "c"].includes(k))) { e.preventDefault(); return emit("devtools", "Tentative d'ouvrir les outils de développement"); }
-      if (e.key === "PrintScreen") { e.preventDefault(); return emit("print_attempt", "Tentative de capture d'écran"); }
-      if (mod && ["p", "s", "u"].includes(k)) { e.preventDefault(); return emit("shortcut", `Raccourci bloqué : Ctrl+${k.toUpperCase()}`); }
-      if (block && mod && ["c", "v", "x"].includes(k)) { e.preventDefault(); return emit("shortcut", `Raccourci bloqué : Ctrl+${k.toUpperCase()}`); }
-      if (block && e.shiftKey && e.key === "Insert") { e.preventDefault(); return emit("shortcut", "Raccourci bloqué : Maj+Inser"); }
+      if (e.key === "F12" || (mod && e.shiftKey && ["i", "j", "c"].includes(k))) { e.preventDefault(); return emit("devtools", "A tenté d'ouvrir les outils de développement du navigateur"); }
+      if (e.key === "PrintScreen") { e.preventDefault(); return emit("print_attempt", "A tenté une capture d'écran"); }
+      if (mod && ["p", "s", "u"].includes(k)) { e.preventDefault(); return emit("shortcut", `Raccourci bloqué : Ctrl+${k.toUpperCase()} (${{ p: "imprimer", s: "enregistrer la page", u: "voir le code source" }[k]})`); }
+    };
+    const leave = (type, detail) => { if (!awayRef.current) awayRef.current = { at: Date.now(), type }; emit(type, detail); };
+    const back = () => {
+      if (!awayRef.current) return;
+      const secs = (Date.now() - awayRef.current.at) / 1000;
+      const where = { tab_hidden: "un autre onglet, site web ou fenêtre", window_blur: "une autre application ou fenêtre", external_focus: "un logiciel permis", tool_focus: "un outil web autorisé" }[awayRef.current.type] || "ailleurs";
+      awayRef.current = null;
+      onEventRef.current("returned", `Retour dans l'examen après ${Math.round(secs)} s passées sur ${where}`, secs);
     };
     const onVis = () => {
-      if (document.hidden) emit(toolActive() ? "tool_focus" : "tab_hidden", toolActive() ? "Fenêtre d'un outil web autorisé" : "Onglet ou fenêtre de l'examen quitté");
-      else emit("returned", "Retour sur la page de l'examen");
+      if (!document.hidden) return back();
+      if (toolActive()) leave("tool_focus", "Est allé sur un outil web autorisé");
+      else leave("tab_hidden", "A quitté la page de l'examen (autre onglet, autre site web ou fenêtre réduite)");
     };
     const onBlur = () => setTimeout(() => {
       if (document.hidden || document.hasFocus()) return;
       if (document.activeElement?.tagName === "IFRAME") return;
-      if (toolActive()) return emit("tool_focus", "Utilisation d'un outil web autorisé");
-      if (desktopAllowed.length) return emit("external_focus", `Focus sur une autre application (permis : ${desktopAllowed.join(", ")})`);
-      emit("window_blur", "La fenêtre de l'examen a perdu le focus");
+      if (toolActive()) return leave("tool_focus", "Est allé sur un outil web autorisé");
+      if (desktopAllowed.length) return leave("external_focus", `A utilisé une autre application (logiciels permis : ${desktopAllowed.join(", ")})`);
+      leave("window_blur", "A cliqué dans une autre fenêtre ou application (Alt+Tab, autre logiciel, autre écran)");
     }, 250);
+    const onFocus = () => back();
     const onFs = () => {
       const fs = !!document.fullscreenElement;
       setIsFullscreen(fs);
@@ -66,6 +81,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
     document.addEventListener("visibilitychange", onVis);
     document.addEventListener("fullscreenchange", onFs);
     window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
     window.addEventListener("beforeprint", onPrint);
     return () => {
       document.removeEventListener("copy", onClip, true);
@@ -78,6 +94,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("fullscreenchange", onFs);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("beforeprint", onPrint);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

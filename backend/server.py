@@ -122,6 +122,13 @@ class AnswersIn(BaseModel):
 class EventIn(BaseModel):
     type: str
     detail: str = ""
+    seconds: float = 0
+
+
+class UnlockIn(BaseModel):
+    mode: str = "reset"  # reset | grant
+    extra: int = Field(default=1, ge=1, le=20)
+    message: str = Field(default="", max_length=500)
 
 
 class GradeIn(BaseModel):
@@ -361,13 +368,25 @@ async def grade_session(session_id: str, body: GradeIn, user: dict = Depends(cur
 
 
 @api.post("/sessions/{session_id}/unlock")
-async def unlock_session(session_id: str, user: dict = Depends(current_teacher)):
+async def unlock_session(session_id: str, body: UnlockIn = UnlockIn(), user: dict = Depends(current_teacher)):
     s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not s:
         raise HTTPException(status_code=404, detail="Copie introuvable")
-    await own_exam(s["exam_id"], user)
-    ev = {"type": "unlocked", "detail": "Déverrouillé par l'enseignant (compteur remis à zéro)", "at": now_iso(), "counted": False}
-    await db.sessions.update_one({"id": session_id}, {"$set": {"status": "in_progress", "violations": 0}, "$push": {"events": ev}})
+    exam = await own_exam(s["exam_id"], user)
+    ts = now_iso()
+    if body.mode == "grant":
+        allowance = max(0, s["violations"] - exam["settings"].get("max_violations", 3)) + body.extra
+        upd = {"status": "in_progress", "allowance": allowance}
+        detail = f"Débloqué par l'enseignant : {body.extra} signalement(s) de plus accordé(s) (compteur conservé à {s['violations']})"
+    else:
+        upd = {"status": "in_progress", "violations": 0, "allowance": 0}
+        detail = "Débloqué par l'enseignant : compteur remis à zéro"
+    msg = body.message.strip()
+    if msg:
+        upd["teacher_message"] = {"text": msg, "at": ts, "read": False}
+        detail += f" · Message : « {msg} »"
+    ev = {"type": "unlocked", "detail": detail, "at": ts, "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": upd, "$push": {"events": ev}})
     return {"ok": True}
 
 
@@ -499,18 +518,29 @@ async def student_event(body: EventIn, s: dict = Depends(current_session)):
     desktop_ok = any(t in exam["settings"].get("allowed_tools", []) for t in ("antidote", "wordq", "lexibar"))
     counted = (body.type in COUNTED_EVENTS or (body.type == "external_focus" and not desktop_ok)) and s["status"] == "in_progress"
     ev = {"type": body.type, "detail": body.detail[:300], "at": now_iso(), "counted": counted}
+    if body.seconds > 0:
+        ev["seconds"] = round(body.seconds, 1)
     upd = {"$push": {"events": ev}}
     violations = s["violations"] + (1 if counted else 0)
     status = s["status"]
+    limit = exam["settings"].get("max_violations", 3) + (s.get("allowance") or 0)
     if counted:
         upd["$inc"] = {"violations": 1}
         st = exam["settings"]
-        if st.get("lock_on_max") and violations >= st.get("max_violations", 3):
+        if st.get("lock_on_max") and violations >= limit:
             status = "locked"
             upd["$set"] = {"status": "locked", "locked_at": now_iso()}
             upd["$push"] = {"events": {"$each": [ev, {"type": "locked", "detail": f"Examen bloqué après {violations} signalement(s)", "at": now_iso(), "counted": False}]}}
     await db.sessions.update_one({"id": s["id"]}, upd)
-    return {"violations": violations, "status": status, "counted": counted}
+    return {"violations": violations, "status": status, "counted": counted, "limit": limit}
+
+
+@api.post("/student/message-read")
+async def student_message_read(s: dict = Depends(current_session)):
+    if s.get("teacher_message"):
+        ev = {"type": "message_read", "detail": "L'élève a lu le message de l'enseignant", "at": now_iso(), "counted": False}
+        await db.sessions.update_one({"id": s["id"]}, {"$set": {"teacher_message.read": True}, "$push": {"events": ev}})
+    return {"ok": True}
 
 
 @api.post("/student/submit")

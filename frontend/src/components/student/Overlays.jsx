@@ -1,4 +1,4 @@
-import { Lock, Maximize, Globe, CheckCircle2 } from "lucide-react";
+import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Shell = ({ children, testId }) => (
@@ -10,9 +10,18 @@ const Shell = ({ children, testId }) => (
 export const LockedOverlay = ({ violations }) => (
   <Shell testId="locked-overlay">
     <Lock className="mx-auto h-10 w-10 text-rose-500" />
-    <h2 className="mt-4 font-display text-2xl font-bold text-white">Examen verrouillé</h2>
-    <p className="mt-2 text-slate-400">Vous avez atteint {violations} infraction(s). Votre enseignant·e a été averti·e et doit déverrouiller votre copie. Vos réponses sont sauvegardées.</p>
-    <p className="mt-6 text-xs text-slate-500">En attente de déverrouillage…</p>
+    <h2 className="mt-4 font-display text-2xl font-bold text-white">Examen bloqué</h2>
+    <p className="mt-2 text-slate-400">Vous avez atteint {violations} signalement(s). Votre enseignant·e a été averti·e et doit débloquer votre examen. Vos réponses sont sauvegardées.</p>
+    <p className="mt-6 text-xs text-slate-500">En attente de déblocage…</p>
+  </Shell>
+);
+
+export const TeacherMessageOverlay = ({ text, onRead }) => (
+  <Shell testId="teacher-message-overlay">
+    <MessageSquareWarning className="mx-auto h-10 w-10 text-amber-400" />
+    <h2 className="mt-4 font-display text-2xl font-bold text-white">Message de votre enseignant·e</h2>
+    <p className="mt-4 whitespace-pre-wrap rounded-lg border border-amber-700/50 bg-amber-950/40 p-4 text-left text-amber-100" data-testid="teacher-message-text">{text}</p>
+    <Button onClick={onRead} className="mt-6 w-full bg-blue-600 hover:bg-blue-500" data-testid="teacher-message-read-btn">J'ai lu et je reprends l'examen</Button>
   </Shell>
 );
 

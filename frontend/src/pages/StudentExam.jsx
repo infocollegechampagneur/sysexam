@@ -7,7 +7,7 @@ import { useAntiCheat } from "@/hooks/useAntiCheat";
 import { ExamIntro } from "@/components/student/ExamIntro";
 import { ExamTopBar } from "@/components/student/ExamTopBar";
 import { ExamBody } from "@/components/student/ExamBody";
-import { LockedOverlay, FullscreenOverlay, SubmittedScreen } from "@/components/student/Overlays";
+import { LockedOverlay, FullscreenOverlay, SubmittedScreen, TeacherMessageOverlay } from "@/components/student/Overlays";
 
 export default function StudentExam() {
   const token = sessionStorage.getItem("exam_token");
@@ -45,15 +45,26 @@ export default function StudentExam() {
   }, [token, sapi]);
 
   const settings = data?.exam?.settings;
+  const [limit, setLimit] = useState(null);
+  const [message, setMessage] = useState(null);
 
-  const onEvent = useCallback(async (type, detail) => {
+  const showMessageIfAny = (sess) => { if (sess.teacher_message && !sess.teacher_message.read) setMessage(sess.teacher_message.text); };
+
+  useEffect(() => {
+    if (data?.session) { setLimit(data.exam.settings.max_violations + (data.session.allowance || 0)); showMessageIfAny(data.session); }
+  }, [data]);
+
+  const readMessage = () => { setMessage(null); sapi.post("/student/message-read").catch(() => {}); };
+
+  const onEvent = useCallback(async (type, detail, seconds = 0) => {
     try {
-      const { data: r } = await sapi.post("/student/event", { type, detail });
+      const { data: r } = await sapi.post("/student/event", { type, detail, seconds });
       setViolations(r.violations);
       setStatus(r.status);
-      if (r.counted) toast.warning(`Infraction ${r.violations}/${settings?.max_violations} : ${detail}`, { duration: 6000 });
+      setLimit(r.limit);
+      if (r.counted) toast.warning(`Signalement ${r.violations}/${r.limit} : ${detail}`, { duration: 6000 });
     } catch (e) { /* network issue: ignore */ }
-  }, [sapi, settings]);
+  }, [sapi]);
 
   const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress", settings, onEvent });
 
@@ -81,7 +92,13 @@ export default function StudentExam() {
     if (status !== "locked") return;
     const iv = setInterval(async () => {
       const { data: d } = await sapi.get("/student/session").catch(() => ({ data: null }));
-      if (d && d.session.status !== "locked") { setStatus(d.session.status); setViolations(d.session.violations); toast.success("Votre copie a été déverrouillée"); }
+      if (d && d.session.status !== "locked") {
+        setStatus(d.session.status);
+        setViolations(d.session.violations);
+        setLimit(d.exam.settings.max_violations + (d.session.allowance || 0));
+        showMessageIfAny(d.session);
+        toast.success("Votre examen a été débloqué");
+      }
     }, 5000);
     return () => clearInterval(iv);
   }, [status, sapi]);
@@ -111,13 +128,14 @@ export default function StudentExam() {
   const needFs = settings.require_fullscreen && !isFullscreen && status === "in_progress";
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
-      <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations}
+      <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit}
         onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} />
       )}
       {status === "locked" && <LockedOverlay violations={violations} />}
-      {needFs && status !== "locked" && <FullscreenOverlay toolOpen={toolOpen} onResume={enterFullscreen} onCloseTool={closeTool} />}
+      {needFs && status !== "locked" && !message && <FullscreenOverlay toolOpen={toolOpen} onResume={enterFullscreen} onCloseTool={closeTool} />}
+      {message && status !== "locked" && <TeacherMessageOverlay text={message} onRead={() => { readMessage(); if (settings.require_fullscreen) enterFullscreen(); }} />}
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyContent } from "@/components/CopyContent";
+import { UnlockDialog } from "@/components/UnlockDialog";
+import { ActivitySummary } from "@/components/ActivitySummary";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
 import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
@@ -37,7 +39,7 @@ const LockedBanner = ({ session, onUnlock }) => (
   <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-rose-400 bg-rose-50 p-4" data-testid="session-locked-banner">
     <Lock className="h-5 w-5 text-rose-600" />
     <p className="flex-1 text-sm text-rose-900">
-      <strong>Examen bloqué</strong>{session.locked_at && ` à ${new Date(session.locked_at).toLocaleTimeString("fr-CA")}`} après {session.violations} signalement(s). Consultez l'historique ci-dessous, puis débloquez si vous le jugez approprié (le compteur repart à zéro).
+      <strong>Examen bloqué</strong>{session.locked_at && ` à ${new Date(session.locked_at).toLocaleTimeString("fr-CA")}`} après {session.violations} signalement(s). Consultez l'historique ci-dessous, puis choisissez comment débloquer (signalements de plus ou compteur à zéro, avec un message à l'élève si vous le souhaitez).
     </p>
     <Button onClick={onUnlock} className="bg-rose-600 hover:bg-rose-700" data-testid="unlock-session-btn"><Unlock className="mr-1.5 h-4 w-4" />Débloquer l'examen</Button>
   </div>
@@ -87,9 +89,8 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
     } catch (e) { toast.error(formatErr(e)); } finally { setSaving(false); }
   };
 
-  const unlock = async () => {
-    await api.post(`/sessions/${session.id}/unlock`).then(() => { toast.success("Copie déverrouillée"); onChanged(); }).catch((e) => toast.error(formatErr(e)));
-  };
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const unlock = () => setUnlockOpen(true);
 
   const fname = `${slug(exam.title)}_${slug(session.student_name)}`;
   const inlinePdf = exam.exam_type === "document" && exam.doc_answer_mode === "inline" && exam.file?.kind === "pdf";
@@ -111,10 +112,12 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       </div>
 
       {session.status === "locked" && <LockedBanner session={session} onUnlock={unlock} />}
+      <UnlockDialog open={unlockOpen} onOpenChange={setUnlockOpen} session={session} maxViolations={exam.settings.max_violations} onDone={onChanged} />
       {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations} signalement(s)</span></p>
+        <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations + (session.allowance || 0)} signalement(s)</span></p>
+        <ActivitySummary events={session.events || []} />
         <Timeline events={session.events || []} />
       </section>
 

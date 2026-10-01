@@ -4,7 +4,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ExamTimer } from "@/components/student/ExamTimer";
 import { TOOLS } from "@/lib/tools";
 
-export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, onTool, onSubmit, submitting, onExpire }) => {
+export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, onTool, onSubmit, submitting, onExpire }) => {
   const allowed = TOOLS.filter((t) => exam.settings.allowed_tools.includes(t.id));
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
@@ -25,7 +25,7 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
           ))}
         </div>
         <span className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold ${violations ? "bg-rose-950 text-rose-300" : "bg-slate-800 text-slate-300"}`} data-testid="violations-indicator">
-          <ShieldAlert className="h-3.5 w-3.5" />{violations}/{exam.settings.max_violations}
+          <ShieldAlert className="h-3.5 w-3.5" />{violations}/{limit ?? exam.settings.max_violations}
         </span>
         <span className="hidden items-center gap-1 text-xs text-emerald-400 sm:flex" data-testid="autosave-indicator">
           <CloudCheck className="h-4 w-4" />{savedAt ? `Sauvegardé à ${new Date(savedAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Non sauvegardé"}
