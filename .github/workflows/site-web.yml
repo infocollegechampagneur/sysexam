@@ -1,0 +1,31 @@
+name: Construire le site web (Siteground)
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: "Adresse du serveur (sans /api), ex. https://monexamenligne-api.onrender.com"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+        env:
+          REACT_APP_BACKEND_URL: ${{ inputs.backend_url }}
+          CI: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MonExamEnLigne-SiteWeb
+          path: frontend/build/
+          include-hidden-files: true

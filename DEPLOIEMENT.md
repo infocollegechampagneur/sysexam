@@ -120,8 +120,15 @@ Le forfait gratuit de Render donne **750 heures par mois**, assez pour un servic
 ### 5.1 Créer le sous-domaine
 **Site Tools → Domaine → Sous-domaines** : créez `examen`. Un dossier `examen.votredomaine.com/public_html` est créé. Activez ensuite le **SSL** (Let's Encrypt) pour ce sous-domaine dans **Sécurité → Gestionnaire SSL**.
 
-### 5.2 Construire le site (une fois, sur votre ordinateur)
-Installez **Node.js 20** (https://nodejs.org) et **Yarn** (`corepack enable`), puis :
+### 5.2 Construire le site
+
+**Option A, automatique avec GitHub (recommandée, rien à installer) :**
+1. Dans GitHub, allez dans **Actions → Construire le site web (Siteground) → Run workflow**.
+2. Dans le champ *Adresse du serveur*, entrez l'adresse Render **sans `/api`**, par exemple `https://monexamenligne-api.onrender.com`.
+3. Après environ 3 minutes, ouvrez l'exécution et téléchargez l'artefact **MonExamEnLigne-SiteWeb** (un fichier `.zip`).
+4. Décompressez-le : son contenu (`index.html`, `.htaccess`, dossier `static/`…) est ce qu'il faut copier à l'étape 5.3.
+
+**Option B, sur votre ordinateur :** installez **Node.js 20** (https://nodejs.org) et **Yarn** (`corepack enable`), puis :
 
 ```bash
 cd frontend
