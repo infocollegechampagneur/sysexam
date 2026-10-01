@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileType2, Unlock, Save, Loader2, Clock, FilePen } from "lucide-react";
+import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,16 +11,36 @@ import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
 import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
 import { downloadAnnotatedPdf } from "@/lib/pdf";
 
-const Timeline = ({ events }) => (
-  <ol className="max-h-80 space-y-2 overflow-y-auto pr-2" data-testid="session-timeline">
-    {[...events].reverse().map((ev, i) => (
-      <li key={i} className={`flex gap-3 rounded-lg border px-3 py-2 text-sm ${ev.counted ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white"}`}>
-        <span className="shrink-0 font-mono text-xs text-slate-500">{new Date(ev.at).toLocaleTimeString("fr-CA")}</span>
-        <span className={`shrink-0 font-medium ${ev.counted ? "text-rose-700" : "text-slate-700"}`}>{EVENT_LABELS[ev.type] || ev.type}</span>
-        <span className="text-slate-500">{ev.detail}</span>
-      </li>
-    ))}
-  </ol>
+const Timeline = ({ events }) => {
+  const [onlyFlags, setOnlyFlags] = useState(false);
+  const list = [...events].reverse().filter((ev) => !onlyFlags || ev.counted || ["locked", "unlocked"].includes(ev.type));
+  return (
+    <>
+      <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+        <input type="checkbox" checked={onlyFlags} onChange={(e) => setOnlyFlags(e.target.checked)} data-testid="timeline-only-flags" />
+        Afficher seulement les signalements
+      </label>
+      <ol className="max-h-80 space-y-2 overflow-y-auto pr-2" data-testid="session-timeline">
+        {list.map((ev, i) => (
+          <li key={i} className={`flex gap-3 rounded-lg border px-3 py-2 text-sm ${ev.type === "locked" ? "border-rose-400 bg-rose-100" : ev.counted ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white"}`}>
+            <span className="shrink-0 font-mono text-xs text-slate-500">{new Date(ev.at).toLocaleTimeString("fr-CA")}</span>
+            <span className={`shrink-0 font-medium ${ev.counted || ev.type === "locked" ? "text-rose-700" : "text-slate-700"}`}>{EVENT_LABELS[ev.type] || ev.type}</span>
+            <span className="text-slate-500">{ev.detail}</span>
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+};
+
+const LockedBanner = ({ session, onUnlock }) => (
+  <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-rose-400 bg-rose-50 p-4" data-testid="session-locked-banner">
+    <Lock className="h-5 w-5 text-rose-600" />
+    <p className="flex-1 text-sm text-rose-900">
+      <strong>Examen bloqué</strong>{session.locked_at && ` à ${new Date(session.locked_at).toLocaleTimeString("fr-CA")}`} après {session.violations} signalement(s). Consultez l'historique ci-dessous, puis débloquez si vous le jugez approprié (le compteur repart à zéro).
+    </p>
+    <Button onClick={onUnlock} className="bg-rose-600 hover:bg-rose-700" data-testid="unlock-session-btn"><Unlock className="mr-1.5 h-4 w-4" />Débloquer l'examen</Button>
+  </div>
 );
 
 const answerText = (q, v) => (v === undefined || v === "" ? "<em>(sans réponse)</em>" : q.type === "long" ? v : String(v).replace(/</g, "&lt;"));
@@ -83,17 +103,18 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           <p className="text-sm text-slate-500">{session.student_number || "Sans matricule"} · {session.teacher_name ? `Enseignant : ${session.teacher_name} · ` : ""}{SESSION_LABELS[session.status]} · Début {fmtTime(session.started_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {session.status === "locked" && <Button onClick={unlock} className="bg-amber-600 hover:bg-amber-700" data-testid="unlock-session-btn"><Unlock className="mr-1.5 h-4 w-4" />Déverrouiller</Button>}
+          {session.status === "locked" && <Button onClick={unlock} variant="outline" className="border-rose-300 text-rose-700" data-testid="unlock-session-top-btn"><Unlock className="mr-1.5 h-4 w-4" />Débloquer</Button>}
           <Button variant="outline" onClick={() => exportPdf(printRef.current, fname)} data-testid="export-pdf-report-btn"><FileDown className="mr-1.5 h-4 w-4" />PDF</Button>
           <Button variant="outline" onClick={() => exportWord(printRef.current, fname)} data-testid="export-word-report-btn"><FileType2 className="mr-1.5 h-4 w-4" />Word</Button>
           {inlinePdf && <Button variant="outline" onClick={annotated} data-testid="export-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />PDF annoté</Button>}
         </div>
       </div>
 
+      {session.status === "locked" && <LockedBanner session={session} onUnlock={unlock} />}
       {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="mb-3 text-sm font-semibold text-slate-700">Journal de surveillance · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} infraction(s)</span></p>
+        <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations} signalement(s)</span></p>
         <Timeline events={session.events || []} />
       </section>
 

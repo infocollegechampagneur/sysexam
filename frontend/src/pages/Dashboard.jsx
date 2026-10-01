@@ -48,6 +48,7 @@ const ExamCard = ({ exam, onDelete }) => {
       <div className="mt-3 flex gap-4 text-xs text-slate-500">
         <span>{exam.session_count} copie(s)</span>
         {exam.flagged_count > 0 && <span className="text-amber-700">{exam.flagged_count} avec infraction(s)</span>}
+        {exam.locked_count > 0 && <span className="font-semibold text-rose-700" data-testid={`exam-locked-count-${exam.code}`}>{exam.locked_count} bloquée(s)</span>}
         <span>{exam.duration_minutes ? `${exam.duration_minutes} min` : "Sans limite"}</span>
       </div>
       <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">

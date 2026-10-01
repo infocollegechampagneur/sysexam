@@ -13,7 +13,7 @@ export const EXAM_TYPES = [
 ];
 
 export const STATUS_LABELS = { draft: "Brouillon", open: "Ouvert", closed: "Fermé" };
-export const SESSION_LABELS = { in_progress: "En cours", locked: "Verrouillé", submitted: "Remis" };
+export const SESSION_LABELS = { in_progress: "En cours", locked: "Bloqué", submitted: "Remis" };
 
 export const EVENT_LABELS = {
   joined: "Début", rejoined: "Reconnexion", submitted: "Remise", unlocked: "Déverrouillage",
@@ -22,6 +22,7 @@ export const EVENT_LABELS = {
   shortcut: "Raccourci bloqué", devtools: "Outils dév.", print_attempt: "Impression/capture",
   contextmenu: "Clic droit", tool_focus: "Outil web permis", external_focus: "Logiciel externe (permis)",
   fullscreen_exit_tool: "Plein écran (outil)", returned: "Retour", time_up: "Temps écoulé",
+  locked: "Examen bloqué", extra_time: "Temps supp.",
 };
 
 export const COUNTED = new Set(["tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt"]);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users, FileDown, FileType2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TeacherLayout } from "@/components/TeacherLayout";
@@ -33,9 +33,15 @@ export default function Results() {
   const [exam, setExam] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sel, setSel] = useState(null);
+  const lockedRef = useRef(null);
 
   const load = useCallback(() => {
-    api.get(`/exams/${id}/sessions`).then((r) => setSessions(r.data)).catch((e) => toast.error(formatErr(e)));
+    api.get(`/exams/${id}/sessions`).then((r) => {
+      const locked = r.data.filter((s) => s.status === "locked");
+      if (lockedRef.current) locked.filter((s) => !lockedRef.current.has(s.id)).forEach((s) => toast.error(`Examen bloqué : ${s.student_name} (${s.violations} signalements)`, { duration: 10000 }));
+      lockedRef.current = new Set(locked.map((s) => s.id));
+      setSessions(r.data);
+    }).catch((e) => toast.error(formatErr(e)));
   }, [id]);
 
   useEffect(() => {
@@ -67,6 +73,18 @@ export default function Results() {
       <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
       </div>
+      {sessions.some((s) => s.status === "locked") && (
+        <div className="mt-4 rounded-xl border-2 border-rose-400 bg-rose-50 p-4" data-testid="locked-alert">
+          <p className="flex items-center gap-2 font-semibold text-rose-800"><Lock className="h-4 w-4" />Examens bloqués en attente de votre décision</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sessions.filter((s) => s.status === "locked").map((s) => (
+              <Button key={s.id} size="sm" variant="outline" onClick={() => setSel(s.id)} className="border-rose-300 bg-white text-rose-800 hover:bg-rose-100" data-testid={`locked-alert-open-${s.id}`}>
+                {s.student_name} · {s.violations} signalement(s) — voir l'historique
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="mt-6 grid gap-6 lg:grid-cols-12">
         <aside className="space-y-2 lg:col-span-4" data-testid="sessions-list">
           {sessions.map((s, i) => <SessionRow key={s.id} s={s} i={i} active={s.id === sel} onClick={() => setSel(s.id)} />)}

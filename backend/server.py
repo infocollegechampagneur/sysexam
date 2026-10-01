@@ -269,6 +269,7 @@ async def list_exams(user: dict = Depends(current_teacher)):
     for e in exams:
         e["session_count"] = await db.sessions.count_documents({"exam_id": e["id"]})
         e["flagged_count"] = await db.sessions.count_documents({"exam_id": e["id"], "violations": {"$gt": 0}})
+        e["locked_count"] = await db.sessions.count_documents({"exam_id": e["id"], "status": "locked"})
     return exams
 
 
@@ -506,7 +507,8 @@ async def student_event(body: EventIn, s: dict = Depends(current_session)):
         st = exam["settings"]
         if st.get("lock_on_max") and violations >= st.get("max_violations", 3):
             status = "locked"
-            upd["$set"] = {"status": "locked"}
+            upd["$set"] = {"status": "locked", "locked_at": now_iso()}
+            upd["$push"] = {"events": {"$each": [ev, {"type": "locked", "detail": f"Examen bloqué après {violations} signalement(s)", "at": now_iso(), "counted": False}]}}
     await db.sessions.update_one({"id": s["id"]}, upd)
     return {"violations": violations, "status": status, "counted": counted}
 

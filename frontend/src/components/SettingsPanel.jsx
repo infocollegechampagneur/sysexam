@@ -34,12 +34,23 @@ export const SettingsPanel = ({ settings, onChange }) => {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <Row title="Plein écran obligatoire" desc="L'examen est masqué tant que l'élève n'est pas en plein écran." checked={settings.require_fullscreen} onChange={(v) => set("require_fullscreen", v)} testId="setting-require-fullscreen" />
           <Row title="Bloquer copier / coller" desc="Copier, couper, coller, glisser-déposer et clic droit désactivés." checked={settings.block_clipboard} onChange={(v) => set("block_clipboard", v)} testId="setting-block-clipboard" />
-          <Row title="Verrouiller après le seuil" desc="La copie est verrouillée lorsque le nombre maximal d'infractions est atteint." checked={settings.lock_on_max} onChange={(v) => set("lock_on_max", v)} testId="setting-lock-on-max" />
           <Row title="Correcteur du navigateur" desc="Autoriser le soulignement orthographique intégré au navigateur." checked={settings.browser_spellcheck} onChange={(v) => set("browser_spellcheck", v)} testId="setting-browser-spellcheck" />
         </div>
-        <div className="mt-4 flex items-center gap-3">
-          <Label htmlFor="maxv" className="text-sm">Nombre maximal d'infractions</Label>
-          <Input id="maxv" type="number" min={1} max={50} value={settings.max_violations} onChange={(e) => set("max_violations", Math.max(1, Number(e.target.value)))} className="w-24" data-testid="setting-max-violations" />
+        <div className="mt-4 rounded-xl border-2 border-rose-200 bg-rose-50/50 p-5" data-testid="violations-settings">
+          <p className="font-semibold text-slate-900">Signalements et blocage</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Label htmlFor="maxv" className="text-sm">Nombre de signalements permis</Label>
+            <Input id="maxv" type="number" min={1} max={50} value={settings.max_violations} onChange={(e) => set("max_violations", Math.max(1, Number(e.target.value)))} className="w-24 bg-white" data-testid="setting-max-violations" />
+          </div>
+          <label className="mt-4 flex cursor-pointer items-center justify-between gap-4">
+            <span className="text-sm text-slate-700">Bloquer l'examen au seuil, jusqu'à ce que l'enseignant le débloque</span>
+            <Switch checked={settings.lock_on_max} onCheckedChange={(v) => set("lock_on_max", v)} data-testid="setting-lock-on-max" />
+          </label>
+          <p className="mt-3 rounded-md bg-white px-3 py-2 text-sm text-rose-800" data-testid="violations-rule-preview">
+            {settings.lock_on_max
+              ? `À ${settings.max_violations} signalement(s), l'examen de l'élève est bloqué. Vous recevez une alerte, consultez son historique (onglet quitté, copier-coller, plein écran…) et décidez de le débloquer.`
+              : `Les signalements sont enregistrés dans l'historique de l'élève, mais l'examen n'est jamais bloqué.`}
+          </p>
         </div>
       </section>
       <div className="flex gap-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-900" data-testid="settings-limits-note">
