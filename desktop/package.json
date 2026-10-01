@@ -8,7 +8,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis"
+    "dist": "electron-builder --win nsis msi"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -18,7 +18,8 @@
     "appId": "com.monexamenligne.desktop",
     "productName": "MonExamEnLigne",
     "files": ["main.js", "preload.js", "config.json"],
-    "win": { "target": "nsis" },
-    "nsis": { "oneClick": false, "perMachine": true, "allowToChangeInstallationDirectory": true, "shortcutName": "MonExamEnLigne" }
+    "win": { "target": ["nsis", "msi"] },
+    "nsis": { "oneClick": false, "perMachine": true, "allowToChangeInstallationDirectory": true, "shortcutName": "MonExamEnLigne" },
+    "msi": { "oneClick": true, "perMachine": true, "createDesktopShortcut": true, "shortcutName": "MonExamEnLigne", "upgradeCode": "8C3E6B1A-4F2D-4B7E-9A51-6D2F0C7B3E19" }
   }
 }

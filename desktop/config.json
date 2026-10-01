@@ -1,3 +1,31 @@
 {
-  "appUrl": "https://examen.votredomaine.com"
+  "appUrl": "https://examen.votredomaine.com",
+  "tools": {
+    "antidote": {
+      "label": "Antidote",
+      "process": "antidote",
+      "paths": [
+        "C:\\Program Files\\Druide\\Antidote 12\\Application\\Bin64\\Antidote.exe",
+        "C:\\Program Files\\Druide\\Antidote 11\\Application\\Bin64\\Antidote.exe",
+        "C:\\Program Files\\Druide\\Antidote 10\\Application\\Bin64\\Antidote.exe"
+      ]
+    },
+    "wordq": {
+      "label": "WordQ",
+      "process": "wordq",
+      "paths": [
+        "C:\\Program Files (x86)\\WordQ 5\\WordQ.exe",
+        "C:\\Program Files\\WordQ 5\\WordQ.exe",
+        "C:\\Program Files (x86)\\WordQ\\WordQ.exe"
+      ]
+    },
+    "lexibar": {
+      "label": "Lexibar",
+      "process": "lexibar",
+      "paths": [
+        "C:\\Program Files (x86)\\Lexibar\\Lexibar.exe",
+        "C:\\Program Files\\Lexibar\\Lexibar.exe"
+      ]
+    }
+  }
 }

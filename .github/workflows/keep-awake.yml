@@ -1,0 +1,12 @@
+name: Garder le serveur eveille
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 11-23 * * 1-5"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 60 "${{ secrets.API_URL }}/api/" || true

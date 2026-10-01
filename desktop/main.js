@@ -1,6 +1,13 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
-const config = require("./config.json");
+const fs = require("fs");
+const { execFile } = require("child_process");
+const packaged = require("./config.json");
+
+const EXTERNAL_CONFIG = path.join(process.env.ProgramData || "C:\\ProgramData", "MonExamEnLigne", "config.json");
+let external = {};
+try { external = JSON.parse(fs.readFileSync(EXTERNAL_CONFIG, "utf8")); } catch (e) { external = {}; }
+const config = { ...packaged, ...external, tools: { ...packaged.tools, ...(external.tools || {}) } };
 
 const APP_URL = process.env.MONEXAM_URL || config.appUrl;
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -59,14 +66,33 @@ function createWindow() {
   });
 }
 
-ipcMain.handle("set-lockdown", (_e, on) => {
+ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
   locked = !!on;
+  const onTop = locked && !(opts.desktopTools || []).length;
   win.setKiosk(locked);
-  win.setAlwaysOnTop(locked, "screen-saver");
+  win.setAlwaysOnTop(onTop, "screen-saver");
   win.setContentProtection(locked);
   BrowserWindow.getAllWindows().filter((w) => w !== win).forEach((w) => { w.setAlwaysOnTop(locked, "screen-saver"); w.setContentProtection(locked); });
   if (locked) win.focus();
   return locked;
+});
+
+ipcMain.handle("tools-running", () => new Promise((resolve) => {
+  if (process.platform !== "win32") return resolve([]);
+  execFile("tasklist", ["/fo", "csv", "/nh"], { windowsHide: true }, (err, out) => {
+    if (err) return resolve([]);
+    const list = out.toLowerCase();
+    resolve(Object.entries(config.tools || {}).filter(([, t]) => list.includes(`"${t.process.toLowerCase()}`)).map(([id]) => id));
+  });
+}));
+
+ipcMain.handle("launch-tool", async (_e, id) => {
+  const tool = (config.tools || {})[id];
+  if (!tool) return { ok: false, reason: "Outil inconnu" };
+  const exe = (tool.paths || []).find((p) => fs.existsSync(p));
+  if (!exe) return { ok: false, reason: `${tool.label || id} n'est pas installé sur ce poste` };
+  const err = await shell.openPath(exe);
+  return err ? { ok: false, reason: err } : { ok: true };
 });
 
 if (!app.requestSingleInstanceLock()) {

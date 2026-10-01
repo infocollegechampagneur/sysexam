@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, formatErr } from "@/lib/api";
 import { useAntiCheat } from "@/hooks/useAntiCheat";
+import { useDesktopTools } from "@/hooks/useDesktopTools";
 import { ExamIntro } from "@/components/student/ExamIntro";
 import { ExamTopBar } from "@/components/student/ExamTopBar";
 import { ExamBody } from "@/components/student/ExamBody";
@@ -67,6 +68,7 @@ export default function StudentExam() {
   }, [sapi]);
 
   const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress", settings, onEvent });
+  const desktopTools = useDesktopTools({ active: phase === "exam" && status === "in_progress", allowed: settings?.allowed_tools || [], onEvent });
 
   const setAnswer = (qid, v) => { setAnswers((a) => { const n = { ...a, [qid]: v }; latest.current.answers = n; return n; }); dirty.current = true; };
   const setEssayV = (v) => { setEssay(v); latest.current.essay_html = v; dirty.current = true; };
@@ -133,7 +135,7 @@ export default function StudentExam() {
   const needFs = settings.require_fullscreen && !isFullscreen && status === "in_progress";
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
-      <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit}
+      <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
         onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} />

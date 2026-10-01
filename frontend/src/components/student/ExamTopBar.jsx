@@ -4,7 +4,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ExamTimer } from "@/components/student/ExamTimer";
 import { TOOLS } from "@/lib/tools";
 
-export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, onTool, onSubmit, submitting, onExpire }) => {
+export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, desktopTools, onTool, onSubmit, submitting, onExpire }) => {
   const allowed = TOOLS.filter((t) => exam.settings.allowed_tools.includes(t.id));
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
@@ -17,6 +17,11 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
           {allowed.map((t) => t.kind === "web" ? (
             <Button key={t.id} size="sm" variant="outline" onClick={() => onTool(t)} className="h-8 border-emerald-700 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900 hover:text-white" data-testid={`tool-button-${t.id}`}>
               <Globe className="mr-1 h-3.5 w-3.5" />{t.label}
+            </Button>
+          ) : desktopTools?.desktop ? (
+            <Button key={t.id} size="sm" variant="outline" onClick={() => desktopTools.launch(t.id)} className="h-8 border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800 hover:text-white" title={desktopTools.running.includes(t.id) ? "Ouvert sur ce poste" : "Cliquer pour ouvrir"} data-testid={`tool-launch-${t.id}`}>
+              <span className={`mr-1.5 h-2 w-2 rounded-full ${desktopTools.running.includes(t.id) ? "bg-emerald-400" : "bg-slate-500"}`} />
+              <Monitor className="mr-1 h-3.5 w-3.5" />{t.label}
             </Button>
           ) : (
             <span key={t.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-700 px-2.5 text-xs text-slate-300" title="Logiciel permis sur ce poste" data-testid={`tool-badge-${t.id}`}>

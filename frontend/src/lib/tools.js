@@ -23,6 +23,7 @@ export const EVENT_LABELS = {
   contextmenu: "Clic droit", tool_focus: "Outil web permis", external_focus: "Logiciel externe (permis)",
   fullscreen_exit_tool: "Plein écran (outil)", returned: "Retour dans l'examen", time_up: "Temps écoulé",
   locked: "Examen bloqué", extra_time: "Temps supp.", message_read: "Message lu", teacher_message: "Avertissement envoyé",
+  tool_opened: "Logiciel permis ouvert", tool_closed: "Logiciel permis fermé", tool_launch: "Lancement d'un logiciel permis",
 };
 
 export const COUNTED = new Set(["tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt"]);

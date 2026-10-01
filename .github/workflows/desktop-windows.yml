@@ -11,14 +11,20 @@ jobs:
     defaults:
       run:
         working-directory: desktop
+    env:
+      CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: yarn install --frozen-lockfile
-      - run: yarn electron-builder --win nsis --publish never
+      - run: yarn electron-builder --win nsis msi --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: MonExamEnLigne-Windows
-          path: desktop/dist/*.exe
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.msi

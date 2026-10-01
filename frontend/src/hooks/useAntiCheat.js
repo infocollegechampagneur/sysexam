@@ -104,7 +104,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   }, [active, settings, emit]);
 
   const enterFullscreen = () => {
-    if (window.monExam?.isDesktop) return window.monExam.setLockdown(true);
+    if (window.monExam?.isDesktop) return window.monExam.setLockdown(true, { desktopTools: allowed.filter((id) => TOOLS.find((t) => t.id === id)?.kind === "desktop") });
     return document.documentElement.requestFullscreen?.().catch(() => {});
   };
 
