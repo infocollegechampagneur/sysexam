@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { execFile } = require("child_process");
@@ -36,7 +36,12 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged },
   });
   win.removeMenu();
-  win.loadURL(APP_URL);
+  session.defaultSession.clearCache().finally(() => win.loadURL(APP_URL));
+
+  win.webContents.on("did-fail-load", (e, code, desc, url, isMainFrame) => {
+    if (!isMainFrame) return;
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<html><body style="font-family:Segoe UI,Arial;display:grid;place-items:center;height:100vh;margin:0;background:#f8fafc;color:#0f172a"><div style="text-align:center;max-width:460px"><h2>Site inaccessible</h2><p>${desc} (${code})<br><small>${url}</small></p><p>Vérifiez la connexion Internet ou le DNS du poste, puis appuyez sur <b>F5</b> ou <b>Ctrl+R</b> pour réessayer.</p></div></body></html>`)}`);
+  });
 
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith(APP_ORIGIN)) e.preventDefault(); });
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -53,7 +58,13 @@ function createWindow() {
       win.webContents.send("emergency-request");
       return;
     }
-    if (!locked) return;
+    if (!locked) {
+      if (input.type === "keyDown" && (input.key === "F5" || (input.control && (input.key || "").toLowerCase() === "r"))) {
+        e.preventDefault();
+        session.defaultSession.clearCache().finally(() => win.loadURL(APP_URL));
+      }
+      return;
+    }
     const k = (input.key || "").toLowerCase();
     if (BLOCKED_KEYS.includes(input.key) || (input.alt && input.key === "F4") ||
         (input.control && input.shift && ["i", "j", "c"].includes(k)) ||
