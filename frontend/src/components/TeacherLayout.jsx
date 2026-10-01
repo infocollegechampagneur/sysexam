@@ -9,7 +9,7 @@ export const Brand = ({ dark = false }) => (
       <ShieldCheck className="h-5 w-5" />
     </span>
     <span className={`font-display text-xl font-bold tracking-tight ${dark ? "text-white" : "text-slate-900"}`}>
-      ÉxamSécure
+      MonExamEnLigne
     </span>
   </span>
 );

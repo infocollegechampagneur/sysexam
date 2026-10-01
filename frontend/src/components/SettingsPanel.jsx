@@ -45,7 +45,7 @@ export const SettingsPanel = ({ settings, onChange }) => {
       <div className="flex gap-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-900" data-testid="settings-limits-note">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          Un site web ne peut pas couper Internet ni fermer les autres logiciels de l'ordinateur. ÉxamSécure bloque le presse-papier, impose le plein écran et <strong>détecte et consigne chaque sortie</strong> de la fenêtre. Les logiciels permis (Antidote, WordQ, Lexibar) ne comptent pas comme infraction. Pour un blocage total du poste, combinez avec Safe Exam Browser ou la gestion des postes de l'école.
+          Un site web ne peut pas couper Internet ni fermer les autres logiciels de l'ordinateur. MonExamEnLigne bloque le presse-papier, impose le plein écran et <strong>détecte et consigne chaque sortie</strong> de la fenêtre. Les logiciels permis (Antidote, WordQ, Lexibar) ne comptent pas comme infraction. Pour un blocage total du poste, combinez avec Safe Exam Browser ou la gestion des postes de l'école.
         </p>
       </div>
     </div>

@@ -512,7 +512,7 @@ async def student_file(s: dict = Depends(current_session)):
 
 @api.get("/")
 async def root():
-    return {"message": "ÉxamSécure API"}
+    return {"message": "MonExamEnLigne API"}
 
 
 app.include_router(api)

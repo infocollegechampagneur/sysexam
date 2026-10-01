@@ -27,11 +27,19 @@ const AnnotationBox = ({ a, pageW, readOnly, onChange, onDelete, onDragStart, id
   );
 };
 
+export const HL_COLORS = [
+  { id: "yellow", hex: "#FDE047", label: "Jaune" },
+  { id: "green", hex: "#86EFAC", label: "Vert" },
+  { id: "blue", hex: "#93C5FD", label: "Bleu" },
+  { id: "pink", hex: "#F9A8D4", label: "Rose" },
+  { id: "orange", hex: "#FDBA74", label: "Orange" },
+];
+
 const Mark = ({ a, idx, readOnly, passive, onDelete }) => (
   <div className={`group absolute ${passive ? "pointer-events-none" : ""}`} data-testid={`mark-${a.kind}-${idx}`}
     style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%`, width: `${a.w * 100}%`, height: `${a.h * 100}%` }}>
     {a.kind === "highlight"
-      ? <div className="h-full w-full rounded-[2px] bg-yellow-300/50 mix-blend-multiply" />
+      ? <div className="h-full w-full rounded-[2px] mix-blend-multiply" style={{ backgroundColor: a.color || HL_COLORS[0].hex, opacity: 0.6 }} />
       : <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-rose-600" />}
     {!readOnly && (
       <button type="button" onClick={onDelete} aria-label="Retirer la marque" data-testid={`mark-delete-${idx}`}
@@ -47,6 +55,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
   const [error, setError] = useState(false);
   const [mode, setMode] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [hlColor, setHlColor] = useState(HL_COLORS[0].hex);
   const [width, setWidth] = useState(800);
   const wrap = useRef(null);
   const annRef = useRef(annotations);
@@ -82,7 +91,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
     const sx = clamp((e.clientX - r.left) / r.width), sy = clamp((e.clientY - r.top) / r.height);
     const calc = (ev) => {
       const x = clamp((ev.clientX - r.left) / r.width), y = clamp((ev.clientY - r.top) / r.height);
-      return { page, kind, x: Math.min(sx, x), y: Math.min(sy, y), w: Math.abs(x - sx), h: Math.abs(y - sy) };
+      return { page, kind, ...(kind === "highlight" ? { color: hlColor } : {}), x: Math.min(sx, x), y: Math.min(sy, y), w: Math.abs(x - sx), h: Math.abs(y - sy) };
     };
     const move = (ev) => setDraft(calc(ev));
     const up = (ev) => {
@@ -125,6 +134,14 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-2">
           <ModeBtn m="text" icon={Type} label={mode === "text" ? "Cliquez dans le document…" : "Zone de texte"} testId="annotator-add-text-btn" />
           <ModeBtn m="highlight" icon={Highlighter} label="Surligner" testId="annotator-highlight-btn" />
+          <div className="flex items-center gap-1 rounded-full border border-slate-200 px-1.5 py-1" role="radiogroup" aria-label="Couleur du surligneur" data-testid="highlight-color-picker">
+            {HL_COLORS.map((c) => (
+              <button key={c.id} type="button" title={c.label} aria-label={c.label} aria-checked={hlColor === c.hex} role="radio"
+                onClick={() => { setHlColor(c.hex); setMode("highlight"); }} data-testid={`highlight-color-${c.id}`}
+                className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${hlColor === c.hex ? "scale-110 border-slate-900" : "border-white"}`}
+                style={{ backgroundColor: c.hex }} />
+            ))}
+          </div>
           <ModeBtn m="underline" icon={UnderlineIcon} label="Souligner" testId="annotator-underline-btn" />
           <span className="text-xs text-slate-500" data-testid="annotator-counts">
             {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : "survolez une marque pour la retirer"}

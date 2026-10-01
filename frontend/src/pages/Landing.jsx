@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock, ClipboardX, MonitorX, BookOpenCheck, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Brand } from "@/components/TeacherLayout";
 import { api, formatErr } from "@/lib/api";
 
-const features = [
-  { icon: ClipboardX, title: "Presse-papier verrouillé", text: "Copier, couper et coller sont bloqués et consignés." },
-  { icon: MonitorX, title: "Changement d'onglet détecté", text: "Chaque sortie de la fenêtre est horodatée et comptée." },
-  { icon: BookOpenCheck, title: "Outils d'aide au choix", text: "Antidote, WordQ, Lexibar, Usito, WordReference : l'enseignant décide." },
-];
 
 const JoinCard = () => {
   const nav = useNavigate();
@@ -63,34 +58,13 @@ export default function Landing() {
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
         <Brand />
         <Link to="/connexion">
-          <Button variant="outline" className="border-blue-900 text-blue-900 hover:bg-blue-50" data-testid="teacher-login-link">
+          <Button variant="outline" size="sm" className="border-blue-900 text-blue-900 hover:bg-blue-50 sm:h-10 sm:px-4" data-testid="teacher-login-link">
             Espace enseignant
           </Button>
         </Link>
       </header>
-      <main className="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 pt-8 sm:px-6 lg:grid-cols-12 lg:px-8 lg:pt-16">
-        <section className="lg:col-span-7 fade-up">
-          <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-800">
-            <Lock className="h-3.5 w-3.5" /> Évaluation en environnement contrôlé
-          </span>
-          <h1 className="mt-6 font-display text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-            Des examens en ligne<br />
-            <span className="text-blue-900">sans plagiat</span>, sans détour.
-          </h1>
-          <p className="mt-6 max-w-xl text-base text-slate-600 md:text-lg">
-            Formulaires, rédactions ou vos propres documents Word et PDF. Plein écran obligatoire, presse-papier bloqué, et seulement les outils d'aide que vous autorisez.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            {features.map((f, i) => (
-              <div key={f.title} className="rounded-xl border border-slate-200 bg-white/80 p-4 backdrop-blur fade-up" style={{ animationDelay: `${120 * (i + 1)}ms` }}>
-                <f.icon className="h-5 w-5 text-blue-900" />
-                <p className="mt-3 text-sm font-semibold text-slate-900">{f.title}</p>
-                <p className="mt-1 text-sm text-slate-500">{f.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="lg:col-span-5 fade-up" style={{ animationDelay: "200ms" }}>
+      <main className="grid place-items-center px-4 pb-20 pt-8 lg:pt-16">
+        <section className="w-full max-w-md fade-up">
           <JoinCard />
         </section>
       </main>

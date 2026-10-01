@@ -28,7 +28,12 @@ export async function downloadAnnotatedPdf(blob, annotations, filename) {
     if (!p) continue;
     const { width, height } = p.getSize();
     const by = height - (a.y + (a.h || 0)) * height;
-    if (a.kind === "highlight") { p.drawRectangle({ x: a.x * width, y: by, width: a.w * width, height: a.h * height, color: rgb(1, 0.88, 0.2), opacity: 0.4 }); continue; }
+    if (a.kind === "highlight") {
+      const hex = (a.color || "#FDE047").replace("#", "");
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      p.drawRectangle({ x: a.x * width, y: by, width: a.w * width, height: a.h * height, color: rgb(r, g, b), opacity: 0.5 });
+      continue;
+    }
     if (a.kind === "underline") { p.drawLine({ start: { x: a.x * width, y: by }, end: { x: (a.x + a.w) * width, y: by }, thickness: 1.5, color: rgb(0.86, 0.15, 0.15) }); continue; }
     if (!a.text?.trim()) continue;
     const size = a.fs * width;

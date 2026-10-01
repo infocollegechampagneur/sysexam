@@ -24,5 +24,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 
 ## Backlog
 - Iteration 3: PDF highlight & underline marks (drag), shown to teacher and burned into annotated PDF export
+- Iteration 4: 5 highlighter colors (in UI + annotated PDF), rebrand to MonExamEnLigne, landing reduced to centered student join card
 - P1: Safe Exam Browser config file (.seb) export per exam
 - P2: Statistics per question, server-side export with watermark
