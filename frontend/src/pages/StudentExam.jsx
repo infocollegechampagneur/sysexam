@@ -73,9 +73,9 @@ export default function StudentExam() {
 
   const readMessage = () => { setMessage(null); sapi.post("/student/message-read").catch(() => {}); };
 
-  const onEvent = useCallback(async (type, detail, seconds = 0, text = "") => {
+  const onEvent = useCallback(async (type, detail, seconds = 0, text = "", before = "") => {
     try {
-      const { data: r } = await sapi.post("/student/event", { type, detail, seconds, text });
+      const { data: r } = await sapi.post("/student/event", { type, detail, seconds, text, before });
       setViolations(r.violations);
       setStatus(r.status);
       setLimit(r.limit);

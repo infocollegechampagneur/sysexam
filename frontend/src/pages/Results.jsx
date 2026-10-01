@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, ClipboardPaste } from "lucide-react";
 import { SurveillanceReport } from "@/components/SurveillanceReport";
 import { ClassControls } from "@/components/TeacherControls";
 import { toast } from "sonner";
@@ -14,12 +14,17 @@ import { SESSION_LABELS } from "@/lib/tools";
 
 const DOT = { in_progress: "bg-blue-500", locked: "bg-rose-600", submitted: "bg-emerald-600" };
 
-const SessionRow = ({ s, active, onClick, i }) => (
+const SessionRow = ({ s, active, onClick, i }) => {
+  const pastes = (s.events || []).filter((e) => e.type === "clipboard_tool" && e.suspect).length;
+  return (
   <button onClick={onClick} data-testid={`monitoring-student-card-${i}`}
     className={`w-full rounded-lg border p-3 text-left transition-colors ${active ? "border-blue-900 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-300"} ${s.status === "locked" ? "ring-1 ring-rose-300" : ""}`}>
     <div className="flex items-center justify-between gap-2">
       <span className="truncate font-medium text-slate-900">{s.student_name}</span>
-      {s.violations > 0 && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">{s.violations}</span>}
+      <span className="flex items-center gap-1">
+        {pastes > 0 && <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" title="Collage(s) de 40 mots ou plus" data-testid={`paste-badge-${i}`}><ClipboardPaste className="h-3 w-3" />{pastes}</span>}
+        {s.violations > 0 && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">{s.violations}</span>}
+      </span>
     </div>
     <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
       <span className={`h-2 w-2 rounded-full ${DOT[s.status]} ${s.status === "in_progress" ? "animate-pulse" : ""}`} />
@@ -27,7 +32,8 @@ const SessionRow = ({ s, active, onClick, i }) => (
       {s.grade?.score != null && <span className="ml-auto font-mono text-blue-900">{s.grade.score}/{s.grade.max_score}</span>}
     </div>
   </button>
-);
+  );
+};
 
 export default function Results() {
   const { id } = useParams();
@@ -36,12 +42,22 @@ export default function Results() {
   const [sessions, setSessions] = useState([]);
   const [sel, setSel] = useState(null);
   const lockedRef = useRef(null);
+  const pasteRef = useRef(null);
 
   const load = useCallback(() => {
     api.get(`/exams/${id}/sessions`).then((r) => {
       const locked = r.data.filter((s) => s.status === "locked");
       if (lockedRef.current) locked.filter((s) => !lockedRef.current.has(s.id)).forEach((s) => toast.error(`Examen bloqué : ${s.student_name} (${s.violations} signalements)`, { duration: 10000 }));
       lockedRef.current = new Set(locked.map((s) => s.id));
+      const suspects = Object.fromEntries(r.data.map((s) => [s.id, (s.events || []).filter((e) => e.type === "clipboard_tool" && e.suspect).length]));
+      if (pasteRef.current) r.data.forEach((s) => {
+        const n = suspects[s.id] - (pasteRef.current[s.id] || 0);
+        if (n > 0) {
+          const ev = [...s.events].reverse().find((e) => e.type === "clipboard_tool" && e.suspect);
+          toast.warning(`Collage important : ${s.student_name} a collé ${ev.words} mots d'un coup (${ev.similarity ?? 0} % déjà écrits)`, { duration: 12000, action: { label: "Voir", onClick: () => setSel(s.id) } });
+        }
+      });
+      pasteRef.current = suspects;
       setSessions(r.data);
     }).catch((e) => toast.error(formatErr(e)));
   }, [id]);

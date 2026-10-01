@@ -1,6 +1,14 @@
-import { ShieldCheck, Globe, Monitor, Ban, Maximize, ClipboardX, Eye } from "lucide-react";
+import { ShieldCheck, Globe, Monitor, Ban, Maximize, ClipboardX, Eye, SpellCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TOOLS } from "@/lib/tools";
+
+const ANTIDOTE_STEPS = [
+  "Rédigez votre texte directement dans la zone de réponse de l'examen.",
+  "Cliquez sur le bouton vert « Corriger avec Antidote » dans la barre de l'éditeur : votre texte est copié automatiquement.",
+  "Dans Antidote, collez le texte (Ctrl+V), lancez le correcteur et appliquez les corrections.",
+  "Dans Antidote, sélectionnez tout (Ctrl+A) et copiez (Ctrl+C).",
+  "Revenez dans l'examen, sélectionnez votre ancien texte (Ctrl+A dans la zone) et collez (Ctrl+V) la version corrigée.",
+];
 
 const RULES = [
   { icon: Maximize, text: "L'examen se déroule en plein écran. En sortir est une infraction." },
@@ -39,6 +47,15 @@ export const ExamIntro = ({ exam, session, onStart }) => {
           </div>
         </div>
       </div>
+      {st.allowed_tools.includes("antidote") && (
+        <div className="mt-6 rounded-xl border border-emerald-800 bg-emerald-950/30 p-5" data-testid="antidote-guide">
+          <p className="flex items-center gap-2 font-semibold text-emerald-200"><SpellCheck className="h-4 w-4" />Comment corriger avec Antidote sans infraction</p>
+          <ol className="mt-3 space-y-2 text-sm text-emerald-100/90">
+            {ANTIDOTE_STEPS.map((s, i) => <li key={i} className="flex gap-3"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-700 font-mono text-xs font-bold text-white">{i + 1}</span>{s}</li>)}
+          </ol>
+          <p className="mt-3 text-xs text-emerald-300/80">Le copier-coller est permis <strong>seulement dans votre zone de réponse</strong>. Chaque collage est noté et visible par l'enseignant : ne collez que votre propre texte corrigé. Copier l'énoncé, ouvrir un autre site ou une autre application reste une infraction.</p>
+        </div>
+      )}
       <Button onClick={onStart} className="mt-10 h-12 w-full bg-blue-600 text-base hover:bg-blue-500" data-testid="start-exam-btn">
         {st.require_fullscreen ? "Passer en plein écran et commencer" : "Commencer l'examen"}
       </Button>

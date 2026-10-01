@@ -147,8 +147,12 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           </div>
         )}
         {exam.exam_type !== "form" && !inlinePdf && (
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="font-medium text-slate-900">Rédaction <span className="text-sm font-normal text-slate-500">({wordCount(session.essay_html)} mots)</span></p>
+          <div className="rounded-xl border-2 border-blue-900/20 bg-white p-4" data-testid="grade-essay-section">
+            <div className="flex items-center justify-between">
+              <p className="font-display font-semibold text-slate-900">Production écrite</p>
+              <span className="rounded-md border border-blue-900 px-2 py-0.5 font-mono text-sm font-bold text-blue-900" data-testid="grade-essay-words">{wordCount(session.essay_html)} mots</span>
+            </div>
+            {exam.writing_prompt && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-500">Sujet : {exam.writing_prompt}</p>}
             <div className="doc-html mt-2 rounded-md border border-slate-200 p-4" data-testid="grade-essay" dangerouslySetInnerHTML={{ __html: session.essay_html || "<em>(vide)</em>" }} />
           </div>
         )}

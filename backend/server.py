@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import re
 import io
 import uuid
 import random
@@ -55,6 +56,15 @@ api = APIRouter(prefix="/api")
 
 TOOLS = ["usito", "wordreference", "antidote", "wordq", "lexibar"]
 COUNTED_EVENTS = {"tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt", "forbidden_app"}
+
+
+def text_similarity(pasted: str, before: str) -> int:
+    norm = lambda s: re.findall(r"[\w'’-]+", s.lower())
+    a, b = norm(pasted), norm(before)
+    if not a or not b:
+        return 0
+    sb = set(b)
+    return round(100 * sum(1 for w in a if w in sb) / len(a))
 
 
 def new_exit_code():
@@ -153,6 +163,7 @@ class EventIn(BaseModel):
     detail: str = ""
     seconds: float = 0
     text: str = ""
+    before: str = ""
 
 
 class UnlockIn(BaseModel):
@@ -641,6 +652,11 @@ async def student_event(body: EventIn, s: dict = Depends(current_session)):
         ev["seconds"] = round(body.seconds, 1)
     if body.text:
         ev["text"] = body.text[:3000]
+        words = len(body.text.split())
+        ev["words"] = words
+        ev["similarity"] = text_similarity(body.text, body.before)
+        ev["before_words"] = len(body.before.split())
+        ev["suspect"] = words >= 40
     upd = {"$push": {"events": ev}}
     violations = s["violations"] + (1 if counted else 0)
     status = s["status"]

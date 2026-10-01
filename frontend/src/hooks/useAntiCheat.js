@@ -16,13 +16,13 @@ export function useAntiCheat({ active, settings, onEvent }) {
 
   const toolActive = () => (popupRef.current && !popupRef.current.closed) || Date.now() < graceRef.current;
 
-  const emit = useCallback((type, detail, seconds = 0, text = "") => {
+  const emit = useCallback((type, detail, seconds = 0, text = "", before = "") => {
     if (COUNTED.has(type) || type === "clipboard_tool") {
       const last = lastCountedRef.current[type] || 0;
       if (Date.now() - last < 1500) return;
       lastCountedRef.current[type] = Date.now();
     }
-    onEventRef.current(type, detail, seconds, text);
+    onEventRef.current(type, detail, seconds, text, before);
   }, []);
 
   useEffect(() => {
@@ -30,11 +30,13 @@ export function useAntiCheat({ active, settings, onEvent }) {
     const block = settings.block_clipboard;
     const onClip = (e) => {
       if (!block) return;
-      if (desktopAllowed.length && e.target?.closest?.("[data-answer-zone]")) {
+      const zone = desktopAllowed.length && e.target?.closest?.("[data-answer-zone]");
+      if (zone) {
         const verb = { copy: "copié", cut: "coupé", paste: "collé" }[e.type];
         const text = (e.type === "paste" ? e.clipboardData?.getData("text") : String(window.getSelection() || "")) || "";
         const words = (text.trim().match(/\S+/g) || []).length;
-        return emit("clipboard_tool", `A ${verb} ${words} mot(s) dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`, 0, e.type === "paste" ? text.slice(0, 3000) : "");
+        const before = e.type === "paste" ? (zone.tagName === "INPUT" ? zone.value : zone.innerText || "").slice(0, 6000) : "";
+        return emit("clipboard_tool", `A ${verb} ${words} mot(s) dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`, 0, e.type === "paste" ? text.slice(0, 3000) : "", before);
       }
       e.preventDefault();
       const sel = window.getSelection();

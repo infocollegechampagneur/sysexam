@@ -17,12 +17,17 @@ export const CopyContent = ({ exam, session, grade, per }) => {
         <div key={q.id} style={{ breakInside: "avoid" }}>
           <p style={{ fontWeight: 600, margin: 0 }}>{i + 1}. {q.text} <span style={{ fontWeight: 400, color: "#64748b" }}>({q.points} pts)</span></p>
           <div style={{ margin: "6px 0", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6 }} className="doc-html" dangerouslySetInnerHTML={{ __html: answerText(q, session.answers?.[q.id]) }} />
+          {q.type === "long" && <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 4px", textAlign: "right" }}>{wordCount(session.answers?.[q.id])} mots</p>}
           {(p[q.id]?.points !== undefined || p[q.id]?.comment) && <p style={{ fontSize: 13, color: "#1e3a8a", margin: 0 }}>Points : {p[q.id]?.points ?? "—"} {p[q.id]?.comment && `— ${p[q.id].comment}`}</p>}
         </div>
       ))}
       {exam.exam_type !== "form" && !(exam.doc_answer_mode === "inline" && exam.file?.kind === "pdf") && (
-        <div>
-          <p style={{ fontWeight: 600, margin: 0 }}>Rédaction ({wordCount(session.essay_html)} mots){exam.writing_prompt && ` — ${exam.writing_prompt}`}</p>
+        <div style={{ marginTop: 12, breakInside: "avoid" }} data-testid="copy-essay-section">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1e3a8a", paddingBottom: 4 }}>
+            <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>Production écrite</p>
+            <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#1e3a8a", border: "1px solid #1e3a8a", borderRadius: 6, padding: "2px 8px" }} data-testid="copy-essay-words">{wordCount(session.essay_html)} mots</span>
+          </div>
+          {exam.writing_prompt && <p style={{ margin: "6px 0 0", fontSize: 13, color: "#475569", whiteSpace: "pre-wrap" }}>Sujet : {exam.writing_prompt}</p>}
           <div className="doc-html" style={{ marginTop: 6, padding: 12, border: "1px solid #cbd5e1", borderRadius: 6 }} dangerouslySetInnerHTML={{ __html: session.essay_html || "<em>(vide)</em>" }} />
         </div>
       )}
