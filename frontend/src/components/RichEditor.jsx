@@ -15,21 +15,21 @@ const Btn = ({ onClick, active, children, label }) => (
   </button>
 );
 
-export const RichEditor = ({ value, onChange, spellcheck = false, testId = "rich-editor", minHeight = 260, placeholder }) => {
+export const RichEditor = ({ value, onChange, spellcheck = false, testId = "rich-editor", minHeight = 260, placeholder, allowPaste = false }) => {
   const editor = useEditor({
     extensions: [StarterKit],
     content: value || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: { spellcheck: String(!!spellcheck), "data-testid": testId, "aria-label": placeholder || "Zone de rédaction" },
-      handlePaste: () => true,
+      handlePaste: () => !allowPaste,
       handleDrop: () => true,
     },
-  });
+  }, [allowPaste]);
   if (!editor) return null;
   const c = () => editor.chain().focus();
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-300 bg-white" style={{ "--editor-min": `${minHeight}px` }}>
+    <div data-answer-zone="" className="overflow-hidden rounded-lg border border-slate-300 bg-white" style={{ "--editor-min": `${minHeight}px` }}>
       <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-slate-50 px-2 py-1">
         <Btn label="Gras" active={editor.isActive("bold")} onClick={() => c().toggleBold().run()}><Bold className="h-4 w-4" /></Btn>
         <Btn label="Italique" active={editor.isActive("italic")} onClick={() => c().toggleItalic().run()}><Italic className="h-4 w-4" /></Btn>

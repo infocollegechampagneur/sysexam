@@ -17,7 +17,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   const toolActive = () => (popupRef.current && !popupRef.current.closed) || Date.now() < graceRef.current;
 
   const emit = useCallback((type, detail) => {
-    if (COUNTED.has(type)) {
+    if (COUNTED.has(type) || type === "clipboard_tool") {
       const last = lastCountedRef.current[type] || 0;
       if (Date.now() - last < 1500) return;
       lastCountedRef.current[type] = Date.now();
@@ -30,6 +30,10 @@ export function useAntiCheat({ active, settings, onEvent }) {
     const block = settings.block_clipboard;
     const onClip = (e) => {
       if (!block) return;
+      if (desktopAllowed.length && e.target?.closest?.("[data-answer-zone]")) {
+        const verb = { copy: "copié", cut: "coupé", paste: "collé" }[e.type];
+        return emit("clipboard_tool", `A ${verb} du texte dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`);
+      }
       e.preventDefault();
       const sel = window.getSelection();
       const inToast = sel?.anchorNode?.parentElement?.closest?.("[data-sonner-toaster]");
@@ -71,7 +75,11 @@ export function useAntiCheat({ active, settings, onEvent }) {
     const onFs = () => {
       const fs = !!document.fullscreenElement;
       setIsFullscreen(fs);
-      if (!fs && settings.require_fullscreen) emit(toolActive() ? "fullscreen_exit_tool" : "fullscreen_exit", toolActive() ? "Sortie du plein écran pour un outil autorisé" : "Sortie du mode plein écran");
+      if (!fs && settings.require_fullscreen) {
+        if (toolActive()) return emit("fullscreen_exit_tool", "Sortie du plein écran pour un outil autorisé");
+        if (desktopAllowed.length) return emit("fullscreen_exit_tool", `Sortie du plein écran (logiciels permis : ${desktopAllowed.join(", ")})`);
+        emit("fullscreen_exit", "Sortie du mode plein écran");
+      }
     };
     const onPrint = () => emit("print_attempt", "Tentative d'impression");
     document.addEventListener("copy", onClip, true);
