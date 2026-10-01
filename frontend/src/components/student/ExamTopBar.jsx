@@ -1,0 +1,54 @@
+import { Globe, Monitor, CloudCheck, ShieldAlert, Send, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ExamTimer } from "@/components/student/ExamTimer";
+import { TOOLS } from "@/lib/tools";
+
+export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, onTool, onSubmit, submitting, onExpire }) => {
+  const allowed = TOOLS.filter((t) => exam.settings.allowed_tools.includes(t.id));
+  return (
+    <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display font-semibold text-white" data-testid="exam-topbar-title">{exam.title}</p>
+          <p className="truncate text-xs text-slate-400">{session.student_name}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5" data-testid="exam-tools-bar">
+          {allowed.map((t) => t.kind === "web" ? (
+            <Button key={t.id} size="sm" variant="outline" onClick={() => onTool(t)} className="h-8 border-emerald-700 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900 hover:text-white" data-testid={`tool-button-${t.id}`}>
+              <Globe className="mr-1 h-3.5 w-3.5" />{t.label}
+            </Button>
+          ) : (
+            <span key={t.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-700 px-2.5 text-xs text-slate-300" title="Logiciel permis sur ce poste" data-testid={`tool-badge-${t.id}`}>
+              <Monitor className="h-3.5 w-3.5" />{t.label}
+            </span>
+          ))}
+        </div>
+        <span className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold ${violations ? "bg-rose-950 text-rose-300" : "bg-slate-800 text-slate-300"}`} data-testid="violations-indicator">
+          <ShieldAlert className="h-3.5 w-3.5" />{violations}/{exam.settings.max_violations}
+        </span>
+        <span className="hidden items-center gap-1 text-xs text-emerald-400 sm:flex" data-testid="autosave-indicator">
+          <CloudCheck className="h-4 w-4" />{savedAt ? `Sauvegardé à ${new Date(savedAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Non sauvegardé"}
+        </span>
+        <ExamTimer deadline={deadline} offsetMs={offsetMs} onExpire={onExpire} />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500" disabled={submitting} data-testid="submit-exam-btn">
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1.5 h-3.5 w-3.5" />Remettre</>}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remettre votre copie ?</AlertDialogTitle>
+              <AlertDialogDescription>Une fois remise, vous ne pourrez plus modifier vos réponses.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="cancel-submit-modal-btn">Continuer l'examen</AlertDialogCancel>
+              <AlertDialogAction onClick={onSubmit} className="bg-blue-900 hover:bg-blue-800" data-testid="confirm-submit-modal-btn">Remettre</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </header>
+  );
+};

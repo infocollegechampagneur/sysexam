@@ -1,0 +1,125 @@
+{
+  "project_name": "ÉxamSécure / ÉxamProctor Québec",
+  "app_type": "saas_app",
+  "archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST + INSTITUTIONAL SECURITY",
+  "language_context": "French (Québec) - Examen sécurisé et environnement contrôlé",
+  "typography": {
+    "heading_font": "Outfit, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 dark:text-slate-100",
+      "h2": "text-2xl sm:text-3xl font-semibold tracking-tight text-slate-800 dark:text-slate-200",
+      "h3": "text-xl sm:text-2xl font-semibold text-slate-800 dark:text-slate-200",
+      "h4": "text-lg font-medium text-slate-700 dark:text-slate-300",
+      "body": "text-base leading-relaxed text-slate-600 dark:text-slate-300",
+      "small": "text-sm text-slate-500 dark:text-slate-400",
+      "badge": "text-xs font-semibold uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "theme_mode": "Light default with high-contrast locked dark surfaces for exam security mode",
+    "primary": "#1E3A8A",
+    "primary_hover": "#1D4ED8",
+    "accent_blue": "#2563EB",
+    "accent_emerald": "#059669",
+    "accent_amber": "#D97706",
+    "accent_rose": "#DC2626",
+    "background_light": "#F8FAFC",
+    "surface_light": "#FFFFFF",
+    "border_light": "#E2E8F0",
+    "background_dark": "#0F172A",
+    "surface_dark": "#1E293B",
+    "border_dark": "#334155",
+    "exam_lockdown_bg": "#0B0F17"
+  },
+  "visual_enhancers": {
+    "cards": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200",
+    "proctor_card": "relative overflow-hidden border-2 rounded-xl p-5 shadow-sm transition-all",
+    "badge_authorized_tool": "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+    "badge_forbidden_tool": "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 line-through dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700",
+    "warning_banner": "bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-500",
+    "alert_banner": "bg-rose-50 border-l-4 border-rose-600 p-4 rounded-r-lg text-rose-900 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-600",
+    "autosave_indicator": "flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800"
+  },
+  "grids_and_layouts": {
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+    "exam_builder_layout": "grid grid-cols-1 lg:grid-cols-12 gap-8",
+    "student_exam_shell": "min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-none select-none",
+    "container_max": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+  },
+  "key_features_and_ux_flows": {
+    "teacher_dashboard": {
+      "header": "Stats summary (active exams, total students, flagged anti-cheat incidents)",
+      "exam_list": "Table / Grid of created exams with join codes, status (Brouillon, En cours, Terminé), allowed tools badges, direct link to live monitoring and copy code button.",
+      "quick_actions": "Button 'Créer un nouvel examen', 'Rejoindre une session d'observation'"
+    },
+    "exam_builder": {
+      "steps": "1. Informations de base (Titre, Matière, Consignes, Durée) -> 2. Type d'examen (Formulaire, Rédaction / Composition, Document PDF/Word téléversé) -> 3. Autorisations des outils & Sécurité (WordQ, Antidote, Lexibar, Usito.usherbrooke.ca, WordReference, Blocage du presse-papier, Plein écran obligatoire, Seuil max d'avertissements) -> 4. Aperçu & Publication",
+      "exam_types": [
+        "Formulaire Interactif (QCM, Réponses courtes, Questions développées)",
+        "Rédaction / Composition Libre (Éditeur de texte enrichi sécurisé)",
+        "Document PDF/Word Téléversé (Visualiseur de document + zone de réponse)"
+      ],
+      "tool_toggles": [
+        {"id": "antidote", "label": "Antidote (Correcteur)", "desc": "Permettre le lancement de l'application Antidote locale"},
+        {"id": "wordq", "label": "WordQ (Prédiction de mots)", "desc": "Autoriser la barre d'assistance WordQ"},
+        {"id": "lexibar", "label": "Lexibar (Aide à la lecture)", "desc": "Autoriser l'outil d'aide Lexibar"},
+        {"id": "usito", "label": "Dictionnaire Usito (usito.usherbrooke.ca)", "desc": "Ouvrir Usito dans un panneau sécurisé intégré"},
+        {"id": "wordreference", "label": "WordReference", "desc": "Ouvrir WordReference dans un iframe/modal contrôlé"}
+      ]
+    },
+    "student_portal": {
+      "join_screen": "Card to enter 6-digit Code d'examen, Nom complet, Code permanent / Matricule. System check (Fullscreen readiness, Clipboard lockdown check).",
+      "pre_exam_modal": "Liste des règles: Interdiction de changer d'onglet, Alt+Tab bloqué, Clic droit désactivé, Presse-papier verrouillé. Outils autorisés listés clairement.",
+      "student_locked_exam_environment": {
+        "header": "Persistent bar showing: Timer décomptant, Indicateur d'enregistrement automatique ('Sauvegardé à 14:32'), Code élève, Boutons d'outils autorisés (Usito, WordReference, Antidote, WordQ, Lexibar) et Bouton 'Remettre l'examen'.",
+        "anti_cheat_engine": "Detection of visibilitychange, blur, contextmenu, copy, paste, cut, key combinations (Ctrl+C, Ctrl+V, Alt+Tab, F12). Log exact violation with timestamp to backend and show non-blocking toast warning.",
+        "max_violations_trigger": "If violations reach max (e.g., 3 warnings), show locked screen modal overlay requiring teacher passcode or auto-submitting.",
+        "tool_sidepanel": "Slide-out drawer or tab modal containing embedded authorized web tool windows (Usito / WordReference) with strict URL sandboxing."
+      }
+    },
+    "realtime_monitoring_and_grading": {
+      "live_monitoring": "Realtime student status list (En train de composer, Onglet quitté, Avertissement émis, Terminé/Remis). Live filter by alert level.",
+      "student_detail_drawer": "Show exact chronological timeline of events (e.g. 10:14:02 - Changement de fenêtre détecté).",
+      "grading_page": "Manual & automated scoring, custom feedback comments per question, PDF & Word report export generation."
+    }
+  },
+  "image_urls": {
+    "classroom_hero": "https://images.unsplash.com/photo-1563394867331-e687a36112fd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHw0fHx0ZWFjaGVyJTIwY2xhc3Nyb29tJTIwc3R1ZGVudCUyMGNvbXB1dGVyJTIwZXhhbXxlbnwwfHx8fDE3OTA4MTQ1MDR8MA&ixlib=rb-4.1.0&q=85",
+    "students_in_class": "https://images.unsplash.com/photo-1577896851231-70ef18881754?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwxfHx0ZWFjaGVyJTIwY2xhc3Nyb29tJTIwc3R1ZGVudCUyMGNvbXB1dGVyJTIwZXhhbXxlbnwwfHx8fDE3OTA4MTQ1MDR8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "motion_and_interactions": {
+    "transitions": "transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
+    "hover_effects": "hover:-translate-y-0.5 hover:shadow-md transition-all duration-200",
+    "anti_cheat_pulse": "animate-pulse border-rose-500 bg-rose-50 dark:bg-rose-950/30 text-rose-700"
+  },
+  "testing_and_accessibility": {
+    "data_testid_convention": "All interactive elements (buttons, inputs, toggles, tab items, tool buttons, submit triggers, modal buttons) MUST have kebab-case data-testid attributes.",
+    "sample_test_ids": [
+      "teacher-login-btn",
+      "create-exam-btn",
+      "exam-title-input",
+      "exam-type-select",
+      "tool-toggle-antidote",
+      "tool-toggle-usito",
+      "student-join-code-input",
+      "student-name-input",
+      "start-exam-btn",
+      "exam-rich-editor",
+      "tool-button-usito",
+      "submit-exam-btn",
+      "confirm-submit-modal-btn",
+      "monitoring-student-card-1",
+      "export-pdf-report-btn"
+    ],
+    "contrast_rule": "Strict WCAG AA adherence. Interactive elements must maintain explicit readable hover text colors. Never use transparent header backgrounds."
+  },
+  "instructions_to_main_agent": [
+    "Ensure the entire app is in French (Québec academic context: 'Évaluation sécurisée', 'Antidote', 'WordQ', 'Lexibar', 'Usito').",
+    "Use React standard .js files with Tailwind CSS and pre-built Shadcn components located in src/components/ui/.",
+    "Implement mock anti-cheat listeners (fullscreen exit detector, focus blur counter, right click prevent, copy/paste prevent) for immediate realistic feedback during student test taking.",
+    "Include sample default exams (e.g., 'Examen de Français - Synthèse de texte', 'Évaluation de Mathématiques SN4', 'Rédaction d'histoire') pre-populated so the user can test student and teacher experience right away.",
+    "Always include data-testid on buttons, inputs, modals, and list items for automated testing."
+  ]
+}
