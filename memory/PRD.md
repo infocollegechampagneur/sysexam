@@ -45,3 +45,11 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Les collages dans la zone de réponse envoient le texte (`text`, max 3000 car.) ; `PasteHistory.jsx` l'affiche à l'enseignant dans la fiche élève.
 - Instructions de déploiement (Siteground + Atlas + Render + .msi) remises dans le chat ; détails dans /app/DEPLOIEMENT.md.
 - Testé : iteration_6.json (66/66 backend, E2E OK).
+
+## 2026-06 — Alerte collage, comparaison, guide Antidote, production écrite
+- Backend : `clipboard_tool` stocke words/similarity/before_words/suspect (≥40 mots) ; `text_similarity()`.
+- Surveillance en direct (Results.jsx) : toast « Collage important » + badge ambre sur la carte élève.
+- PasteHistory : verdict par collage (correction / remanié / texte nouveau / zone vide).
+- ExamIntro : guide Antidote en 5 étapes si Antidote permis.
+- Section « Production écrite » avec compteur de mots (SessionDetail + export CopyContent), compteur sur réponses longues.
+- Testé : iteration_7.json (70/70 backend, E2E OK).

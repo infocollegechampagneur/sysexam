@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 7 — Validated suspect paste alert + text comparison + ExamIntro antidote-guide + Production écrite section. Backend: 4 new pytest cases in /app/backend/tests/test_examsecure_v7.py validating clipboard_tool events now store words/similarity/before_words/suspect fields (counted=False), handle empty before (similarity=0, before_words=0), skip suspect flag for <40-word pastes, and compute partial similarity (~50%). All 4 pass. Full regression suite 70/70 PASS. Frontend E2E on preview URL covered all 4 scenarios: (1) toast 'Collage important : AliceLive a collé 80 mots d'un coup (100 % déjà écrits)' + paste-badge-0 appear within 5s poll; (2) SessionDetail shows paste-history, paste-suspect-0, paste-verdict-0 ('100 % de mots déjà écrits — ressemble à une correction'), paste-suspect-count ('1 collage(s) de 40 mots ou plus'); (3) antidote-guide with 5 numbered steps shown on antidote-allowed exam, hidden on no-tool exam; (4) grade-essay-section with grade-essay-words showing '80 mots' after essay save; PDF/Word export buttons present (no JS error).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_examsecure_v7.py", "/app/test_reports/pytest/pytest_v7.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py text_similarity uses regex [\\w'’-]+ with lowercase normalization — correct and avoids punctuation noise. Empty pasted or before returns 0.",
+    "student_event enriches clipboard_tool events with words/similarity/before_words/suspect only when body.text is non-empty; before defaults to empty string via EventIn model. Backward-compatible with v6 events.",
+    "Results.jsx paste alert diff logic uses pasteRef to track per-session suspect counts and emits toast only on delta>0; correctly ignores initial load. Action 'Voir' calls setSel(s.id) to open SessionDetail.",
+    "PasteHistory.jsx pasteVerdict thresholds: ≥70 emerald/correction, 40-69 amber/partiel, <40 rose/NOUVEAU, before_words==0 → 'Zone vide avant le collage' (rose if suspect, slate otherwise). Matches spec.",
+    "SessionDetail.jsx grade-essay-section gated by exam.exam_type !== 'form' && !inlinePdf — correct scope for redaction and document (non-inline) exams. wordCount imported from lib/tools.",
+    "CopyContent.jsx copy-essay-section mirrors SessionDetail wording and gating; safe for PDF/Word export.",
+    "ExamIntro.jsx antidote-guide only rendered when settings.allowed_tools includes 'antidote'. 5 ANTIDOTE_STEPS array matches requirement."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v7.py", "/app/test_reports/iteration_7.json"],
+  "success_rate": {"backend": "100% (4/4 new; 70/70 regression)", "frontend": "100% (4/4 UI scenarios validated on preview URL)"},
+  "test_credentials": "Teacher lynchs2757@gmail.com / Enseignant2026! (seeded).",
+  "seed_data_creation": "Transient test exams prefixed TEST_V7_ / TEST_V7LIVE_ were created and deleted during tests. No residual data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Student session is set to 'in_progress' directly by POST /api/student/join (no /start endpoint). Student token key in sessionStorage is 'exam_token' (not 'student_token'). To test teacher live polling, create a transient exam, join via API as student to obtain X-Session-Token, open /enseignant/examens/{id}/resultats in a UI-logged-in page, then POST /api/student/event with type=clipboard_tool + text + before to trigger toast + paste-badge within ~5s poll. Teacher UI login persists via httpOnly cookie — visiting /connexion when already logged in redirects to /enseignant.",
+  "rca of the issue": "N/A — feature implementation verified correct on both backend (text_similarity + enriched clipboard_tool event fields) and frontend (Results.jsx toast + badge, PasteHistory verdict/suspect badges, ExamIntro antidote-guide, SessionDetail/CopyContent Production écrite section with word count)."
+}
