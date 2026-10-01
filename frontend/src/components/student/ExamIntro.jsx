@@ -16,7 +16,7 @@ export const ExamIntro = ({ exam, session, onStart }) => {
     <div className="mx-auto max-w-3xl px-4 py-12 fade-up" data-testid="exam-intro">
       <p className="text-xs font-semibold uppercase tracking-wider text-blue-300">Bonjour {session.student_name}</p>
       <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl" data-testid="exam-intro-title">{exam.title}</h1>
-      <p className="mt-2 text-slate-400">{exam.subject} · {exam.duration_minutes ? `${exam.duration_minutes} minutes` : "Sans limite de temps"}</p>
+      <p className="mt-2 text-slate-400">{exam.subject} · {exam.duration_minutes ? `${exam.duration_minutes} minutes` : "Sans limite de temps"}{exam.duration_minutes > 0 && session.extra_time_percent > 0 && <span className="text-emerald-400" data-testid="intro-extra-time"> · +{session.extra_time_percent} % de temps (plan d'intervention)</span>}</p>
       {exam.instructions && <p className="mt-6 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900 p-5 text-slate-200">{exam.instructions}</p>}
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">

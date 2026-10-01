@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TeacherLayout } from "@/components/TeacherLayout";
 import { SessionDetail } from "@/components/SessionDetail";
+import { CopyContent } from "@/components/CopyContent";
+import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
 import { api, formatErr } from "@/lib/api";
 import { SESSION_LABELS } from "@/lib/tools";
 
@@ -45,6 +47,9 @@ export default function Results() {
 
   const current = sessions.find((s) => s.id === sel);
   const counts = ["in_progress", "locked", "submitted"].map((k) => [k, sessions.filter((s) => s.status === k).length]);
+  const groupRef = useRef(null);
+  const groupName = `${slug(exam?.title)}_toutes_les_copies`;
+  const groupExport = (fn) => { if (!sessions.length) return toast.error("Aucune copie à exporter"); fn(groupRef.current, groupName); };
 
   return (
     <TeacherLayout>
@@ -56,6 +61,8 @@ export default function Results() {
         </div>
         <span className="rounded-lg border border-dashed border-blue-300 bg-blue-50 px-3 py-1.5 font-mono font-bold tracking-[0.25em] text-blue-900" data-testid="results-exam-code">{exam?.code}</span>
         <Button variant="outline" size="sm" onClick={load} data-testid="results-refresh-btn"><RefreshCw className="mr-1.5 h-4 w-4" />Actualiser</Button>
+        <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />Toutes (PDF)</Button>
+        <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />Toutes (Word)</Button>
       </div>
       <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
@@ -75,6 +82,18 @@ export default function Results() {
           )}
         </section>
       </div>
+      {exam && (
+        <div className="fixed -left-[9999px] top-0 w-[760px] bg-white p-6" aria-hidden>
+          <div ref={groupRef}>
+            {sessions.map((s, i) => (
+              <div key={s.id}>
+                {i > 0 && <p className="html2pdf__page-break" style={{ pageBreakBefore: "always", margin: 0 }} />}
+                <CopyContent exam={exam} session={s} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </TeacherLayout>
   );
 }

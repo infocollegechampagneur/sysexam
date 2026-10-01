@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ShieldCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -23,7 +23,9 @@ export const TeacherLayout = ({ children }) => {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/enseignant" data-testid="nav-home-link"><Brand /></Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-500 sm:inline" data-testid="nav-user-email">{user?.email}</span>
+            <NavLink to="/enseignant" end className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-exams-link">Examens</NavLink>
+            <NavLink to="/enseignant/classes" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-classes-link">Classes</NavLink>
+            <span className="hidden text-sm text-slate-500 lg:inline" data-testid="nav-user-email">{user?.email}</span>
             <Button
               variant="outline"
               size="sm"

@@ -2,7 +2,7 @@ import html2pdf from "html2pdf.js";
 
 export const exportPdf = (element, filename) =>
   html2pdf()
-    .set({ margin: 12, filename: `${filename}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: "mm", format: "letter" } })
+    .set({ margin: 12, filename: `${filename}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: "mm", format: "letter" }, pagebreak: { mode: ["css", "legacy"], avoid: ".avoid-break" } })
     .from(element)
     .save();
 

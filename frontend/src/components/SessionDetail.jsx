@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileType2, Unlock, Save, Loader2 } from "lucide-react";
+import { FileDown, FileType2, Unlock, Save, Loader2, Clock, FilePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CopyContent } from "@/components/CopyContent";
+import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
 import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
 import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
+import { downloadAnnotatedPdf } from "@/lib/pdf";
 
 const Timeline = ({ events }) => (
   <ol className="max-h-80 space-y-2 overflow-y-auto pr-2" data-testid="session-timeline">
@@ -22,29 +25,19 @@ const Timeline = ({ events }) => (
 
 const answerText = (q, v) => (v === undefined || v === "" ? "<em>(sans réponse)</em>" : q.type === "long" ? v : String(v).replace(/</g, "&lt;"));
 
-const CopyContent = ({ exam, session, grade, per }) => (
-  <div className="space-y-5 text-slate-900" style={{ fontFamily: "Public Sans, sans-serif" }}>
-    <div style={{ borderBottom: "2px solid #1e3a8a", paddingBottom: 8 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{exam.title}</h2>
-      <p style={{ margin: "4px 0 0", fontSize: 13 }}>Élève : <strong>{session.student_name}</strong> {session.student_number && `(${session.student_number})`} — Remis : {fmtTime(session.submitted_at)} — Infractions : {session.violations}</p>
-      {grade.score !== "" && grade.score != null && <p style={{ margin: "4px 0 0", fontSize: 13 }}>Note : <strong>{grade.score} / {grade.max_score}</strong></p>}
+const ExtraTime = ({ session, onChanged }) => {
+  const [min, setMin] = useState(session.extra_minutes || 0);
+  const save = () => api.put(`/sessions/${session.id}/extra-time`, { extra_minutes: Number(min) || 0 }).then(() => { toast.success("Temps supplémentaire mis à jour"); onChanged(); }).catch((e) => toast.error(formatErr(e)));
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="extra-time-panel">
+      <Clock className="h-4 w-4 text-blue-900" />
+      <span className="text-slate-700">Temps supp. du plan d'intervention : <strong data-testid="extra-time-percent">{session.extra_time_percent || 0} %</strong></span>
+      <span className="ml-auto text-slate-500">+ minutes accordées</span>
+      <Input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} className="h-9 w-20" data-testid="extra-minutes-input" />
+      <Button size="sm" variant="outline" onClick={save} data-testid="save-extra-minutes-btn">Appliquer</Button>
     </div>
-    {exam.questions.map((q, i) => (
-      <div key={q.id} style={{ breakInside: "avoid" }}>
-        <p style={{ fontWeight: 600, margin: 0 }}>{i + 1}. {q.text} <span style={{ fontWeight: 400, color: "#64748b" }}>({q.points} pts)</span></p>
-        <div style={{ margin: "6px 0", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6 }} className="doc-html" dangerouslySetInnerHTML={{ __html: answerText(q, session.answers?.[q.id]) }} />
-        {(per[q.id]?.points !== undefined || per[q.id]?.comment) && <p style={{ fontSize: 13, color: "#1e3a8a", margin: 0 }}>Points : {per[q.id]?.points ?? "—"} {per[q.id]?.comment && `— ${per[q.id].comment}`}</p>}
-      </div>
-    ))}
-    {(exam.exam_type !== "form") && (
-      <div>
-        <p style={{ fontWeight: 600, margin: 0 }}>Rédaction ({wordCount(session.essay_html)} mots){exam.writing_prompt && ` — ${exam.writing_prompt}`}</p>
-        <div className="doc-html" style={{ marginTop: 6, padding: 12, border: "1px solid #cbd5e1", borderRadius: 6 }} dangerouslySetInnerHTML={{ __html: session.essay_html || "<em>(vide)</em>" }} />
-      </div>
-    )}
-    {grade.comment && <div><p style={{ fontWeight: 600, margin: 0 }}>Commentaire de l'enseignant</p><p style={{ whiteSpace: "pre-wrap", margin: "4px 0 0" }}>{grade.comment}</p></div>}
-  </div>
-);
+  );
+};
 
 export const SessionDetail = ({ exam, session, onChanged }) => {
   const printRef = useRef(null);
@@ -79,6 +72,9 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
   };
 
   const fname = `${slug(exam.title)}_${slug(session.student_name)}`;
+  const inlinePdf = exam.exam_type === "document" && exam.doc_answer_mode === "inline" && exam.file?.kind === "pdf";
+  const fetchBlob = useCallback(() => api.get(`/exams/${exam.id}/file`, { responseType: "blob" }).then((r) => r.data), [exam.id]);
+  const annotated = () => fetchBlob().then((b) => downloadAnnotatedPdf(b, session.annotations || [], `${fname}_annote`)).catch(() => toast.error("Export du PDF annoté impossible"));
   return (
     <div className="space-y-6" data-testid="session-detail">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -90,8 +86,11 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           {session.status === "locked" && <Button onClick={unlock} className="bg-amber-600 hover:bg-amber-700" data-testid="unlock-session-btn"><Unlock className="mr-1.5 h-4 w-4" />Déverrouiller</Button>}
           <Button variant="outline" onClick={() => exportPdf(printRef.current, fname)} data-testid="export-pdf-report-btn"><FileDown className="mr-1.5 h-4 w-4" />PDF</Button>
           <Button variant="outline" onClick={() => exportWord(printRef.current, fname)} data-testid="export-word-report-btn"><FileType2 className="mr-1.5 h-4 w-4" />Word</Button>
+          {inlinePdf && <Button variant="outline" onClick={annotated} data-testid="export-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />PDF annoté</Button>}
         </div>
       </div>
+
+      {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Journal de surveillance · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} infraction(s)</span></p>
@@ -109,7 +108,13 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
             </div>
           </div>
         ))}
-        {exam.exam_type !== "form" && (
+        {inlinePdf && (
+          <div>
+            <p className="mb-2 font-medium text-slate-900">Document complété par l'élève</p>
+            <PdfAnnotator key={session.id} fetchBlob={fetchBlob} annotations={session.annotations || []} readOnly />
+          </div>
+        )}
+        {exam.exam_type !== "form" && !inlinePdf && (
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <p className="font-medium text-slate-900">Rédaction <span className="text-sm font-normal text-slate-500">({wordCount(session.essay_html)} mots)</span></p>
             <div className="doc-html mt-2 rounded-md border border-slate-200 p-4" data-testid="grade-essay" dangerouslySetInnerHTML={{ __html: session.essay_html || "<em>(vide)</em>" }} />

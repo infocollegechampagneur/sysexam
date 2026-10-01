@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import ExamBuilder from "@/pages/ExamBuilder";
 import Results from "@/pages/Results";
 import StudentExam from "@/pages/StudentExam";
+import Classes from "@/pages/Classes";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/enseignant/examens/nouveau" element={<ProtectedRoute><ExamBuilder /></ProtectedRoute>} />
             <Route path="/enseignant/examens/:id" element={<ProtectedRoute><ExamBuilder /></ProtectedRoute>} />
             <Route path="/enseignant/examens/:id/resultats" element={<ProtectedRoute><Results /></ProtectedRoute>} />
+            <Route path="/enseignant/classes" element={<ProtectedRoute><Classes /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

@@ -14,6 +14,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 
+import unicodedata
 import mammoth
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
 from starlette.middleware.cors import CORSMiddleware
@@ -85,6 +86,24 @@ class ExamIn(BaseModel):
     writing_prompt: str = ""
     settings: ExamSettings = ExamSettings()
     status: str = "draft"  # draft | open | closed
+    class_id: Optional[str] = None
+    doc_answer_mode: str = "separate"  # separate | inline
+
+
+class RosterStudent(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    student_number: str = ""
+    extra_time_percent: float = 0
+
+
+class ClassIn(BaseModel):
+    name: str
+    students: List[RosterStudent] = []
+
+
+class ExtraTimeIn(BaseModel):
+    extra_minutes: float = 0
 
 
 class JoinIn(BaseModel):
@@ -96,6 +115,7 @@ class JoinIn(BaseModel):
 class AnswersIn(BaseModel):
     answers: Dict[str, Any] = {}
     essay_html: str = ""
+    annotations: List[Dict[str, Any]] = []
 
 
 class EventIn(BaseModel):
@@ -138,8 +158,24 @@ async def current_session(x_session_token: str = Header(None)) -> dict:
     return s
 
 
+def norm(s: str) -> str:
+    s = unicodedata.normalize("NFD", s or "")
+    return " ".join("".join(c for c in s if unicodedata.category(c) != "Mn").lower().split())
+
+
+def match_roster(students: list, name: str, number: str):
+    n, num = norm(name), number.strip().lower()
+    for st in students:
+        snum = (st.get("student_number") or "").strip().lower()
+        if snum and num and snum == num:
+            return st
+        if norm(st["name"]) == n and (not snum or snum == num):
+            return st
+    return None
+
+
 def public_exam(exam: dict) -> dict:
-    keys = ["id", "title", "subject", "instructions", "exam_type", "duration_minutes", "questions", "writing_prompt", "settings", "status"]
+    keys = ["id", "title", "subject", "instructions", "exam_type", "duration_minutes", "questions", "writing_prompt", "settings", "status", "doc_answer_mode"]
     out = {k: exam.get(k) for k in keys}
     f = exam.get("file")
     out["file"] = {"filename": f["filename"], "content_type": f["content_type"], "kind": f["kind"], "html": f.get("html")} if f else None
@@ -153,7 +189,8 @@ def public_session(s: dict) -> dict:
 def deadline_of(session: dict, exam: dict):
     if not exam.get("duration_minutes"):
         return None
-    return datetime.fromisoformat(session["started_at"]) + timedelta(minutes=exam["duration_minutes"])
+    minutes = exam["duration_minutes"] * (1 + (session.get("extra_time_percent") or 0) / 100) + (session.get("extra_minutes") or 0)
+    return datetime.fromisoformat(session["started_at"]) + timedelta(minutes=minutes)
 
 
 # ---------- Auth ----------
@@ -322,6 +359,58 @@ async def unlock_session(session_id: str, user: dict = Depends(current_teacher))
     return {"ok": True}
 
 
+@api.put("/sessions/{session_id}/extra-time")
+async def session_extra_time(session_id: str, body: ExtraTimeIn, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    ev = {"type": "extra_time", "detail": f"Temps supplémentaire accordé : {body.extra_minutes:g} min", "at": now_iso(), "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": {"extra_minutes": body.extra_minutes}, "$push": {"events": ev}})
+    return {"ok": True}
+
+
+# ---------- Teacher: classes ----------
+@api.get("/classes")
+async def list_classes(user: dict = Depends(current_teacher)):
+    return await db.classes.find({"teacher_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+
+@api.post("/classes")
+async def create_class(body: ClassIn, user: dict = Depends(current_teacher)):
+    cls = {**body.model_dump(), "id": str(uuid.uuid4()), "teacher_id": user["id"], "created_at": now_iso()}
+    await db.classes.insert_one(cls)
+    cls.pop("_id", None)
+    return cls
+
+
+async def own_class(class_id: str, user: dict) -> dict:
+    cls = await db.classes.find_one({"id": class_id, "teacher_id": user["id"]}, {"_id": 0})
+    if not cls:
+        raise HTTPException(status_code=404, detail="Classe introuvable")
+    return cls
+
+
+@api.get("/classes/{class_id}")
+async def get_class(class_id: str, user: dict = Depends(current_teacher)):
+    return await own_class(class_id, user)
+
+
+@api.put("/classes/{class_id}")
+async def update_class(class_id: str, body: ClassIn, user: dict = Depends(current_teacher)):
+    await own_class(class_id, user)
+    await db.classes.update_one({"id": class_id}, {"$set": body.model_dump()})
+    return await own_class(class_id, user)
+
+
+@api.delete("/classes/{class_id}")
+async def delete_class(class_id: str, user: dict = Depends(current_teacher)):
+    await own_class(class_id, user)
+    await db.classes.delete_one({"id": class_id})
+    await db.exams.update_many({"class_id": class_id}, {"$set": {"class_id": None}})
+    return {"ok": True}
+
+
 # ---------- Student ----------
 @api.post("/student/join")
 async def student_join(body: JoinIn):
@@ -334,7 +423,15 @@ async def student_join(body: JoinIn):
         raise HTTPException(status_code=404, detail="Code d'examen invalide")
     if exam["status"] != "open":
         raise HTTPException(status_code=403, detail="Cet examen n'est pas ouvert actuellement")
-    existing = await db.sessions.find_one({"exam_id": exam["id"], "student_name_lc": name.lower(), "student_number": body.student_number.strip()}, {"_id": 0})
+    extra_pct = 0
+    number = body.student_number.strip()
+    if exam.get("class_id"):
+        cls = await db.classes.find_one({"id": exam["class_id"]}, {"_id": 0})
+        entry = match_roster(cls["students"], name, number) if cls else None
+        if not entry:
+            raise HTTPException(status_code=403, detail="Vous n'êtes pas inscrit·e sur la liste de cette classe. Vérifiez votre nom et votre matricule.")
+        name, number, extra_pct = entry["name"], entry.get("student_number") or number, entry.get("extra_time_percent") or 0
+    existing = await db.sessions.find_one({"exam_id": exam["id"], "student_name_lc": name.lower(), "student_number": number}, {"_id": 0})
     if existing:
         if existing["status"] == "submitted":
             raise HTTPException(status_code=403, detail="Vous avez déjà remis cet examen")
@@ -342,7 +439,8 @@ async def student_join(body: JoinIn):
         await db.sessions.update_one({"id": existing["id"]}, {"$push": {"events": ev}})
         return {"token": existing["token"]}
     s = {"id": str(uuid.uuid4()), "token": uuid.uuid4().hex + uuid.uuid4().hex, "exam_id": exam["id"],
-         "student_name": name, "student_name_lc": name.lower(), "student_number": body.student_number.strip(),
+         "student_name": name, "student_name_lc": name.lower(), "student_number": number,
+         "extra_time_percent": extra_pct, "extra_minutes": 0, "annotations": [],
          "status": "in_progress", "answers": {}, "essay_html": "", "started_at": now_iso(), "submitted_at": None,
          "last_saved_at": None, "violations": 0,
          "events": [{"type": "joined", "detail": "Début de l'examen", "at": now_iso(), "counted": False}], "grade": None}
@@ -367,8 +465,8 @@ async def student_save(body: AnswersIn, s: dict = Depends(current_session)):
     if dl and datetime.now(timezone.utc) > dl + timedelta(seconds=60):
         raise HTTPException(status_code=403, detail="Le temps est écoulé")
     ts = now_iso()
-    await db.sessions.update_one({"id": s["id"]}, {"$set": {"answers": body.answers, "essay_html": body.essay_html, "last_saved_at": ts}})
-    return {"last_saved_at": ts}
+    await db.sessions.update_one({"id": s["id"]}, {"$set": {"answers": body.answers, "essay_html": body.essay_html, "annotations": body.annotations, "last_saved_at": ts}})
+    return {"last_saved_at": ts, "deadline": dl.isoformat() if dl else None}
 
 
 @api.post("/student/event")
@@ -398,7 +496,7 @@ async def student_submit(body: AnswersIn, s: dict = Depends(current_session)):
     ev = {"type": "submitted", "detail": "Copie remise", "at": ts, "counted": False}
     upd = {"status": "submitted", "submitted_at": ts}
     if s["status"] == "in_progress":
-        upd.update({"answers": body.answers, "essay_html": body.essay_html, "last_saved_at": ts})
+        upd.update({"answers": body.answers, "essay_html": body.essay_html, "annotations": body.annotations, "last_saved_at": ts})
     await db.sessions.update_one({"id": s["id"]}, {"$set": upd, "$push": {"events": ev}})
     return {"ok": True}
 

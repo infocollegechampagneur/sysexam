@@ -18,21 +18,28 @@ export default function StudentExam() {
   const [violations, setViolations] = useState(0);
   const [answers, setAnswers] = useState({});
   const [essay, setEssay] = useState("");
+  const [annotations, setAnnotationsS] = useState([]);
+  const [deadline, setDeadline] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const latest = useRef({ answers: {}, essay_html: "" });
+  const latest = useRef({ answers: {}, essay_html: "", annotations: [] });
   const dirty = useRef(false);
 
   useEffect(() => {
     if (!token) return;
     sapi.get("/student/session").then(({ data: d }) => {
+      const ex = d.exam;
+      const docInline = ex.exam_type === "document" && ex.doc_answer_mode === "inline" && ex.file?.kind === "docx";
+      const essay0 = d.session.essay_html || (docInline ? ex.file.html || "" : "");
       setData({ ...d, offsetMs: new Date(d.server_now).getTime() - Date.now() });
+      setDeadline(d.deadline);
       setStatus(d.session.status);
       setViolations(d.session.violations);
       setAnswers(d.session.answers || {});
-      setEssay(d.session.essay_html || "");
+      setEssay(essay0);
+      setAnnotationsS(d.session.annotations || []);
       setSavedAt(d.session.last_saved_at);
-      latest.current = { answers: d.session.answers || {}, essay_html: d.session.essay_html || "" };
+      latest.current = { answers: d.session.answers || {}, essay_html: essay0, annotations: d.session.annotations || [] };
       if (d.session.status === "submitted") setPhase("submitted");
     }).catch((e) => { toast.error(formatErr(e)); sessionStorage.removeItem("exam_token"); setData(false); });
   }, [token, sapi]);
@@ -52,16 +59,23 @@ export default function StudentExam() {
 
   const setAnswer = (qid, v) => { setAnswers((a) => { const n = { ...a, [qid]: v }; latest.current.answers = n; return n; }); dirty.current = true; };
   const setEssayV = (v) => { setEssay(v); latest.current.essay_html = v; dirty.current = true; };
+  const setAnnotations = (v) => { setAnnotationsS(v); latest.current.annotations = v; dirty.current = true; };
 
   useEffect(() => {
     if (phase !== "exam" || status !== "in_progress") return;
     const iv = setInterval(async () => {
       if (!dirty.current) return;
       dirty.current = false;
-      try { const { data: r } = await sapi.put("/student/answers", latest.current); setSavedAt(r.last_saved_at); } catch (e) { dirty.current = true; }
+      try { const { data: r } = await sapi.put("/student/answers", latest.current); setSavedAt(r.last_saved_at); setDeadline(r.deadline); } catch (e) { dirty.current = true; }
     }, 8000);
     return () => clearInterval(iv);
   }, [phase, status, sapi]);
+
+  useEffect(() => {
+    if (phase !== "exam" || status !== "in_progress" || !deadline) return;
+    const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => setDeadline(d.deadline)).catch(() => {}), 30000);
+    return () => clearInterval(iv);
+  }, [phase, status, sapi, deadline]);
 
   useEffect(() => {
     if (status !== "locked") return;
@@ -97,10 +111,10 @@ export default function StudentExam() {
   const needFs = settings.require_fullscreen && !isFullscreen && status === "in_progress";
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
-      <ExamTopBar exam={exam} session={session} deadline={data.deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations}
+      <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations}
         onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} />
       {!needFs && status !== "locked" && (
-        <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} />
+        <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} />
       )}
       {status === "locked" && <LockedOverlay violations={violations} />}
       {needFs && status !== "locked" && <FullscreenOverlay toolOpen={toolOpen} onResume={enterFullscreen} onCloseTool={closeTool} />}

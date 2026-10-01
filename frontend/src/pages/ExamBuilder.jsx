@@ -17,7 +17,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
-  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft",
+  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate",
   settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false },
 };
 const FIELDS = Object.keys(EMPTY);
@@ -46,7 +46,9 @@ export default function ExamBuilder() {
   const [form, setForm] = useState(EMPTY);
   const [meta, setMeta] = useState({ id: null, code: null, file: null });
   const [saving, setSaving] = useState(false);
+  const [classes, setClasses] = useState([]);
 
+  useEffect(() => { api.get("/classes").then((r) => setClasses(r.data)).catch(() => {}); }, []);
   useEffect(() => {
     if (!id) return;
     api.get(`/exams/${id}`).then(({ data }) => {
@@ -109,11 +111,33 @@ export default function ExamBuilder() {
             <div><Label>Matière / groupe</Label><Input value={form.subject} onChange={(e) => set("subject", e.target.value)} className="mt-1.5" data-testid="exam-subject-input" /></div>
             <div><Label>Durée (minutes, 0 = sans limite)</Label><Input type="number" min={0} value={form.duration_minutes} onChange={(e) => set("duration_minutes", Math.max(0, Number(e.target.value)))} className="mt-1.5" data-testid="exam-duration-input" /></div>
             <div className="md:col-span-2"><Label>Consignes pour les élèves</Label><Textarea rows={4} value={form.instructions} onChange={(e) => set("instructions", e.target.value)} className="mt-1.5" data-testid="exam-instructions-input" /></div>
+            <div className="md:col-span-2">
+              <Label>Liste de classe</Label>
+              <Select value={form.class_id || "none"} onValueChange={(v) => set("class_id", v === "none" ? null : v)}>
+                <SelectTrigger className="mt-1.5" data-testid="exam-class-select"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune — ouvert à tout élève qui a le code</SelectItem>
+                  {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.students.length} élèves)</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="mt-1.5 text-xs text-slate-500">Avec une classe, seuls les élèves inscrits peuvent rejoindre, et leur temps supplémentaire est appliqué. Gérez vos listes dans l'onglet « Classes ».</p>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="content" className="mt-6 space-y-8">
           <TypePicker value={form.exam_type} onChange={(v) => set("exam_type", v)} />
+          {form.exam_type === "document" && (
+            <div className="grid gap-3 md:grid-cols-2" data-testid="doc-answer-mode">
+              {[["separate", "Zone de réponse séparée", "Le document est affiché à côté d'un éditeur où l'élève répond."],
+                ["inline", "Écrire directement dans le document", "Word : l'élève modifie le document lui-même. PDF : l'élève ajoute des zones de texte sur les pages."]].map(([k, t, d]) => (
+                <button key={k} type="button" onClick={() => set("doc_answer_mode", k)} data-testid={`doc-mode-${k}`}
+                  className={`rounded-xl border-2 p-4 text-left transition-colors ${form.doc_answer_mode === k ? "border-blue-900 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-300"}`}>
+                  <p className="font-semibold text-slate-900">{t}</p><p className="mt-1 text-xs text-slate-500">{d}</p>
+                </button>
+              ))}
+            </div>
+          )}
           {form.exam_type !== "form" && (
             <div className="rounded-xl border border-slate-200 bg-white p-6">
               <Label>{form.exam_type === "redaction" ? "Sujet de la rédaction" : "Consigne de la zone de réponse"}</Label>
