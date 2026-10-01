@@ -20,9 +20,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Allowed web tools open in popup (not counted); desktop tools tolerated on blur
 - Live monitoring (5s polling), event timeline, unlock, manual grading per question, export PDF/Word
 - Limitation: web app cannot block internet/OS apps — recommend Safe Exam Browser for full lockdown
+- Iteration 2: class rosters (import CSV/paste, roster-restricted join by name/matricule), extra time % per student + teacher-granted minutes, group export (all copies PDF/Word), write directly in uploaded docs (DOCX editable in editor; PDF text boxes via pdf.js + annotated PDF export via pdf-lib)
 
 ## Backlog
 - P1: Safe Exam Browser config file (.seb) export per exam
-- P1: Class lists / roster restricting who can join
-- P2: Bulk export of all copies (ZIP), statistics per question
-- P2: Accommodations (extra time per student)
+- P2: Statistics per question, server-side export with watermark

@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 2 testing of ÉxamSécure new features (classes/rosters, extra time plan d'intervention, class-restricted join, group export buttons, inline PDF annotator, inline DOCX editor). Backend: 14/14 new pytest in /app/backend/tests/test_examsecure_v2.py all PASS (classes CRUD + delete cascade clears exam.class_id, class-restricted join refuses non-enrolled with 403 and 'inscrit' detail, case/accent-insensitive match, matricule-only match, wrong-matricule refusal, name-only when roster has no matricule, deadline = duration*(1+extra_pct/100) verified ~79.8min for 60min*1.33, teacher PUT /sessions/{id}/extra-time extends deadline by exact +15min via PUT /student/answers response, inline PDF annotations persisted via PUT /student/answers and read back from teacher sessions endpoint, inline DOCX uploaded via mammoth returns html containing 'Examen Word'/content exposed to student via /student/session.exam.file.html). Backend regression: 22/22 original tests still pass. Frontend: Classes page full flow verified (create class, add row, open import dialog, paste 'Marie Tremblay;TREM123;33', confirm, save, persistence across reload). Student join UI: non-enrolled gets 'Vous n'êtes pas inscrit·e...' toast; enrolled 'marie tremblay'/'TREM123' hits intro-extra-time showing '+33 % de temps (plan d'intervention)'. PDF annotator UI: pdf-annotator mounts, pdf-page-0 renders, annotator-add-text-btn + click-on-page spawns annotation-input-0 textarea that accepts typing. Results page: export-all-pdf-btn + export-all-word-btn present on Suivi page; monitoring-student-card-0 opens SessionDetail with extra-time-panel + extra-minutes-input + save-extra-minutes-btn, applying +10 min shows success toast and journal 'extra_time' event. PDF annoté export button visible for inline doc exams.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_examsecure_v2.py",
+    "/app/backend/tests/test_examsecure.py",
+    "/app/test_reports/pytest/pytest_v2.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py public_session returns session dict excluding 'token' only, so annotations ARE exposed to the student via /api/student/session - acceptable since the student owns their copy, but worth noting.",
+    "match_roster: when both the roster entry has a student_number and the student submits a mismatching number, we still refuse (good). But when roster entry has student_number and student submits NO number, 'not snum or snum == num' uses `not snum` -> False (snum truthy), so name match alone fails. This is intentional ('matricule required when roster has one') and verified by test test_wrong_matricule_refused. Document this in UI help text if not already (Landing shows a 'numéro' field but is only required when the class has matricules).",
+    "doc_answer_mode defaults to 'separate'; teacher must pick 'inline' explicitly. For teachers who upload a PDF/DOCX expecting students to write on it, consider making 'inline' the default when exam_type == 'document'.",
+    "No endpoint for backend-side group export - all export logic is client-side in Results.jsx (jsPDF/docx). Acceptable but note that signatures and anti-tamper guarantees are weaker than a backend render; consider server rendering with watermark later.",
+    "login_attempts rate limit uses request.client.host which behind an ingress may be the ingress IP, meaning 5 failures from any user share the lockout bucket per email. Minor hardening."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v2.py"],
+  "success_rate": {"backend": "100% (36/36)", "frontend": "100%"},
+  "test_credentials": "Teacher: lynchs2757@gmail.com / Enseignant2026! (seeded).",
+  "seed_data_creation": "Transient TEST_* classes, exams, sessions created during tests. All TEST_ exams and classes created in the frontend run were cleaned up at end of session. Pytest fixtures delete their own data. Residual TEST_ sessions in FRA401 remain from prior iterations (expected, matches iteration_1 handoff).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New feature pytest file is /app/backend/tests/test_examsecure_v2.py (14 tests covering classes, class-restricted join, extra time deadline math, inline PDF/DOCX exams). Fixtures used: /app/tests/fixtures/examen.pdf and /app/tests/fixtures/examen.docx. Group export (export-all-pdf/word, export-annotated-pdf) is purely client-side (jsPDF/docx libs); backend has no corresponding endpoint. Deadline formula confirmed: duration_minutes * (1 + extra_time_percent/100) + extra_minutes.",
+  "rca of the issue": "N/A - no issues found."
+}

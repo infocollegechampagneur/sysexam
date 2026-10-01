@@ -46,7 +46,7 @@ const JoinCard = () => {
           <Input id="name" required value={f.student_name} onChange={(e) => setF({ ...f, student_name: e.target.value })} className="mt-1.5" data-testid="student-name-input" />
         </div>
         <div>
-          <Label htmlFor="num">Code permanent / matricule (facultatif)</Label>
+          <Label htmlFor="num">Code permanent / matricule (si votre enseignant·e l'exige)</Label>
           <Input id="num" value={f.student_number} onChange={(e) => setF({ ...f, student_number: e.target.value })} className="mt-1.5" data-testid="student-number-input" />
         </div>
       </div>
