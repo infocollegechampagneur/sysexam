@@ -374,7 +374,8 @@ async def student_save(body: AnswersIn, s: dict = Depends(current_session)):
 @api.post("/student/event")
 async def student_event(body: EventIn, s: dict = Depends(current_session)):
     exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
-    counted = body.type in COUNTED_EVENTS and s["status"] == "in_progress"
+    desktop_ok = any(t in exam["settings"].get("allowed_tools", []) for t in ("antidote", "wordq", "lexibar"))
+    counted = (body.type in COUNTED_EVENTS or (body.type == "external_focus" and not desktop_ok)) and s["status"] == "in_progress"
     ev = {"type": body.type, "detail": body.detail[:300], "at": now_iso(), "counted": counted}
     upd = {"$push": {"events": ev}}
     violations = s["violations"] + (1 if counted else 0)
