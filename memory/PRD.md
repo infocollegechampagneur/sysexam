@@ -39,3 +39,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Quand Antidote/WordQ/Lexibar sont permis : copier/coller autorisé dans la zone de réponse (`[data-answer-zone]`, événement `clipboard_tool` non compté), sortie plein écran → `fullscreen_exit_tool` (non compté). Copier depuis l'énoncé reste bloqué/compté.
 - Note affichée à l'enseignant dans les réglages (desktop-tools-notice). Détection des logiciels seulement dans l'app Windows (.msi).
 - Testé : iteration_5.json (62/62 backend, E2E OK).
+
+## 2026-06 — Bouton Antidote + historique des collages
+- Bouton « Corriger avec Antidote » dans l'éditeur (si Antidote permis) : copie le texte, ouvre Antidote dans l'app Windows, événement `antidote_correct` (non compté).
+- Les collages dans la zone de réponse envoient le texte (`text`, max 3000 car.) ; `PasteHistory.jsx` l'affiche à l'enseignant dans la fiche élève.
+- Instructions de déploiement (Siteground + Atlas + Render + .msi) remises dans le chat ; détails dans /app/DEPLOIEMENT.md.
+- Testé : iteration_6.json (66/66 backend, E2E OK).

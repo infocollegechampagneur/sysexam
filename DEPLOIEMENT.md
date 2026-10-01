@@ -202,7 +202,7 @@ Quand ces logiciels sont permis dans l'examen, l'application Windows :
 
 **Chemins d'installation** : les chemins habituels sont dans `config.json` (`tools → paths`). Si un logiciel est installé ailleurs dans votre école, corrigez le chemin dans `C:\ProgramData\MonExamEnLigne\config.json` (section 6.3). Le champ `process` est le nom du processus à détecter : `antidote` détecte par exemple `Antidote.exe`.
 
-> **À savoir :** WordQ et Lexibar fonctionnent au niveau de Windows et marchent dans les zones de texte de l'examen. Avec Antidote, les **dictionnaires et guides** fonctionnent toujours. La **correction directe** dans la zone de texte dépend des connecteurs d'Antidote : testez-la sur un poste, car elle passe parfois par le copier-coller, qui est bloqué pendant l'examen.
+> **À savoir :** WordQ et Lexibar fonctionnent au niveau de Windows et marchent dans les zones de texte de l'examen. Avec Antidote, la correction passe par le copier-coller : c'est pourquoi, dès qu'un de ces logiciels est permis, le copier/coller est **autorisé dans la zone de réponse** (journalisé, non compté ; le texte collé est visible par l'enseignant dans la fiche de l'élève, section « Texte collé »). Le bouton **« Corriger avec Antidote »** de l'éditeur copie le texte de la réponse et ouvre Antidote (dans l'application Windows). Copier depuis l'énoncé reste bloqué.
 
 ### 6.6 Applications interdites (navigateurs, IA, Discord)
 Pendant l'examen, l'application vérifie toutes les 10 secondes les programmes **ouverts avec une fenêtre visible** sur le poste : Chrome, Edge, Firefox, Opera, Brave, Vivaldi, ChatGPT, Copilot, Claude, Perplexity, Gemini, DeepSeek, Discord, Teams, WhatsApp, Messenger…
