@@ -30,7 +30,7 @@ const JoinCard = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.post("/student/join", f);
+      const { data } = await api.post("/student/join", { ...f, client: window.monExam?.isDesktop ? "desktop" : "web" });
       sessionStorage.setItem("exam_token", data.token);
       nav("/examen");
     } catch (err) {

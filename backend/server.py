@@ -23,7 +23,8 @@ from pydantic import BaseModel, Field
 
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
                   decode_token, set_auth_cookies, extract_token)
-from storage import init_storage, put_object, get_object, APP_NAME
+from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorGridFSBucket
 from seed import sample_exams
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -31,6 +32,23 @@ logger = logging.getLogger(__name__)
 
 client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = client[os.environ["DB_NAME"]]
+files_bucket = AsyncIOMotorGridFSBucket(db, bucket_name="exam_files")
+
+
+async def read_file(file_doc: dict) -> bytes:
+    try:
+        stream = await files_bucket.open_download_stream(ObjectId(file_doc["gridfs_id"]))
+        return await stream.read()
+    except Exception:
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+
+
+async def drop_file(file_doc: Optional[dict]):
+    if file_doc and file_doc.get("gridfs_id"):
+        try:
+            await files_bucket.delete(ObjectId(file_doc["gridfs_id"]))
+        except Exception:
+            pass
 
 app = FastAPI()
 api = APIRouter(prefix="/api")
@@ -74,6 +92,7 @@ class ExamSettings(BaseModel):
     require_fullscreen: bool = True
     block_clipboard: bool = True
     browser_spellcheck: bool = False
+    require_desktop: bool = False
 
 
 class ExamIn(BaseModel):
@@ -115,6 +134,7 @@ class JoinIn(BaseModel):
     student_name: str
     student_number: str = ""
     teacher_name: str = ""
+    client: str = "web"
 
 
 class AnswersIn(BaseModel):
@@ -309,7 +329,8 @@ async def update_exam(exam_id: str, body: ExamIn, user: dict = Depends(current_t
 
 @api.delete("/exams/{exam_id}")
 async def delete_exam(exam_id: str, user: dict = Depends(current_teacher)):
-    await own_exam(exam_id, user)
+    exam = await own_exam(exam_id, user)
+    await drop_file(exam.get("file"))
     await db.exams.delete_one({"id": exam_id})
     await db.sessions.delete_many({"exam_id": exam_id})
     return {"ok": True}
@@ -317,7 +338,7 @@ async def delete_exam(exam_id: str, user: dict = Depends(current_teacher)):
 
 @api.post("/exams/{exam_id}/file")
 async def upload_exam_file(exam_id: str, file: UploadFile = File(...), user: dict = Depends(current_teacher)):
-    await own_exam(exam_id, user)
+    exam = await own_exam(exam_id, user)
     name = file.filename or "document"
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if ext not in ("pdf", "docx"):
@@ -326,20 +347,21 @@ async def upload_exam_file(exam_id: str, file: UploadFile = File(...), user: dic
     if len(data) > 20 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 20 Mo)")
     ctype = "application/pdf" if ext == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    path = f"{APP_NAME}/exams/{user['id']}/{uuid.uuid4()}.{ext}"
-    result = await asyncio.to_thread(put_object, path, data, ctype)
+    fid = await files_bucket.upload_from_stream(name, data, metadata={"contentType": ctype, "exam_id": exam_id})
     html = None
     if ext == "docx":
         html = (await asyncio.to_thread(mammoth.convert_to_html, io.BytesIO(data))).value
-    file_doc = {"id": str(uuid.uuid4()), "storage_path": result["path"], "filename": name, "content_type": ctype,
+    file_doc = {"id": str(uuid.uuid4()), "gridfs_id": str(fid), "filename": name, "content_type": ctype,
                 "kind": ext, "size": len(data), "html": html, "uploaded_at": now_iso()}
+    await drop_file(exam.get("file"))
     await db.exams.update_one({"id": exam_id}, {"$set": {"file": file_doc}})
     return file_doc
 
 
 @api.delete("/exams/{exam_id}/file")
 async def remove_exam_file(exam_id: str, user: dict = Depends(current_teacher)):
-    await own_exam(exam_id, user)
+    exam = await own_exam(exam_id, user)
+    await drop_file(exam.get("file"))
     await db.exams.update_one({"id": exam_id}, {"$set": {"file": None}})
     return {"ok": True}
 
@@ -349,8 +371,7 @@ async def teacher_download_file(exam_id: str, user: dict = Depends(current_teach
     exam = await own_exam(exam_id, user)
     if not exam.get("file"):
         raise HTTPException(status_code=404, detail="Aucun fichier")
-    data, _ = await asyncio.to_thread(get_object, exam["file"]["storage_path"])
-    return Response(content=data, media_type=exam["file"]["content_type"])
+    return Response(content=await read_file(exam["file"]), media_type=exam["file"]["content_type"])
 
 
 @api.get("/exams/{exam_id}/sessions")
@@ -473,6 +494,9 @@ async def student_join(body: JoinIn):
         raise HTTPException(status_code=404, detail="Code d'examen invalide")
     if exam["status"] != "open":
         raise HTTPException(status_code=403, detail="Cet examen n'est pas ouvert actuellement")
+    client_kind = "desktop" if body.client == "desktop" else "web"
+    if exam["settings"].get("require_desktop") and client_kind != "desktop":
+        raise HTTPException(status_code=403, detail="Cet examen doit être fait dans l'application MonExamEnLigne pour Windows.")
     extra_pct = 0
     number = body.student_number.strip()
     teacher_name = body.teacher_name.strip()[:120]
@@ -493,7 +517,7 @@ async def student_join(body: JoinIn):
         return {"token": existing["token"]}
     s = {"id": str(uuid.uuid4()), "token": uuid.uuid4().hex + uuid.uuid4().hex, "exam_id": exam["id"],
          "student_name": name, "student_name_lc": name.lower(), "student_number": number,
-         "extra_time_percent": extra_pct, "extra_minutes": 0, "annotations": [], "teacher_name": teacher_name,
+         "extra_time_percent": extra_pct, "extra_minutes": 0, "annotations": [], "teacher_name": teacher_name, "client": client_kind,
          "status": "in_progress", "answers": {}, "essay_html": "", "started_at": now_iso(), "submitted_at": None,
          "last_saved_at": None, "violations": 0,
          "events": [{"type": "joined", "detail": "Début de l'examen", "at": now_iso(), "counted": False}], "grade": None}
@@ -580,8 +604,7 @@ async def student_file(s: dict = Depends(current_session)):
     exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     if not exam.get("file"):
         raise HTTPException(status_code=404, detail="Aucun fichier")
-    data, _ = await asyncio.to_thread(get_object, exam["file"]["storage_path"])
-    return Response(content=data, media_type=exam["file"]["content_type"])
+    return Response(content=await read_file(exam["file"]), media_type=exam["file"]["content_type"])
 
 
 @api.get("/")
@@ -593,7 +616,7 @@ app.include_router(api)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ["FRONTEND_URL"], "http://localhost:3000"],
+    allow_origins=[o.strip() for o in os.environ["FRONTEND_URL"].split(",") if o.strip()] + ["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -618,11 +641,6 @@ async def startup():
     if await db.exams.count_documents({"teacher_id": admin["id"]}) == 0:
         for ex in sample_exams():
             await db.exams.insert_one({**ex, "id": str(uuid.uuid4()), "teacher_id": admin["id"], "file": None, "created_at": now_iso()})
-    try:
-        await asyncio.to_thread(init_storage)
-        logger.info("Storage initialized")
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
 
 
 @app.on_event("shutdown")

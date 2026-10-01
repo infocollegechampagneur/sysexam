@@ -103,7 +103,10 @@ export function useAntiCheat({ active, settings, onEvent }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, settings, emit]);
 
-  const enterFullscreen = () => document.documentElement.requestFullscreen?.().catch(() => {});
+  const enterFullscreen = () => {
+    if (window.monExam?.isDesktop) return window.monExam.setLockdown(true);
+    return document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   const openTool = (tool) => {
     graceRef.current = Date.now() + 3000;
@@ -122,5 +125,5 @@ export function useAntiCheat({ active, settings, onEvent }) {
 
   const closeTool = () => popupRef.current?.close();
 
-  return { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen };
+  return { isFullscreen: window.monExam?.isDesktop ? true : isFullscreen, enterFullscreen, openTool, closeTool, toolOpen };
 }

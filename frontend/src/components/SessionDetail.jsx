@@ -102,7 +102,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl font-semibold text-slate-900" data-testid="session-detail-name">{session.student_name}</h2>
-          <p className="text-sm text-slate-500">{session.student_number || "Sans matricule"} · {session.teacher_name ? `Enseignant : ${session.teacher_name} · ` : ""}{SESSION_LABELS[session.status]} · Début {fmtTime(session.started_at)}</p>
+          <p className="text-sm text-slate-500">{session.student_number || "Sans matricule"} · {session.client === "desktop" ? "Application Windows · " : "Navigateur web · "}{session.teacher_name ? `Enseignant : ${session.teacher_name} · ` : ""}{SESSION_LABELS[session.status]} · Début {fmtTime(session.started_at)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {session.status === "in_progress" && <SendMessageDialog session={session} onDone={onChanged} />}

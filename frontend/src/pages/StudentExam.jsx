@@ -112,6 +112,7 @@ export default function StudentExam() {
     try {
       await sapi.post("/student/submit", latest.current);
       setPhase("submitted");
+      window.monExam?.setLockdown(false);
       sessionStorage.removeItem("exam_token");
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     } catch (e) { toast.error(formatErr(e)); } finally { setSubmitting(false); }
@@ -127,7 +128,7 @@ export default function StudentExam() {
 
   const { exam, session } = data;
   if (phase === "intro")
-    return <div className="min-h-screen bg-slate-950 grid-paper"><ExamIntro exam={exam} session={session} onStart={() => { if (settings.require_fullscreen) enterFullscreen(); setPhase("exam"); }} /></div>;
+    return <div className="min-h-screen bg-slate-950 grid-paper"><ExamIntro exam={exam} session={session} onStart={() => { if (settings.require_fullscreen || window.monExam?.isDesktop) enterFullscreen(); setPhase("exam"); }} /></div>;
 
   const needFs = settings.require_fullscreen && !isFullscreen && status === "in_progress";
   return (

@@ -35,6 +35,7 @@ export const SettingsPanel = ({ settings, onChange }) => {
           <Row title="Plein écran obligatoire" desc="L'examen est masqué tant que l'élève n'est pas en plein écran." checked={settings.require_fullscreen} onChange={(v) => set("require_fullscreen", v)} testId="setting-require-fullscreen" />
           <Row title="Bloquer copier / coller" desc="Copier, couper, coller, glisser-déposer et clic droit désactivés." checked={settings.block_clipboard} onChange={(v) => set("block_clipboard", v)} testId="setting-block-clipboard" />
           <Row title="Correcteur du navigateur" desc="Autoriser le soulignement orthographique intégré au navigateur." checked={settings.browser_spellcheck} onChange={(v) => set("browser_spellcheck", v)} testId="setting-browser-spellcheck" />
+          <Row title="Application Windows obligatoire" desc="Les élèves doivent utiliser l'application MonExamEnLigne pour Windows (mode kiosque, captures d'écran bloquées). Le site web sera refusé." checked={!!settings.require_desktop} onChange={(v) => set("require_desktop", v)} testId="setting-require-desktop" />
         </div>
         <div className="mt-4 rounded-xl border-2 border-rose-200 bg-rose-50/50 p-5" data-testid="violations-settings">
           <p className="font-semibold text-slate-900">Signalements et blocage</p>

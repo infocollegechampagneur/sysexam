@@ -92,3 +92,5 @@ frontend/node_modules/.cache/default-development/5.pack
 frontend/node_modules/.cache/default-development/12.pack
 frontend/node_modules/.cache/default-development/0.pack
 frontend/node_modules/.cache/default-development/15.pack
+desktop/node_modules/electron/dist/electron
+frontend/node_modules/.cache/default-development/2.pack
