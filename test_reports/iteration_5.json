@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 5 — Validated Antidote/desktop-tool clipboard whitelist bug fix. Backend: 5 new pytest cases in /app/backend/tests/test_examsecure_v5.py cover clipboard_tool (counted=False), fullscreen_exit_tool (counted=False), paste_attempt still counted when tool is allowed (statement area), paste_attempt counted when no tools allowed (regression), and teacher visibility of both event types. All 5 pass. Full regression suite 62/62 PASS. Frontend E2E (Playwright on preview URL): (a) Antidote-allowed redaction exam -> dispatched ClipboardEvent('paste') on [data-testid=exam-rich-editor] -> NO 'Signalement' toast, session.violations stayed 0, session.events contains ('clipboard_tool', counted=false). (b) Regression no-tool exam -> same paste -> 'Signalement 1/3 : A tenté de coller' toast appears, violations=1, event ('paste_attempt', counted=true). RichEditor handlePaste gating via allowPaste prop works: when desktopAllowed non-empty the editor accepts the paste and useAntiCheat emits non-counted clipboard_tool via data-answer-zone check.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Teacher SettingsPanel", "issues": ["Review request mentions a data-testid='desktop-tools-notice' element that should appear when a desktop tool is enabled; this testid is NOT present in SettingsPanel.jsx. The free-text explanation at line 67 references Antidote/WordQ/Lexibar but is static (always visible), not a conditional notice. Low priority — functionality works, only the testid/conditional UI is missing."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_examsecure_v5.py", "/app/test_reports/pytest/pytest_v5.xml"],
+  "action_items": [
+    "Optional: add a conditional <div data-testid='desktop-tools-notice'> in SettingsPanel.jsx that renders only when settings.allowed_tools includes a desktop tool, informing the teacher that clipboard inside the answer zone will be allowed. This was mentioned in the review request but not implemented."
+  ],
+  "critical_code_review_comments": [
+    "server.py COUNTED_EVENTS does NOT include 'clipboard_tool' or 'fullscreen_exit_tool' — correct; backend returns counted=false for both regardless of exam settings. Behavior is uniform and safe.",
+    "useAntiCheat.js emit() has a 1500ms dedupe window for COUNTED types and now also for 'clipboard_tool'. Good — rapid Antidote double-paste won't flood events. However dedupe for non-counted events could hide legitimate repeated activity in the teacher log; acceptable trade-off.",
+    "useAntiCheat.js onClip gate: `desktopAllowed.length && e.target?.closest?.('[data-answer-zone]')`. Note e.target can be a text node in some browsers; .closest handles that fine. The check uses `desktopAllowed.length` (number of allowed desktop tools) which is truthy if ANY desktop tool is allowed — matches backend `desktop_ok` logic for antidote/wordq/lexibar.",
+    "RichEditor.jsx handlePaste returns `!allowPaste` to prevent default pasting when allowPaste=false. When allowPaste=true (desktop tool allowed), tiptap handles paste normally and useAntiCheat emits clipboard_tool. Clean integration.",
+    "ExamBody.jsx computes allowPaste from allowed_tools filtered to antidote/wordq/lexibar — matches backend. Short-answer Input also has data-answer-zone so clipboard_tool fires there too — covered by hook (not editor-specific).",
+    "fullscreen_exit_tool is emitted in useAntiCheat when toolActive() OR desktopAllowed.length — reasonable but note that any desktop-tool-allowed exam will NEVER emit the counted fullscreen_exit (since desktopAllowed.length is truthy). This is the intended behavior per the spec but worth confirming with product."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v5.py"],
+  "success_rate": {"backend": "100% (5/5 new; 62/62 regression)", "frontend": "100% — both antidote-allow and no-tool regression flows verified end-to-end on the preview URL"},
+  "test_credentials": "Teacher lynchs2757@gmail.com / Enseignant2026! (seeded).",
+  "seed_data_creation": "Transient test exams prefixed TEST_V5_ were created and deleted during tests. No residual data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend exam create expects fields: title, exam_type (NOT 'type'), writing_prompt (NOT 'items'), settings{allowed_tools,...}; code is server-generated and returned in response (ignore client-provided code). Student join body uses student_name (not 'name'). Session token is stored in localStorage/sessionStorage under a key matching /token/i. To exercise paste in the editor use page.evaluate dispatching a ClipboardEvent with DataTransfer-populated clipboardData on element [data-testid=exam-rich-editor]. Preview URL: https://exam-guard-37.preview.emergentagent.com.",
+  "rca of the issue": "N/A — bug fix is implemented correctly on both backend (clipboard_tool/fullscreen_exit_tool excluded from COUNTED_EVENTS) and frontend (RichEditor.allowPaste prop + useAntiCheat data-answer-zone gating). Verified end-to-end."
+}

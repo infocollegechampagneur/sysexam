@@ -29,6 +29,11 @@ export const SettingsPanel = ({ settings, onChange }) => {
               desc={t.desc} checked={settings.allowed_tools.includes(t.id)} onChange={(v) => toggleTool(t.id, v)} testId={`tool-toggle-${t.id}`} />
           ))}
         </div>
+        {settings.allowed_tools.some((t) => ["antidote", "wordq", "lexibar"].includes(t)) && (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="desktop-tools-notice">
+            Antidote, WordQ et Lexibar corrigent le texte via le presse-papiers : le copier/coller est donc permis <strong>dans la zone de réponse</strong> (journalisé, non compté) et la sortie du plein écran n'est pas comptée. Le copier depuis l'énoncé reste bloqué. La détection de ces logiciels n'est possible que dans l'application Windows.
+          </p>
+        )}
       </section>
       <section>
         <h3 className="font-display text-lg font-semibold text-slate-900">Sécurité</h3>

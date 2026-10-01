@@ -34,3 +34,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Iteration 11: forbidden apps detection (desktop, visible windows), emergency exit code (per exam + offline fallback), teacher lock/reopen/lock-all/unlock-all, class broadcast; deployment checklist in DEPLOIEMENT.md
 - P1: Safe Exam Browser config file (.seb) export per exam
 - P2: Statistics per question, server-side export with watermark
+
+## 2026-06 — Correctif Antidote / outils de bureau
+- Quand Antidote/WordQ/Lexibar sont permis : copier/coller autorisé dans la zone de réponse (`[data-answer-zone]`, événement `clipboard_tool` non compté), sortie plein écran → `fullscreen_exit_tool` (non compté). Copier depuis l'énoncé reste bloqué/compté.
+- Note affichée à l'enseignant dans les réglages (desktop-tools-notice). Détection des logiciels seulement dans l'app Windows (.msi).
+- Testé : iteration_5.json (62/62 backend, E2E OK).
