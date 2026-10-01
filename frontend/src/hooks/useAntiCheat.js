@@ -6,7 +6,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   const [toolOpen, setToolOpen] = useState(null);
   const popupRef = useRef(null);
   const graceRef = useRef(0);
-  const lastCountedRef = useRef(0);
+  const lastCountedRef = useRef({});
   const awayRef = useRef(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
@@ -18,8 +18,9 @@ export function useAntiCheat({ active, settings, onEvent }) {
 
   const emit = useCallback((type, detail) => {
     if (COUNTED.has(type)) {
-      if (Date.now() - lastCountedRef.current < 1500) return;
-      lastCountedRef.current = Date.now();
+      const last = lastCountedRef.current[type] || 0;
+      if (Date.now() - last < 1500) return;
+      lastCountedRef.current[type] = Date.now();
     }
     onEventRef.current(type, detail);
   }, []);
@@ -30,7 +31,9 @@ export function useAntiCheat({ active, settings, onEvent }) {
     const onClip = (e) => {
       if (!block) return;
       e.preventDefault();
-      const content = e.type === "paste" ? e.clipboardData?.getData("text") : String(window.getSelection() || "");
+      const sel = window.getSelection();
+      const inToast = sel?.anchorNode?.parentElement?.closest?.("[data-sonner-toaster]");
+      const content = e.type === "paste" ? e.clipboardData?.getData("text") : inToast ? "" : String(sel || "");
       const snippet = (content || "").trim().replace(/\s+/g, " ").slice(0, 160);
       const label = { copy: "A tenté de copier", cut: "A tenté de couper", paste: "A tenté de coller" }[e.type];
       emit(`${e.type}_attempt`, snippet ? `${label} : « ${snippet}${content.length > 160 ? "…" : ""} »` : `${label} (aucun texte)`);

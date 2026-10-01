@@ -27,5 +27,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Iteration 4: 5 highlighter colors (in UI + annotated PDF), rebrand to MonExamEnLigne, landing reduced to centered student join card
 - Iteration 5: "Nom de l'enseignant" field on join (auto-filled + read-only when exam uses a class list), stored on session & shown in copies; teacher can edit display name (PUT /api/auth/me)
 - Iteration 6: clearer "signalements" threshold + block setting with rule preview, "locked" event in history, locked alerts (banner + toast) on results page, locked count on dashboard, history filter for flags only
+- Iteration 7: unlock dialog (grant +1/+2 signalements keeping counter, or reset), teacher message shown to student on unlock (must confirm reading), detailed history: pasted/copied text snippets, time away per exit, activity summary by category
 - P1: Safe Exam Browser config file (.seb) export per exam
 - P2: Statistics per question, server-side export with watermark
