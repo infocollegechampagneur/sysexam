@@ -1,5 +1,5 @@
 {
-  "appUrl": "https://examen.votredomaine.com",
+  "appUrl": "https://examen.champagneur.qc.ca",
   "emergencyCode": "",
   "forbidden": [
     { "label": "Google Chrome", "process": "chrome.exe" },
