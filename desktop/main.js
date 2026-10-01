@@ -10,6 +10,8 @@ try { external = JSON.parse(fs.readFileSync(EXTERNAL_CONFIG, "utf8")); } catch (
 const config = { ...packaged, ...external, tools: { ...packaged.tools, ...(external.tools || {}) } };
 
 const APP_URL = process.env.MONEXAM_URL || config.appUrl;
+const LOG_FILE = path.join(app.getPath("userData"), "monexam.log");
+function log(msg) { try { fs.appendFileSync(LOG_FILE, `${new Date().toISOString()} ${msg}\n`); } catch (e) { /* ignore */ } }
 const APP_ORIGIN = new URL(APP_URL).origin;
 const TOOL_HOSTS = ["usito.usherbrooke.ca", "www.wordreference.com", "wordreference.com"];
 const BLOCKED_KEYS = ["F5", "F11", "F12"];
@@ -40,9 +42,12 @@ function createWindow() {
   session.defaultSession.clearCache().finally(() => win.loadURL(APP_URL));
 
   win.webContents.on("did-fail-load", (e, code, desc, url, isMainFrame) => {
-    if (!isMainFrame) return;
+    if (!isMainFrame || code === -3) return;
+    log(`did-fail-load ${code} ${desc} ${url}`);
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<html><body style="font-family:Segoe UI,Arial;display:grid;place-items:center;height:100vh;margin:0;background:#f8fafc;color:#0f172a"><div style="text-align:center;max-width:460px"><h2>Site inaccessible</h2><p>${desc} (${code})<br><small>${url}</small></p><p>Vérifiez la connexion Internet ou le DNS du poste, puis appuyez sur <b>F5</b> ou <b>Ctrl+R</b> pour réessayer.</p></div></body></html>`)}`);
   });
+  win.webContents.on("console-message", (e, level, message) => { if (level >= 2) log(`console: ${message}`); });
+  win.webContents.on("did-navigate", (e, url) => log(`navigate ${url}`));
 
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith(APP_ORIGIN)) e.preventDefault(); });
   win.webContents.setWindowOpenHandler(({ url }) => {
