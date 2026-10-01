@@ -110,6 +110,7 @@ class JoinIn(BaseModel):
     code: str
     student_name: str
     student_number: str = ""
+    teacher_name: str = ""
 
 
 class AnswersIn(BaseModel):
@@ -236,6 +237,16 @@ async def logout(response: Response):
 @api.get("/auth/me")
 async def me(user: dict = Depends(current_teacher)):
     return user
+
+
+class ProfileIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+@api.put("/auth/me")
+async def update_me(body: ProfileIn, user: dict = Depends(current_teacher)):
+    await db.users.update_one({"id": user["id"]}, {"$set": {"name": body.name.strip()}})
+    return {**user, "name": body.name.strip()}
 
 
 @api.post("/auth/refresh")
@@ -425,7 +436,10 @@ async def student_join(body: JoinIn):
         raise HTTPException(status_code=403, detail="Cet examen n'est pas ouvert actuellement")
     extra_pct = 0
     number = body.student_number.strip()
+    teacher_name = body.teacher_name.strip()[:120]
     if exam.get("class_id"):
+        teacher = await db.users.find_one({"id": exam["teacher_id"]}, {"_id": 0, "name": 1})
+        teacher_name = (teacher or {}).get("name", teacher_name)
         cls = await db.classes.find_one({"id": exam["class_id"]}, {"_id": 0})
         entry = match_roster(cls["students"], name, number) if cls else None
         if not entry:
@@ -440,12 +454,21 @@ async def student_join(body: JoinIn):
         return {"token": existing["token"]}
     s = {"id": str(uuid.uuid4()), "token": uuid.uuid4().hex + uuid.uuid4().hex, "exam_id": exam["id"],
          "student_name": name, "student_name_lc": name.lower(), "student_number": number,
-         "extra_time_percent": extra_pct, "extra_minutes": 0, "annotations": [],
+         "extra_time_percent": extra_pct, "extra_minutes": 0, "annotations": [], "teacher_name": teacher_name,
          "status": "in_progress", "answers": {}, "essay_html": "", "started_at": now_iso(), "submitted_at": None,
          "last_saved_at": None, "violations": 0,
          "events": [{"type": "joined", "detail": "Début de l'examen", "at": now_iso(), "counted": False}], "grade": None}
     await db.sessions.insert_one(s)
     return {"token": s["token"]}
+
+
+@api.get("/student/exam-info/{code}")
+async def student_exam_info(code: str):
+    exam = await db.exams.find_one({"code": code.strip().upper(), "status": "open"}, {"_id": 0, "class_id": 1, "teacher_id": 1})
+    if not exam or not exam.get("class_id"):
+        return {"roster": False, "teacher_name": None}
+    teacher = await db.users.find_one({"id": exam["teacher_id"]}, {"_id": 0, "name": 1})
+    return {"roster": True, "teacher_name": (teacher or {}).get("name")}
 
 
 @api.get("/student/session")

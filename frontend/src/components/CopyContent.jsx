@@ -10,7 +10,7 @@ export const CopyContent = ({ exam, session, grade, per }) => {
     <div className="space-y-5 text-slate-900" style={{ fontFamily: "Public Sans, sans-serif" }}>
       <div style={{ borderBottom: "2px solid #1e3a8a", paddingBottom: 8 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{exam.title}</h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13 }}>Élève : <strong>{session.student_name}</strong> {session.student_number && `(${session.student_number})`} — Remis : {fmtTime(session.submitted_at)} — Infractions : {session.violations}</p>
+        <p style={{ margin: "4px 0 0", fontSize: 13 }}>Élève : <strong>{session.student_name}</strong> {session.student_number && `(${session.student_number})`}{session.teacher_name && ` — Enseignant : ${session.teacher_name}`} — Remis : {fmtTime(session.submitted_at)} — Infractions : {session.violations}</p>
         {g.score !== "" && g.score != null && <p style={{ margin: "4px 0 0", fontSize: 13 }}>Note : <strong>{g.score} / {g.max_score}</strong></p>}
       </div>
       {exam.questions.map((q, i) => (

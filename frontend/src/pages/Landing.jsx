@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,8 +11,21 @@ import { api, formatErr } from "@/lib/api";
 
 const JoinCard = () => {
   const nav = useNavigate();
-  const [f, setF] = useState({ code: "", student_name: "", student_number: "" });
+  const [f, setF] = useState({ code: "", student_name: "", student_number: "", teacher_name: "" });
   const [loading, setLoading] = useState(false);
+  const [autoTeacher, setAutoTeacher] = useState(false);
+  const autoRef = useRef(false);
+
+  useEffect(() => {
+    const reset = () => { if (autoRef.current) { autoRef.current = false; setAutoTeacher(false); setF((x) => ({ ...x, teacher_name: "" })); } };
+    if (f.code.length !== 6) return reset();
+    api.get(`/student/exam-info/${f.code}`).then(({ data }) => {
+      if (!data.roster) return reset();
+      autoRef.current = true;
+      setAutoTeacher(true);
+      setF((x) => ({ ...x, teacher_name: data.teacher_name || "" }));
+    }).catch(() => {});
+  }, [f.code]);
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -43,6 +56,12 @@ const JoinCard = () => {
         <div>
           <Label htmlFor="num">Code permanent / matricule (si votre enseignant·e l'exige)</Label>
           <Input id="num" value={f.student_number} onChange={(e) => setF({ ...f, student_number: e.target.value })} className="mt-1.5" data-testid="student-number-input" />
+        </div>
+        <div>
+          <Label htmlFor="teacher">Nom de l'enseignant</Label>
+          <Input id="teacher" value={f.teacher_name} readOnly={autoTeacher} onChange={(e) => setF({ ...f, teacher_name: e.target.value })}
+            className={`mt-1.5 ${autoTeacher ? "bg-slate-100 text-slate-700" : ""}`} data-testid="teacher-name-input" />
+          {autoTeacher && <p className="mt-1 text-xs text-emerald-700" data-testid="teacher-name-auto-hint">Rempli automatiquement d'après la liste de classe.</p>}
         </div>
       </div>
       <Button type="submit" disabled={loading} className="mt-6 h-12 w-full bg-blue-900 text-base hover:bg-blue-800" data-testid="student-join-submit-btn">
