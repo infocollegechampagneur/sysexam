@@ -117,6 +117,16 @@ Le forfait gratuit de Render donne **750 heures par mois**, assez pour un servic
 
 ## 5. Site web : SiteGround (environ 15 minutes)
 
+> **Alternative recommandée : héberger le site sur Render (gratuit, sans captcha, mise à jour automatique).**
+> La protection anti-robot de SiteGround (« sgcaptcha ») peut bloquer l'application Windows et les classes entières arrivant d'une même adresse IP, et elle n'est pas toujours désactivable. Dans ce cas :
+> 1. Render → **New → Static Site** → votre dépôt GitHub.
+> 2. Name `monexamenligne-site` · Root Directory `frontend` · Build Command `yarn install --no-frozen-lockfile && yarn build` · Publish Directory `build`.
+> 3. Environment Variables : `REACT_APP_BACKEND_URL` = `https://monexamenligne-api.onrender.com` (sans `/api`) et `CI` = `false`.
+> 4. Onglet **Redirects/Rewrites** → Add Rule : Source `/*`, Destination `/index.html`, Action **Rewrite**.
+> 5. **Settings → Custom Domains** → `examen.votredomaine.com`. Dans SiteGround → **Zone DNS**, remplacez l'enregistrement **A** de `examen` par un **CNAME** vers l'adresse `xxx.onrender.com` indiquée par Render (supprimez d'abord le sous-domaine SiteGround s'il a été créé).
+> 6. Sur le service API, vérifiez que `FRONTEND_URL` = `https://examen.votredomaine.com`.
+> Ensuite, chaque **Save to GitHub** met le site à jour tout seul : plus rien à téléverser. Les sections 5.1 à 5.3 ci-dessous deviennent inutiles.
+
 ### 5.1 Créer le sous-domaine
 **Site Tools → Domaine → Sous-domaines** : créez `examen`. Un dossier `examen.votredomaine.com/public_html` est créé. Activez ensuite le **SSL** (Let's Encrypt) pour ce sous-domaine dans **Sécurité → Gestionnaire SSL**.
 
