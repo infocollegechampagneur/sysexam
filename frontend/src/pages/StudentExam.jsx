@@ -73,9 +73,9 @@ export default function StudentExam() {
 
   const readMessage = () => { setMessage(null); sapi.post("/student/message-read").catch(() => {}); };
 
-  const onEvent = useCallback(async (type, detail, seconds = 0) => {
+  const onEvent = useCallback(async (type, detail, seconds = 0, text = "") => {
     try {
-      const { data: r } = await sapi.post("/student/event", { type, detail, seconds });
+      const { data: r } = await sapi.post("/student/event", { type, detail, seconds, text });
       setViolations(r.violations);
       setStatus(r.status);
       setLimit(r.limit);
@@ -156,7 +156,7 @@ export default function StudentExam() {
       <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
         onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} />
       {!needFs && status !== "locked" && (
-        <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} />
+        <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} desktopTools={desktopTools} onEvent={onEvent} />
       )}
       {status === "locked" && <LockedOverlay violations={violations} byTeacher={lockedBy === "teacher"} onEmergency={window.monExam?.isDesktop ? () => setExitOpen(true) : null} />}
       <EmergencyExitDialog open={exitOpen} onOpenChange={setExitOpen} onSubmit={emergencyExit} />

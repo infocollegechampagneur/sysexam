@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyContent } from "@/components/CopyContent";
 import { UnlockDialog } from "@/components/UnlockDialog";
 import { ActivitySummary } from "@/components/ActivitySummary";
+import { PasteHistory } from "@/components/PasteHistory";
 import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog";
 import { LockSessionButton, ReopenSessionButton } from "@/components/TeacherControls";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
@@ -126,6 +127,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
         <div className="mb-2"><MessageStatus msg={session.teacher_message} /></div>
         <Timeline events={session.events || []} />
       </section>
+      <PasteHistory events={session.events} />
 
       <section className="space-y-4">
         {exam.questions.map((q, i) => (

@@ -152,6 +152,7 @@ class EventIn(BaseModel):
     type: str
     detail: str = ""
     seconds: float = 0
+    text: str = ""
 
 
 class UnlockIn(BaseModel):
@@ -638,6 +639,8 @@ async def student_event(body: EventIn, s: dict = Depends(current_session)):
     ev = {"type": body.type, "detail": body.detail[:300], "at": now_iso(), "counted": counted}
     if body.seconds > 0:
         ev["seconds"] = round(body.seconds, 1)
+    if body.text:
+        ev["text"] = body.text[:3000]
     upd = {"$push": {"events": ev}}
     violations = s["violations"] + (1 if counted else 0)
     status = s["status"]

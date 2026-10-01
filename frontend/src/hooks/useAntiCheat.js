@@ -16,13 +16,13 @@ export function useAntiCheat({ active, settings, onEvent }) {
 
   const toolActive = () => (popupRef.current && !popupRef.current.closed) || Date.now() < graceRef.current;
 
-  const emit = useCallback((type, detail) => {
+  const emit = useCallback((type, detail, seconds = 0, text = "") => {
     if (COUNTED.has(type) || type === "clipboard_tool") {
       const last = lastCountedRef.current[type] || 0;
       if (Date.now() - last < 1500) return;
       lastCountedRef.current[type] = Date.now();
     }
-    onEventRef.current(type, detail);
+    onEventRef.current(type, detail, seconds, text);
   }, []);
 
   useEffect(() => {
@@ -32,7 +32,9 @@ export function useAntiCheat({ active, settings, onEvent }) {
       if (!block) return;
       if (desktopAllowed.length && e.target?.closest?.("[data-answer-zone]")) {
         const verb = { copy: "copié", cut: "coupé", paste: "collé" }[e.type];
-        return emit("clipboard_tool", `A ${verb} du texte dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`);
+        const text = (e.type === "paste" ? e.clipboardData?.getData("text") : String(window.getSelection() || "")) || "";
+        const words = (text.trim().match(/\S+/g) || []).length;
+        return emit("clipboard_tool", `A ${verb} ${words} mot(s) dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`, 0, e.type === "paste" ? text.slice(0, 3000) : "");
       }
       e.preventDefault();
       const sel = window.getSelection();

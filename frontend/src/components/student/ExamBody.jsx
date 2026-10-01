@@ -5,7 +5,7 @@ import { DocumentViewer } from "@/components/DocumentViewer";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { wordCount } from "@/lib/tools";
 
-const QuestionBlock = ({ q, i, value, onChange, spellcheck, allowPaste }) => (
+const QuestionBlock = ({ q, i, value, onChange, spellcheck, allowPaste, antidote }) => (
   <div className="rounded-xl border border-slate-200 bg-white p-6" data-testid={`exam-question-${i}`}>
     <div className="flex items-start gap-3">
       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-blue-900 font-mono text-sm font-bold text-white">{i + 1}</span>
@@ -24,14 +24,21 @@ const QuestionBlock = ({ q, i, value, onChange, spellcheck, allowPaste }) => (
         </RadioGroup>
       )}
       {q.type === "short" && <Input value={value ?? ""} onChange={(e) => onChange(e.target.value)} spellCheck={spellcheck} autoComplete="off" data-answer-zone="" data-testid={`exam-question-${i}-input`} />}
-      {q.type === "long" && <RichEditor value={value} onChange={onChange} spellcheck={spellcheck} allowPaste={allowPaste} minHeight={160} testId={`exam-question-${i}-editor`} />}
+      {q.type === "long" && <RichEditor value={value} onChange={onChange} spellcheck={spellcheck} allowPaste={allowPaste} antidote={antidote} minHeight={160} testId={`exam-question-${i}-editor`} />}
     </div>
   </div>
 );
 
-export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob, annotations, setAnnotations }) => {
+export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob, annotations, setAnnotations, desktopTools, onEvent }) => {
   const sc = exam.settings.browser_spellcheck;
-  const allowPaste = (exam.settings.allowed_tools || []).some((t) => ["antidote", "wordq", "lexibar"].includes(t));
+  const tools = exam.settings.allowed_tools || [];
+  const allowPaste = tools.some((t) => ["antidote", "wordq", "lexibar"].includes(t));
+  const antidote = tools.includes("antidote") ? {
+    onCorrect: (text) => {
+      onEvent?.("antidote_correct", `A envoyé ${(text.match(/\S+/g) || []).length} mot(s) vers Antidote pour correction`);
+      if (desktopTools?.desktop) desktopTools.launch("antidote");
+    },
+  } : null;
   const inline = exam.exam_type === "document" && exam.doc_answer_mode === "inline" && !!exam.file;
   const inlinePdf = inline && exam.file.kind === "pdf";
   const hasEssay = exam.exam_type !== "form" && !inlinePdf;
@@ -44,12 +51,12 @@ export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob,
         {hasDoc && <div className={split ? "lg:sticky lg:top-24 lg:self-start" : ""}><DocumentViewer file={exam.file} fetchBlob={fetchBlob} height={split ? "calc(100vh - 140px)" : "60vh"} /></div>}
         <div className="space-y-6">
           {exam.questions.map((q, i) => (
-            <QuestionBlock key={q.id} q={q} i={i} value={answers[q.id]} onChange={(v) => setAnswer(q.id, v)} spellcheck={sc} allowPaste={allowPaste} />
+            <QuestionBlock key={q.id} q={q} i={i} value={answers[q.id]} onChange={(v) => setAnswer(q.id, v)} spellcheck={sc} allowPaste={allowPaste} antidote={antidote} />
           ))}
           {hasEssay && (
             <div className="rounded-xl border border-slate-200 bg-white p-6" data-testid="exam-essay-block">
               {exam.writing_prompt && <p className="mb-4 whitespace-pre-wrap font-medium text-slate-900">{exam.writing_prompt}</p>}
-              <RichEditor value={essay} onChange={setEssay} spellcheck={sc} allowPaste={allowPaste} minHeight={exam.exam_type === "redaction" || inline ? 480 : 300} testId="exam-rich-editor" />
+              <RichEditor value={essay} onChange={setEssay} spellcheck={sc} allowPaste={allowPaste} antidote={antidote} minHeight={exam.exam_type === "redaction" || inline ? 480 : 300} testId="exam-rich-editor" />
               <p className="mt-2 text-right text-xs text-slate-500" data-testid="essay-word-count">{wordCount(essay)} mots</p>
             </div>
           )}
