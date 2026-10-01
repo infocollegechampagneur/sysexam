@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShieldCheck, LogOut, UserPen } from "lucide-react";
+import { ShieldCheck, LogOut, UserPen, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,9 @@ export const TeacherLayout = ({ children }) => {
           <Link to="/enseignant" data-testid="nav-home-link"><Brand compact /></Link>
           <div className="flex items-center gap-3">
             <NavLink to="/enseignant" end className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-exams-link">Examens</NavLink>
-            <NavLink to="/enseignant/classes" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-classes-link">Classes</NavLink>
+            <NavLink to="/enseignant/classes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-classes-link">Classes</NavLink>
+            {user?.role === "admin" && <NavLink to="/enseignant/comptes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-users-link">Comptes</NavLink>}
+            <NavLink to="/enseignant/mot-de-passe" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} title="Changer mon mot de passe" data-testid="nav-password-link"><KeyRound className="h-4 w-4" /></NavLink>
             <ProfileButton />
             <span className="hidden text-sm text-slate-500 lg:inline" data-testid="nav-user-email">{user?.email}</span>
             <Button

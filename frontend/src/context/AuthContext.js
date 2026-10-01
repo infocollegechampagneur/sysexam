@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -24,6 +24,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
+  const loc = useLocation();
   if (user === null)
     return (
       <div className="min-h-screen grid place-items-center" data-testid="auth-loading">
@@ -31,5 +32,6 @@ export const ProtectedRoute = ({ children }) => {
       </div>
     );
   if (!user) return <Navigate to="/connexion" replace />;
+  if (user.must_change_password && loc.pathname !== "/enseignant/mot-de-passe") return <Navigate to="/enseignant/mot-de-passe" replace />;
   return children;
 };

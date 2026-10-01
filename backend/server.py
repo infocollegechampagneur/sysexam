@@ -80,15 +80,31 @@ def new_code():
 
 
 # ---------- Models ----------
-class RegisterIn(BaseModel):
-    email: str
-    password: str = Field(min_length=6)
-    name: str
-
-
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
+class UserCreateIn(BaseModel):
+    email: str
+    name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=8)
+    role: str = "teacher"
+
+
+class UserUpdateIn(BaseModel):
+    name: str | None = None
+    role: str | None = None
+    active: bool | None = None
+
+
+class ResetPasswordIn(BaseModel):
+    password: str = Field(min_length=8)
 
 
 class Question(BaseModel):
@@ -188,7 +204,19 @@ async def current_teacher(request: Request) -> dict:
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Utilisateur introuvable")
+    if user.get("active") is False:
+        raise HTTPException(status_code=403, detail="Ce compte a été désactivé")
     return user
+
+
+async def current_admin(user: dict = Depends(current_teacher)) -> dict:
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Réservé aux administrateurs")
+    return user
+
+
+def public_user(u: dict) -> dict:
+    return {k: u.get(k) for k in ("id", "email", "name", "role", "active", "must_change_password", "created_at", "last_login_at")}
 
 
 async def own_exam(exam_id: str, user: dict) -> dict:
@@ -244,18 +272,6 @@ def deadline_of(session: dict, exam: dict):
 
 
 # ---------- Auth ----------
-@api.post("/auth/register")
-async def register(body: RegisterIn, response: Response):
-    email = body.email.strip().lower()
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(status_code=400, detail="Ce courriel est déjà utilisé")
-    user = {"id": str(uuid.uuid4()), "email": email, "name": body.name, "role": "teacher",
-            "password_hash": hash_password(body.password), "created_at": now_iso()}
-    await db.users.insert_one(user)
-    set_auth_cookies(response, create_access_token(user["id"], email), create_refresh_token(user["id"]))
-    return {"id": user["id"], "email": email, "name": user["name"], "role": "teacher"}
-
-
 @api.post("/auth/login")
 async def login(body: LoginIn, request: Request, response: Response):
     email = body.email.strip().lower()
@@ -271,9 +287,76 @@ async def login(body: LoginIn, request: Request, response: Response):
             upd["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
         await db.login_attempts.update_one({"identifier": ident}, {"$set": upd}, upsert=True)
         raise HTTPException(status_code=401, detail="Courriel ou mot de passe invalide")
+    if user.get("active") is False:
+        raise HTTPException(status_code=403, detail="Ce compte a été désactivé. Contactez l'administrateur.")
     await db.login_attempts.delete_many({"identifier": ident})
+    await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
     set_auth_cookies(response, create_access_token(user["id"], email), create_refresh_token(user["id"]))
-    return {"id": user["id"], "email": email, "name": user["name"], "role": user["role"]}
+    return public_user(user)
+
+
+@api.post("/auth/change-password")
+async def change_password(body: ChangePasswordIn, user: dict = Depends(current_teacher)):
+    full = await db.users.find_one({"id": user["id"]})
+    if not verify_password(body.current_password, full["password_hash"]):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
+    if body.current_password == body.new_password:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit être différent")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(body.new_password), "must_change_password": False}})
+    return {**user, "must_change_password": False}
+
+
+# ---------- Admin : gestion des comptes ----------
+@api.get("/admin/users")
+async def admin_list_users(_: dict = Depends(current_admin)):
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", 1).to_list(1000)
+    return [public_user(u) for u in users]
+
+
+@api.post("/admin/users", status_code=201)
+async def admin_create_user(body: UserCreateIn, _: dict = Depends(current_admin)):
+    email = body.email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Courriel invalide")
+    if body.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=400, detail="Rôle invalide")
+    if await db.users.find_one({"email": email}):
+        raise HTTPException(status_code=400, detail="Ce courriel est déjà utilisé")
+    user = {"id": str(uuid.uuid4()), "email": email, "name": body.name.strip(), "role": body.role, "active": True,
+            "must_change_password": True, "password_hash": hash_password(body.password), "created_at": now_iso()}
+    await db.users.insert_one(user)
+    return public_user(user)
+
+
+@api.put("/admin/users/{user_id}")
+async def admin_update_user(user_id: str, body: UserUpdateIn, admin: dict = Depends(current_admin)):
+    target = await db.users.find_one({"id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="Compte introuvable")
+    upd = {}
+    if body.name is not None:
+        upd["name"] = body.name.strip()
+    if body.role is not None:
+        if body.role not in ("teacher", "admin"):
+            raise HTTPException(status_code=400, detail="Rôle invalide")
+        if user_id == admin["id"] and body.role != "admin":
+            raise HTTPException(status_code=400, detail="Vous ne pouvez pas retirer votre propre rôle d'administrateur")
+        upd["role"] = body.role
+    if body.active is not None:
+        if user_id == admin["id"] and not body.active:
+            raise HTTPException(status_code=400, detail="Vous ne pouvez pas désactiver votre propre compte")
+        upd["active"] = body.active
+    if upd:
+        await db.users.update_one({"id": user_id}, {"$set": upd})
+    return public_user({**target, **upd})
+
+
+@api.post("/admin/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(current_admin)):
+    r = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.password), "must_change_password": True}})
+    if not r.matched_count:
+        raise HTTPException(status_code=404, detail="Compte introuvable")
+    return {"ok": True}
 
 
 @api.post("/auth/logout")
@@ -744,11 +827,14 @@ async def startup():
     pwd = os.environ["ADMIN_PASSWORD"]
     admin = await db.users.find_one({"email": email})
     if not admin:
-        admin = {"id": str(uuid.uuid4()), "email": email, "name": "Enseignant·e principal·e", "role": "teacher",
+        admin = {"id": str(uuid.uuid4()), "email": email, "name": "Administrateur·trice", "role": "admin", "active": True,
                  "password_hash": hash_password(pwd), "created_at": now_iso()}
         await db.users.insert_one(admin)
-    elif not verify_password(pwd, admin["password_hash"]):
-        await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pwd)}})
+    else:
+        upd = {"role": "admin", "active": True}
+        if not verify_password(pwd, admin["password_hash"]):
+            upd["password_hash"] = hash_password(pwd)
+        await db.users.update_one({"email": email}, {"$set": upd})
     if await db.exams.count_documents({"teacher_id": admin["id"]}) == 0:
         for ex in sample_exams():
             ex["settings"]["exit_code"] = new_exit_code()

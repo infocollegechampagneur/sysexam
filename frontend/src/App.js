@@ -9,6 +9,8 @@ import ExamBuilder from "@/pages/ExamBuilder";
 import Results from "@/pages/Results";
 import StudentExam from "@/pages/StudentExam";
 import Classes from "@/pages/Classes";
+import Users from "@/pages/Users";
+import ChangePassword from "@/pages/ChangePassword";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
             <Route path="/enseignant/examens/:id" element={<ProtectedRoute><ExamBuilder /></ProtectedRoute>} />
             <Route path="/enseignant/examens/:id/resultats" element={<ProtectedRoute><Results /></ProtectedRoute>} />
             <Route path="/enseignant/classes" element={<ProtectedRoute><Classes /></ProtectedRoute>} />
+            <Route path="/enseignant/comptes" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+            <Route path="/enseignant/mot-de-passe" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
