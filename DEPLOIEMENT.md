@@ -68,19 +68,33 @@ render.yaml → configuration Render
 ## 4. Serveur : Render.com (environ 15 minutes)
 
 1. Créez un compte sur https://render.com et connectez votre GitHub.
-2. Choisissez **New → Blueprint**, puis votre dépôt. Render lit `render.yaml` automatiquement.
-3. Remplissez les variables d'environnement :
+2. Choisissez **New → Web Service** (et non « Blueprint », devenu payant), puis votre dépôt.
+3. Remplissez le formulaire :
+
+| Champ | Valeur |
+|---|---|
+| Name | `monexamenligne-api` (ou le nom de votre choix) |
+| Language | **Python 3** |
+| Branch | `main` |
+| Region | Ohio ou Virginia (US East) |
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements-prod.txt` |
+| Start Command | `uvicorn server:app --host 0.0.0.0 --port $PORT` |
+| Compute | **Free ($0/mois)** |
+
+4. Plus bas, **Environment Variables → Add Environment Variable** :
 
 | Variable | Valeur |
 |---|---|
+| `PYTHON_VERSION` | `3.11.9` |
 | `MONGO_URL` | L'adresse Atlas de l'étape 2 |
 | `DB_NAME` | `monexamenligne` |
-| `JWT_SECRET` | Générée automatiquement |
+| `JWT_SECRET` | Bouton **Generate** |
 | `FRONTEND_URL` | `https://examen.votredomaine.com` (pour en ajouter d'autres, séparez-les par des virgules) |
 | `ADMIN_EMAIL` | Votre courriel d'enseignant principal |
 | `ADMIN_PASSWORD` | Un mot de passe fort |
 
-4. Déployez. Testez ensuite `https://monexamenligne-api.onrender.com/api/`, qui doit répondre `{"message":"MonExamEnLigne API"}`.
+Cliquez **Deploy Web Service**. Testez ensuite `https://VOTRE-SERVICE.onrender.com/api/`, qui doit répondre `{"message":"MonExamEnLigne API"}`.
 5. **Domaine personnalisé** : dans Render, allez dans **Settings → Custom Domains** et ajoutez `api-examen.votredomaine.com`. Render vous indique un enregistrement **CNAME** à créer.
 6. Dans **SiteGround → Domaine → Zone DNS**, ajoutez ce **CNAME** : nom `api-examen`, valeur `monexamenligne-api.onrender.com`. Le certificat SSL est créé automatiquement par Render.
 
