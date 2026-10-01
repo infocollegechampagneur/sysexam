@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 4 — Tested lock/reopen/broadcast/lock-all/unlock-all, exit code generation and privacy, emergency-exit (correct & wrong), forbidden_app counted event, and teacher UI testids (class-controls bar, broadcast dialog with 3 presets, lock-session dialog, reopen alert, exit-code-panel in editor). Backend: 12/12 new tests PASS in /app/backend/tests/test_examsecure_v4.py; full regression 57/57 PASS. Frontend E2E: student mock monExam.forbiddenApps triggers forbidden_app event -> session.violations=1 and events contains 'forbidden_app'; teacher POST /sessions/{id}/lock -> within 7s student sees locked-overlay with locked-overlay-reason text 'Votre enseignant·e a bloqué votre examen...'; teacher POST /sessions/{id}/unlock {mode:reset} -> overlay disappears; teacher POST /exams/{id}/broadcast {text:'Il reste 5 minutes.'} returns {sent:2} and student sees teacher-message-overlay with correct text, teacher-message-read-btn sets teacher_message.read=true. Emergency exit: wrong code '000000' -> 403 + toast 'Code incorrect' + emergency_exit_failed event; correct code '743151' (HIS301) -> 200 + toast 'Mode kiosque désactivé' + emergency_exit event. Teacher exam editor tab 'Outils et sécurité' shows exit-code-panel with exit-code-value and exit-code-regenerate-btn. Teacher Results page class-controls bar appears only when sessions.length>0 (reasonable); all 3 broadcast presets, broadcast-input, broadcast-confirm-btn, lock-all-btn, unlock-all-btn present. exit_code auto-generated 6 digits on create and on update when empty, and NOT exposed in GET /student/session.exam.settings.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "StudentExam EmergencyExitDialog", "issues": ["Dialog is missing a DialogDescription or aria-describedby — a React warning is emitted in console. Accessibility only, not functional."]},
+      {"screen": "Teacher Results page", "issues": ["class-controls bar is only rendered when sessions.length > 0. If a teacher wants to pre-send a broadcast before anyone joins (edge case), the controls are hidden. Not a bug per se."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_examsecure_v4.py",
+    "/app/test_reports/pytest/pytest_v4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py broadcast() targets sessions in {'in_progress','locked'} — correct per spec. Returns {sent} not {count} — matches TeacherControls which reads d.sent.",
+    "server.py lock_session() rejects when status != 'in_progress' (400). It however does not reject 'submitted' with a specific message; the generic 'Seul un examen en cours peut être bloqué' is returned which is clear.",
+    "server.py reopen_session() does $set submitted_at: None but leaves answers/essay intact — correct so student can resume. However it does NOT reset locked_at/locked_by/lock_reason/teacher_message, which is fine for history but means a previously-locked-then-submitted session reopens as in_progress with stale locked_by='teacher'. Student UI treats status=='locked' only, so no visible bug.",
+    "server.py student_emergency_exit() does `exam['settings'].get('exit_code')` guard but if an exam somehow has empty exit_code, every attempt fails with 403 silently — acceptable because startup backfills every exam without exit_code. Verified.",
+    "server.py COUNTED_EVENTS includes 'forbidden_app' (new) — verified: posting type:forbidden_app increments violations and triggers auto-lock when violations>=limit.",
+    "server.py update_exam() preserves non-empty exit_code sent in body (only regens when empty). This lets the teacher regenerate via exit-code-regenerate-btn by setting a new value client-side, which is what SettingsPanel does with Math.random; however the client generates the new value instead of asking the backend. Minor: if two teachers hit regenerate at same time, both pick independent random numbers — fine because exit_code need not be unique across exams.",
+    "frontend TeacherControls.jsx uses window.confirm for lock-all/unlock-all instead of a styled dialog — functional but inconsistent with the lock-session Dialog UX. Low priority.",
+    "frontend StudentExam.jsx registers window.monExam.onEmergency only once on mount; if monExam is loaded asynchronously after mount (not possible with current init), this would miss. Fine for Electron preload.",
+    "frontend useForbiddenApps dedupe uses `seen = new Set(apps.map(a=>a.label))` and compares against seen.current BEFORE replacing it. So if Chrome stays open across polls, the event only fires once (first time). But if Chrome is closed and reopened, it fires again — reasonable. The seconds field is not sent (events get seconds=0 default)."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v4.py"],
+  "success_rate": {"backend": "100% (12/12 new, 57/57 regression)", "frontend": "100% — all critical testids present and all 7 flows verified end-to-end"},
+  "test_credentials": "Teacher lynchs2757@gmail.com / Enseignant2026! (seeded). HIS301 exit_code = 743151 (read from teacher API).",
+  "seed_data_creation": "Created transient exam 'TEST_V4_*' and several TEST_FE_* / TEST_lk_* / TEST_ro_* / TEST_bc_* / TEST_la_* / TEST_ex_* / TEST_fa_* sessions. All cleaned up (sessions deleted from MongoDB, exam deleted by fixture teardown).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests: 4 files, total 57 tests via pytest-xdist LoadScope. v4 covers all iteration-4 features. For student UI testing, inject window.monExam via page.add_init_script BEFORE navigating to '/'. Student poll interval = 5s so wait >=6s after teacher state changes. HIS301 is the seeded redaction exam with max_violations=5 and allowed tools antidote/wordq/lexibar/usito/wordreference. Home page join form inputs don't have data-testid; use positional selectors inputs[0]=code, inputs[1]=name.",
+  "rca of the issue": "N/A — no issues found; all iteration-4 features work end-to-end."
+}

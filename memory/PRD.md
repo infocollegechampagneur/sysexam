@@ -31,5 +31,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Iteration 8: surveillance report PDF (summary table + per-student timeline), live teacher warnings to student during exam (presets, read receipt)
 - Iteration 9: Emergent independence — files moved to MongoDB GridFS (Emergent storage removed), CORS multi-origin, requirements-prod.txt, render.yaml, .htaccess for SiteGround, Electron Windows app (desktop/) with kiosk + content protection + nav lock + tool child windows, GitHub Actions build, "Application Windows obligatoire" setting, client badge; guide in /app/DEPLOIEMENT.md
 - Iteration 10: MSI target (GPO, fixed upgradeCode), optional signing via GitHub secrets, external config C:\ProgramData\MonExamEnLigne\config.json, desktop tool launch buttons + running detection (tasklist) logged in history, keep-awake workflow + UptimeRobot guide
+- Iteration 11: forbidden apps detection (desktop, visible windows), emergency exit code (per exam + offline fallback), teacher lock/reopen/lock-all/unlock-all, class broadcast; deployment checklist in DEPLOIEMENT.md
 - P1: Safe Exam Browser config file (.seb) export per exam
 - P2: Statistics per question, server-side export with watermark
