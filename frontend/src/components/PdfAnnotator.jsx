@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Loader2, Type, X, GripVertical } from "lucide-react";
+import { Loader2, Type, X, GripVertical, Highlighter, Underline as UnderlineIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { renderPdfPages } from "@/lib/pdf";
 
@@ -27,10 +27,26 @@ const AnnotationBox = ({ a, pageW, readOnly, onChange, onDelete, onDragStart, id
   );
 };
 
+const Mark = ({ a, idx, readOnly, passive, onDelete }) => (
+  <div className={`group absolute ${passive ? "pointer-events-none" : ""}`} data-testid={`mark-${a.kind}-${idx}`}
+    style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%`, width: `${a.w * 100}%`, height: `${a.h * 100}%` }}>
+    {a.kind === "highlight"
+      ? <div className="h-full w-full rounded-[2px] bg-yellow-300/50 mix-blend-multiply" />
+      : <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-rose-600" />}
+    {!readOnly && (
+      <button type="button" onClick={onDelete} aria-label="Retirer la marque" data-testid={`mark-delete-${idx}`}
+        className="absolute -right-2 -top-2 hidden rounded-full bg-rose-600 p-0.5 text-white group-hover:block">
+        <X className="h-3 w-3" />
+      </button>
+    )}
+  </div>
+);
+
 export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = false }) => {
   const [pages, setPages] = useState([]);
   const [error, setError] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [mode, setMode] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [width, setWidth] = useState(800);
   const wrap = useRef(null);
   const annRef = useRef(annotations);
@@ -51,11 +67,43 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
   }, []);
 
   const addAt = (e, page) => {
-    if (!adding || readOnly) return;
+    if (mode !== "text" || readOnly) return;
     const r = e.currentTarget.getBoundingClientRect();
     onChange([...annotations, { id: uid(), page, x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, w: 0.42, fs: 0.018, text: "" }]);
-    setAdding(false);
+    setMode(null);
   };
+
+  const startMark = (e, page) => {
+    if (readOnly || (mode !== "highlight" && mode !== "underline")) return;
+    e.preventDefault();
+    const r = e.currentTarget.getBoundingClientRect();
+    const kind = mode;
+    const clamp = (v) => Math.min(1, Math.max(0, v));
+    const sx = clamp((e.clientX - r.left) / r.width), sy = clamp((e.clientY - r.top) / r.height);
+    const calc = (ev) => {
+      const x = clamp((ev.clientX - r.left) / r.width), y = clamp((ev.clientY - r.top) / r.height);
+      return { page, kind, x: Math.min(sx, x), y: Math.min(sy, y), w: Math.abs(x - sx), h: Math.abs(y - sy) };
+    };
+    const move = (ev) => setDraft(calc(ev));
+    const up = (ev) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      const m = calc(ev);
+      setDraft(null);
+      if (m.w > 0.005) onChange([...annRef.current, { id: uid(), ...m, h: Math.max(m.h, 0.012) }]);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const texts = annotations.filter((a) => !a.kind || a.kind === "text");
+  const marks = annotations.length - texts.length;
+  const ModeBtn = ({ m, icon: Icon, label, testId }) => (
+    <Button size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode((v) => (v === m ? null : m))}
+      className={mode === m ? "bg-amber-500 text-white hover:bg-amber-600" : ""} data-testid={testId}>
+      <Icon className="mr-1.5 h-4 w-4" />{label}
+    </Button>
+  );
 
   const drag = (e, a) => {
     e.preventDefault();
@@ -75,10 +123,12 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100" data-testid="pdf-annotator">
       {!readOnly && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-2">
-          <Button size="sm" onClick={() => setAdding((v) => !v)} className={adding ? "bg-amber-500 hover:bg-amber-600" : "bg-blue-900 hover:bg-blue-800"} data-testid="annotator-add-text-btn">
-            <Type className="mr-1.5 h-4 w-4" />{adding ? "Cliquez dans le document…" : "Ajouter une zone de texte"}
-          </Button>
-          <span className="text-xs text-slate-500">{annotations.length} zone(s) de texte · glissez la poignée bleue pour déplacer</span>
+          <ModeBtn m="text" icon={Type} label={mode === "text" ? "Cliquez dans le document…" : "Zone de texte"} testId="annotator-add-text-btn" />
+          <ModeBtn m="highlight" icon={Highlighter} label="Surligner" testId="annotator-highlight-btn" />
+          <ModeBtn m="underline" icon={UnderlineIcon} label="Souligner" testId="annotator-underline-btn" />
+          <span className="text-xs text-slate-500" data-testid="annotator-counts">
+            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : "survolez une marque pour la retirer"}
+          </span>
         </div>
       )}
       <div ref={wrap} className="mx-auto max-w-[900px] space-y-4 p-4">
@@ -86,9 +136,14 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
         {!pages.length && !error && <div className="grid place-items-center p-10"><Loader2 className="h-5 w-5 animate-spin text-blue-900" /></div>}
         {pages.map((p, i) => (
           <div key={i} data-page={i} onClick={(e) => e.target === e.currentTarget || e.target.tagName === "IMG" ? addAt(e, i) : null}
-            className={`relative bg-white shadow ${adding ? "cursor-crosshair" : ""}`} style={{ aspectRatio: `1 / ${p.ratio}` }} data-testid={`pdf-page-${i}`}>
+            onPointerDown={(e) => startMark(e, i)}
+            className={`relative bg-white shadow ${mode ? "cursor-crosshair" : ""}`} style={{ aspectRatio: `1 / ${p.ratio}`, touchAction: mode && mode !== "text" ? "none" : "auto" }} data-testid={`pdf-page-${i}`}>
             <img src={p.src} alt={`Page ${i + 1}`} draggable={false} className="pointer-events-auto block w-full select-none" />
-            {annotations.map((a, k) => a.page === i && (
+            {annotations.map((a, k) => a.page === i && a.kind && a.kind !== "text" && (
+              <Mark key={a.id} a={a} idx={k} readOnly={readOnly} passive={!!mode} onDelete={() => onChange(annotations.filter((o) => o.id !== a.id))} />
+            ))}
+            {draft?.page === i && <Mark a={draft} idx="draft" readOnly passive />}
+            {annotations.map((a, k) => a.page === i && (!a.kind || a.kind === "text") && (
               <AnnotationBox key={a.id} a={a} idx={k} pageW={width - 32} readOnly={readOnly}
                 onChange={(na) => onChange(annotations.map((o) => (o.id === a.id ? na : o)))}
                 onDelete={() => onChange(annotations.filter((o) => o.id !== a.id))}

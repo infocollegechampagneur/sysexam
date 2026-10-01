@@ -23,5 +23,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Iteration 2: class rosters (import CSV/paste, roster-restricted join by name/matricule), extra time % per student + teacher-granted minutes, group export (all copies PDF/Word), write directly in uploaded docs (DOCX editable in editor; PDF text boxes via pdf.js + annotated PDF export via pdf-lib)
 
 ## Backlog
+- Iteration 3: PDF highlight & underline marks (drag), shown to teacher and burned into annotated PDF export
 - P1: Safe Exam Browser config file (.seb) export per exam
 - P2: Statistics per question, server-side export with watermark
