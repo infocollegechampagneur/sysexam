@@ -66,3 +66,10 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - POST /admin/users/import (Nom;courriel par ligne) → comptes + mots de passe générés + courriels.
 - Journal : collection `login_log` (à chaque login) ; GET /admin/activity (examens par enseignant, connexions). Onglet « Journal d'activité » dans la page Comptes.
 - Testé : iteration_9.json.
+
+## 2026-06 — Navigation + outils de bureau (desktop 1.1.0)
+- Boutons retour : Login → accueil ; en-tête enseignant → « Espace élève » ; accueil → « Retour à l'espace enseignant » si connecté.
+- Antidote : flux Ctrl+C+C (Agent Antidote) ; bouton sélectionne le texte ; plus de lancement d'Antidote.exe (ouvrait les dictionnaires).
+- Desktop : détection des exécutables par jokers (`search`), WordQ 5/6 et Lexibar ; processus multiples (`processes`) ; auto-ouverture WordQ/Lexibar au début de l'examen (`autoLaunchTools`) ; `tools-installed` IPC ; avertissement si outil non trouvé.
+- Anti-triche desktop : fenêtre recouverte (document.hidden) avec outils permis → `external_focus` non compté.
+- Testé : iteration_10.json (frontend OK). Desktop non testable ici.
