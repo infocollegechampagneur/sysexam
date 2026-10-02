@@ -37,6 +37,7 @@ export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob,
     onCorrect: (text) => {
       onEvent?.("antidote_correct", `A lancé la correction Antidote de ${(text.match(/\S+/g) || []).length} mot(s)`);
     },
+    onTool: (kind, sel) => onEvent?.(kind === "guides" ? "antidote_guide" : "antidote_dict", `A consulté les ${kind} Antidote${sel ? ` : « ${sel.slice(0, 60)} »` : ""}`),
   } : null;
   const inline = exam.exam_type === "document" && exam.doc_answer_mode === "inline" && !!exam.file;
   const inlinePdf = inline && exam.file.kind === "pdf";

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyContent } from "@/components/CopyContent";
 import { UnlockDialog } from "@/components/UnlockDialog";
 import { ActivitySummary } from "@/components/ActivitySummary";
+import { ToolUsageCard } from "@/components/ToolUsageCard";
 import { PasteHistory } from "@/components/PasteHistory";
 import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog";
 import { LockSessionButton, ReopenSessionButton } from "@/components/TeacherControls";
@@ -124,6 +125,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations + (session.allowance || 0)} signalement(s)</span></p>
         <ActivitySummary events={session.events || []} />
+        <ToolUsageCard session={session} />
         <div className="mb-2"><MessageStatus msg={session.teacher_message} /></div>
         <Timeline events={session.events || []} />
       </section>

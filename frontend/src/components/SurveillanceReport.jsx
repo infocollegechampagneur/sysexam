@@ -1,13 +1,16 @@
 import { EVENT_LABELS, SESSION_LABELS, fmtTime } from "@/lib/tools";
 import { CATS } from "@/components/ActivitySummary";
+import { toolUsage, usageLabel } from "@/lib/toolUsage";
 
 const th = { border: "1px solid #cbd5e1", padding: "4px 6px", background: "#f1f5f9", textAlign: "left", fontSize: 11 };
 const td = { border: "1px solid #cbd5e1", padding: "4px 6px", fontSize: 11, verticalAlign: "top" };
 const awayOf = (events) => Math.round(events.filter((e) => e.type === "returned" && e.seconds).reduce((a, e) => a + e.seconds, 0));
 const fmtAway = (s) => (s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`);
+const toolsSummary = (s) => toolUsage(s).map((u) => `${u.name} : ${usageLabel(u)}`);
 
 const StudentPage = ({ exam, s }) => {
   const ev = s.events || [];
+  const tools = toolsSummary(s);
   return (
     <div style={{ breakInside: "avoid-page" }}>
       <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>{s.student_name} {s.student_number && `(${s.student_number})`}</h3>
@@ -17,6 +20,9 @@ const StudentPage = ({ exam, s }) => {
       <table style={{ borderCollapse: "collapse", width: "100%", marginBottom: 8 }}>
         <tbody><tr>{CATS.map((c) => <td key={c.key} style={td}>{c.label} : <strong>{ev.filter((e) => c.types.includes(e.type)).length}</strong></td>)}</tr></tbody>
       </table>
+      <div style={{ border: "1px solid #a7f3d0", background: "#ecfdf5", padding: "4px 6px", marginBottom: 8, fontSize: 11 }} data-testid="report-tools">
+        <strong>Logiciels et outils d'aide utilisés :</strong> {tools.length ? tools.join(" · ") : "aucun"}
+      </div>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead><tr><th style={{ ...th, width: 90 }}>Heure</th><th style={{ ...th, width: 150 }}>Événement</th><th style={th}>Détail</th></tr></thead>
         <tbody>
@@ -40,7 +46,7 @@ export const SurveillanceReport = ({ exam, sessions }) => (
       <p style={{ fontSize: 11, margin: "4px 0 0" }}>Code {exam.code}{exam.subject ? ` · ${exam.subject}` : ""} · Généré le {fmtTime(new Date().toISOString())} · Seuil : {exam.settings.max_violations} signalement(s) · ⚑ = signalement compté</p>
     </div>
     <table style={{ borderCollapse: "collapse", width: "100%" }}>
-      <thead><tr><th style={th}>Élève</th><th style={th}>Statut</th><th style={th}>Signalements</th>{CATS.slice(0, 5).map((c) => <th key={c.key} style={th}>{c.label}</th>)}<th style={th}>Temps hors examen</th></tr></thead>
+      <thead><tr><th style={th}>Élève</th><th style={th}>Statut</th><th style={th}>Signalements</th>{CATS.slice(0, 5).map((c) => <th key={c.key} style={th}>{c.label}</th>)}<th style={th}>Temps hors examen</th><th style={th}>Outils d'aide</th></tr></thead>
       <tbody>
         {sessions.map((s) => {
           const ev = s.events || [];
@@ -49,6 +55,7 @@ export const SurveillanceReport = ({ exam, sessions }) => (
               <td style={td}>{s.student_name}</td><td style={td}>{SESSION_LABELS[s.status]}</td><td style={td}><strong>{s.violations}</strong></td>
               {CATS.slice(0, 5).map((c) => <td key={c.key} style={td}>{ev.filter((e) => c.types.includes(e.type)).length}</td>)}
               <td style={td}>{fmtAway(awayOf(ev))}</td>
+              <td style={td}>{toolsSummary(s).join(" · ") || "—"}</td>
             </tr>
           );
         })}

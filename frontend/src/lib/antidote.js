@@ -30,14 +30,21 @@ class AgentTexteurTipTap extends AgentTexteur {
     return { titreDocument: this.title, retourCharriot: "\n", permetRetourCharriot: false, permetEspaceInsecable: true, permetEspaceFine: false, remplaceSansSelection: true, filtreActif: "texte" };
   }
   async zonesDeTexteDisponibles() { return !this.editor.isDestroyed; }
-  async zonesACorriger() {
+  async zonesACorriger({ pourSelectionActive } = {}) {
     const { from, to } = this.editor.state.selection;
-    const text = plainText(this.editor.state.doc);
+    const doc = this.editor.state.doc;
+    const text = plainText(doc);
+    const posToOffset = (p) => { let off = 0; for (const b of blocksOf(doc)) { if (p <= b.pos + 1 + b.text.length) return off + Math.max(0, p - (b.pos + 1)); off += b.text.length + 1; } return text.length; };
     const zone = { texte: text, idZone: "0", zoneEstEnFocus: true };
     if (from !== to) {
-      const posToOffset = (p) => { let off = 0; for (const b of blocksOf(this.editor.state.doc)) { if (p <= b.pos + 1 + b.text.length) return off + Math.max(0, p - (b.pos + 1)); off += b.text.length + 1; } return text.length; };
       zone.positionSelectionDebut = posToOffset(from);
       zone.positionSelectionFin = posToOffset(to);
+    } else if (pourSelectionActive) {
+      const off = posToOffset(from);
+      const left = text.slice(0, off).search(/[\p{L}\p{N}'’-]+$/u);
+      const right = text.slice(off).match(/^[\p{L}\p{N}'’-]*/u)[0].length;
+      zone.positionSelectionDebut = left === -1 ? off : left;
+      zone.positionSelectionFin = off + right;
     }
     return [zone];
   }
@@ -64,17 +71,24 @@ let current = null;
 
 export const antidoteApiAvailable = () => !!window.monExam?.antidotePort;
 
-export async function launchAntidoteCorrector(editor, title, onDone) {
+async function agentFor(editor, title, onDone) {
   const port = await window.monExam.antidotePort();
   if (!port) throw new Error("Connectix introuvable");
-  const texteur = new AgentTexteurTipTap(editor, title);
-  texteur.onDone = onDone;
   if (!current || current.editor !== editor) {
+    const texteur = new AgentTexteurTipTap(editor, title);
     const agent = new AgentConnectix(texteur, async () => port);
     await agent.connecteAvecAntidote();
     current = { agent, editor, texteur };
-  } else {
-    current.texteur.onDone = onDone;
   }
-  current.agent.lanceCorrecteur();
+  current.texteur.onDone = onDone;
+  return current.agent;
+}
+
+export async function launchAntidoteCorrector(editor, title, onDone) {
+  (await agentFor(editor, title, onDone)).lanceCorrecteur();
+}
+
+export async function launchAntidoteTool(editor, kind) {
+  const agent = await agentFor(editor, "Réponse d'examen", null);
+  if (kind === "guides") agent.lanceGuides(); else agent.lanceDictionnaires();
 }
