@@ -100,24 +100,48 @@ ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
 });
 
 const HIDDEN_TITLES = /^(N\/A|S\/O|OLE\w*|Default IME|MSCTFIME UI|DDE Server Window|GDI\+ Window.*|\.NET-BroadcastEventWindow.*|Hidden Window|CicMarshalWnd|SystemResourceNotifyWindow|Chrome_WidgetWin_\d|MediaContextNotificationWindow|Battery Meter|Program Manager|Windows Push Notifications Platform|.*Broker.*)$/i;
+const PS_EXE = fs.existsSync("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe") ? "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" : "powershell";
+
+function scanForbiddenTasklist() {
+  return new Promise((resolve) => {
+    execFile("tasklist", ["/v", "/fo", "csv", "/nh"], { windowsHide: true, timeout: 20000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      if (err) { log(`scanForbidden(tasklist): échec (${(err.message || "").split("\n")[0]})`); return resolve([]); }
+      const rows = out.split(/\r?\n/).map((l) => l.split('","').map((c) => c.replace(/^"|"$/g, "")));
+      const found = {};
+      for (const r of rows) {
+        const image = (r[0] || "").toLowerCase();
+        const title = (r[r.length - 1] || "").trim();
+        const app = (config.forbidden || []).find((f) => f.process.toLowerCase() === image);
+        if (app && title && !HIDDEN_TITLES.test(title)) found[app.label] = { title, process: app.process };
+      }
+      resolve(Object.entries(found).map(([label, v]) => ({ label, title: v.title, process: v.process })));
+    });
+  });
+}
+
 function scanForbidden() {
   return new Promise((resolve) => {
     if (process.platform !== "win32") return resolve([]);
     const names = (config.forbidden || []).map((f) => f.process.replace(/\.exe$/i, "").replace(/'/g, "''"));
     if (!names.length) return resolve([]);
-    const ps = `Get-Process -Name ${names.map((n) => `'${n}'`).join(",")} -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle } | Select-Object ProcessName,MainWindowTitle | ConvertTo-Json -Compress`;
+    const ps = `$ErrorActionPreference='SilentlyContinue'; $r = @(Get-Process -Name ${names.map((n) => `'${n}'`).join(",")} | Where-Object { $_.MainWindowTitle -and $_.MainWindowTitle.Trim() -ne '' } | Select-Object ProcessName,MainWindowTitle); Write-Output (ConvertTo-Json -InputObject $r -Compress)`;
     const t0 = Date.now();
-    execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 10000, maxBuffer: 4 * 1024 * 1024 }, (err, out) => {
-      if (err) { log(`scanForbidden: échec (${(err.message || "").split("\n")[0]})`); return resolve([]); }
-      let rows = [];
-      try { const j = JSON.parse(String(out || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch (e) { rows = []; }
+    execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", ps], { windowsHide: true, timeout: 10000, maxBuffer: 4 * 1024 * 1024 }, async (err, out, stderr) => {
+      let rows = null;
+      if (!err) { try { const j = JSON.parse(String(out || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch (e) { rows = null; } }
+      if (rows === null) {
+        log(`scanForbidden(ps): échec (${err ? (err.message || "").split("\n")[0] : "sortie illisible"}) ${String(stderr || "").slice(0, 200)} → repli tasklist`);
+        const viaTasklist = await scanForbiddenTasklist();
+        log(`scanForbidden(tasklist): ${viaTasklist.length} trouvée(s) en ${Date.now() - t0} ms`);
+        return resolve(viaTasklist);
+      }
       const found = {};
       for (const r of rows) {
         const title = String(r.MainWindowTitle || "").trim();
         const app = (config.forbidden || []).find((f) => f.process.replace(/\.exe$/i, "").toLowerCase() === String(r.ProcessName || "").toLowerCase());
         if (app && title && !HIDDEN_TITLES.test(title)) found[app.label] = { title, process: app.process };
       }
-      log(`scanForbidden: ${Object.keys(found).length} trouvée(s) en ${Date.now() - t0} ms`);
+      log(`scanForbidden(ps): ${Object.keys(found).length} trouvée(s) sur ${rows.length} fenêtre(s) en ${Date.now() - t0} ms`);
       resolve(Object.entries(found).map(([label, v]) => ({ label, title: v.title, process: v.process })));
     });
   });
@@ -132,7 +156,7 @@ ipcMain.handle("close-forbidden", async () => {
       log(`taskkill ${a.process}: ${err ? `échec (${(err.message || "").split("\n")[0]})` : "ok"} en ${Date.now() - t0} ms`);
       if (!err) return resolve(a.label);
       const name = a.process.replace(/\.exe$/i, "");
-      execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue`], { windowsHide: true, timeout: 8000 }, (err2) => {
+      execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-Command", `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue`], { windowsHide: true, timeout: 8000 }, (err2) => {
         log(`Stop-Process ${name}: ${err2 ? "échec" : "ok"}`);
         resolve(err2 ? null : a.label);
       });
@@ -149,7 +173,7 @@ function bringToFront(exePath) {
 using System; using System.Runtime.InteropServices;
 public class W { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c); }
 '@; [W]::ShowWindow($p.MainWindowHandle, 9) | Out-Null; [W]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; 'ok' } else { 'nowindow' }`;
-  return new Promise((resolve) => execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 12000 }, (err, out) => { log(`bringToFront ${name}: ${err ? "échec" : String(out).trim()}`); resolve(!err); }));
+  return new Promise((resolve) => execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 12000 }, (err, out) => { log(`bringToFront ${name}: ${err ? "échec" : String(out).trim()}`); resolve(!err); }));
 }
 
 ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
