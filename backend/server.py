@@ -987,15 +987,25 @@ async def student_emergency_exit(body: ExitIn, s: dict = Depends(current_session
 
 @api.post("/student/submit")
 async def student_submit(body: AnswersIn, s: dict = Depends(current_session)):
+    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     if s["status"] == "submitted":
-        return {"ok": True}
+        return {"ok": True, **submit_receipt(s, exam)}
     ts = now_iso()
     ev = {"type": "submitted", "detail": "Copie remise", "at": ts, "counted": False}
-    upd = {"status": "submitted", "submitted_at": ts}
+    upd = {"status": "submitted", "submitted_at": ts, "receipt": uuid.uuid4().hex[:8].upper()}
     if s["status"] == "in_progress":
         upd.update({"answers": body.answers, "essay_html": body.essay_html, "annotations": body.annotations, "last_saved_at": ts})
     await db.sessions.update_one({"id": s["id"]}, {"$set": upd, "$push": {"events": ev}})
-    return {"ok": True}
+    return {"ok": True, **submit_receipt({**s, **upd}, exam)}
+
+
+def submit_receipt(s: dict, exam: dict) -> dict:
+    answers = s.get("answers") or {}
+    questions = exam.get("questions") or []
+    answered = sum(1 for q in questions if str(answers.get(q["id"], "")).strip() not in ("", "<p></p>"))
+    words = len(re.sub(r"<[^>]+>", " ", s.get("essay_html") or "").split())
+    return {"receipt": s.get("receipt") or "", "submitted_at": s.get("submitted_at"), "answered": answered, "questions": len(questions),
+            "essay_words": words, "annotations": len(s.get("annotations") or []), "student_name": s.get("student_name"), "exam_title": exam.get("title")}
 
 
 @api.get("/student/file")

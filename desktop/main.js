@@ -270,6 +270,8 @@ ipcMain.handle("focus-tool", async (_e, id) => {
   return bringToFront(exe);
 });
 
+ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; setTimeout(() => app.quit(), 200); return true; });
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

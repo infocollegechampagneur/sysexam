@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, formatErr } from "@/lib/api";
-import { TOOLS } from "@/lib/tools";
+import { TOOLS, wordCount } from "@/lib/tools";
 import { useAntiCheat } from "@/hooks/useAntiCheat";
 import { useDesktopTools, useForbiddenApps } from "@/hooks/useDesktopTools";
 import { ExamIntro } from "@/components/student/ExamIntro";
@@ -140,15 +140,28 @@ export default function StudentExam() {
     return () => clearInterval(iv);
   }, [status, sapi]);
 
+  const [receipt, setReceipt] = useState(null);
   const submit = useCallback(async () => {
     setSubmitting(true);
-    try {
-      await sapi.post("/student/submit", latest.current);
-      setPhase("submitted");
-      window.monExam?.setLockdown(false);
-      sessionStorage.removeItem("exam_token");
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    } catch (e) { toast.error(formatErr(e)); } finally { setSubmitting(false); }
+    let attempt = 0;
+    while (true) {
+      try {
+        const { data: r } = await sapi.post("/student/submit", latest.current);
+        setReceipt(r);
+        setPhase("submitted");
+        window.monExam?.setLockdown(false);
+        sessionStorage.removeItem("exam_token");
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        break;
+      } catch (e) {
+        attempt += 1;
+        const permanent = e?.response?.status && e.response.status < 500 && e.response.status !== 408 && e.response.status !== 429;
+        if (permanent || attempt >= 6) { toast.error(`${formatErr(e)} — Votre copie N'EST PAS remise. Ne fermez pas l'application et avertissez l'enseignant.`, { duration: 15000 }); break; }
+        toast.warning(`Le serveur ne répond pas (essai ${attempt}/6). Nouvelle tentative… NE FERMEZ PAS l'application.`, { duration: 4000 });
+        await new Promise((r) => setTimeout(r, 2500 * attempt));
+      }
+    }
+    setSubmitting(false);
   }, [sapi]);
 
   const onExpire = useCallback(() => { toast.info("Temps écoulé : remise automatique"); submit(); }, [submit]);
@@ -157,7 +170,7 @@ export default function StudentExam() {
   if (!token && phase !== "submitted") return <Navigate to="/" replace />;
   if (data === false) return <Navigate to="/" replace />;
   if (!data) return <div className="grid min-h-screen place-items-center bg-slate-950"><Loader2 className="h-6 w-6 animate-spin text-blue-400" /></div>;
-  if (phase === "submitted") return <SubmittedScreen name={data.session.student_name} />;
+  if (phase === "submitted") return <SubmittedScreen name={data.session.student_name} receipt={receipt} />;
 
   const { exam, session } = data;
   if (phase === "intro")
@@ -167,7 +180,8 @@ export default function StudentExam() {
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
       <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
-        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused} />
+        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused}
+        unanswered={exam.questions.filter((q) => String(answers[q.id] ?? "").trim() === "" || answers[q.id] === "<p></p>").length} essayWords={exam.exam_type !== "form" ? wordCount(essay) : null} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} desktopTools={desktopTools} onEvent={onEvent} />
       )}

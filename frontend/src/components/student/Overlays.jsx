@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning, PauseCircle } from "lucide-react";
+import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning, PauseCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -69,12 +69,27 @@ export const FullscreenOverlay = ({ toolOpen, onResume, onCloseTool }) => (
   </Shell>
 );
 
-export const SubmittedScreen = ({ name }) => (
-  <div className="grid min-h-screen place-items-center bg-slate-950 px-4" data-testid="submitted-screen">
-    <div className="max-w-md text-center fade-up">
-      <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
-      <h1 className="mt-5 font-display text-3xl font-bold text-white">Copie remise</h1>
-      <p className="mt-3 text-slate-400">Merci {name}. Votre examen a bien été transmis à votre enseignant·e. Vous pouvez fermer cette page.</p>
+export const SubmittedScreen = ({ name, receipt }) => {
+  const [closing, setClosing] = useState(false);
+  const close = () => { setClosing(true); if (window.monExam?.quitApp) window.monExam.quitApp(); else { window.close(); setTimeout(() => setClosing(false), 1500); } };
+  return (
+    <div className="grid min-h-screen place-items-center bg-slate-950 px-4" data-testid="submitted-screen">
+      <div className="w-full max-w-md text-center fade-up">
+        <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
+        <h1 className="mt-5 font-display text-3xl font-bold text-white">Copie remise avec succès</h1>
+        <p className="mt-3 text-slate-400">Merci {name}. Votre examen est <strong className="text-emerald-300">enregistré sur le serveur</strong> et transmis à votre enseignant·e.</p>
+        {receipt && (
+          <div className="mt-6 rounded-xl border border-emerald-800 bg-emerald-950/40 p-4 text-left text-sm text-emerald-100" data-testid="submit-receipt">
+            <p className="flex items-center justify-between"><span className="text-emerald-300/80">Numéro de confirmation</span><strong className="font-mono text-base tracking-widest" data-testid="receipt-code">{receipt.receipt}</strong></p>
+            <p className="mt-1 flex items-center justify-between"><span className="text-emerald-300/80">Remise le</span><span data-testid="receipt-time">{receipt.submitted_at ? new Date(receipt.submitted_at).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" }) : "—"}</span></p>
+            {receipt.questions > 0 && <p className="mt-1 flex items-center justify-between"><span className="text-emerald-300/80">Questions répondues</span><span data-testid="receipt-answered">{receipt.answered} / {receipt.questions}</span></p>}
+            {receipt.essay_words > 0 && <p className="mt-1 flex items-center justify-between"><span className="text-emerald-300/80">Production écrite</span><span data-testid="receipt-words">{receipt.essay_words} mots</span></p>}
+            {receipt.annotations > 0 && <p className="mt-1 flex items-center justify-between"><span className="text-emerald-300/80">Annotations</span><span>{receipt.annotations}</span></p>}
+          </div>
+        )}
+        <p className="mt-5 text-sm text-slate-400">Vous pouvez maintenant fermer {window.monExam ? "l'application" : "cette page"} en toute sécurité. Notez le numéro de confirmation si votre enseignant·e le demande.</p>
+        <Button onClick={close} disabled={closing} className="mt-5 h-11 w-full bg-emerald-600 hover:bg-emerald-500" data-testid="close-after-submit-btn"><LogOut className="mr-2 h-4 w-4" />{window.monExam ? "Fermer l'application" : "Fermer"}</Button>
+      </div>
     </div>
-  </div>
-);
+  );
+};

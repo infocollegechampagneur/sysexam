@@ -5,7 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ExamTimer } from "@/components/student/ExamTimer";
 import { TOOLS } from "@/lib/tools";
 
-export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, desktopTools, onTool, onSubmit, submitting, onExpire, paused }) => {
+export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, desktopTools, onTool, onSubmit, submitting, onExpire, paused, unanswered = 0, essayWords = null }) => {
   const allowed = TOOLS.filter((t) => exam.settings.allowed_tools.includes(t.id));
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
@@ -46,7 +46,13 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Remettre votre copie ?</AlertDialogTitle>
-              <AlertDialogDescription>Une fois remise, vous ne pourrez plus modifier vos réponses.</AlertDialogDescription>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <p>Une fois remise, vous ne pourrez plus modifier vos réponses. Vous recevrez ensuite une <strong>confirmation avec un numéro</strong> : attendez-la avant de fermer.</p>
+                  {unanswered > 0 && <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-900" data-testid="submit-unanswered-warning">Attention : <strong>{unanswered} question(s) sans réponse</strong>.</p>}
+                  {essayWords !== null && <p className="text-slate-600" data-testid="submit-essay-words">Production écrite : <strong>{essayWords} mots</strong>{essayWords === 0 ? " — votre rédaction est vide !" : ""}</p>}
+                </div>
+              </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel data-testid="cancel-submit-modal-btn">Continuer l'examen</AlertDialogCancel>
