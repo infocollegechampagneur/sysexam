@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 12 frontend-only: validated Antidote Connectix integration fallback paths in RichEditor via Playwright add_init_script window.monExam mocks. (1) Browser without window.monExam on HIS301: joining as student, typing text, clicking 'Corriger avec Antidote' selects all text and shows the Ctrl+C+C fallback toast only; no page errors. (2) Desktop mock antidotePort()->0: click triggers both the error toast 'Antidote (Connectix) n'a pas répondu sur ce poste. Utilisez Ctrl+C+C...' AND the fallback Ctrl+C+C select-all toast; editor remains editable; no uncaught exceptions. (3) Desktop mock antidotePort()->59999 (closed port): WebSocket to ws://127.0.0.1:59999 fails with ERR_CONNECTION_REFUSED (console only, caught); within <500ms both the Connectix error toast and the Ctrl+C+C fallback toast are shown; editor still accepts typing; no page/uncaught errors. (4) ExamIntro antidote-guide has exactly 5 steps and mentions 'bouton vert' and 'Ctrl+C+C'. (5) Regression: landing loads, student join works, no uncaught errors on load of @druide-informatique/antidote-api-js import (only expected 401s on unauthenticated /api/auth/me probe).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "RichEditor.correct(): the error toast message says 'n'a pas répondu' but for port=0 the throw is synchronous ('Connectix introuvable') — same user-facing message is used which is fine, but logging/debug of the real error (e) is not surfaced; consider console.warn(e) for diagnostics.",
+    "antidote.js keeps a module-level 'current' agent singleton tied to the first editor instance; when switching between questions with different RichEditor instances the guard 'current.editor !== editor' creates a new agent each time but the old one is not disposed — potential leaked WebSocket if a student navigates/retries. Acceptable for MVP.",
+    "launchAntidoteCorrector awaits agent.connecteAvecAntidote() but has no timeout — if the WebSocket hangs (open but no response), the UI stays in silent 'await' with no feedback. Current observed behavior with a closed port rejects fast via onerror, but a half-open proxy could stall. Consider Promise.race with a 10s timeout matching the spec's 'within ~10s'."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin, not needed this iteration)",
+  "seed_data_creation": "Student sessions on HIS301: 'TEST Antidote Browser', 'TEST Anti port0', 'TEST Anti port59999', 'TEST Anti port59999 v2'. Safe to leave.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Antidote testids: button is `${testId}-antidote-btn` (e.g. 'exam-rich-editor-antidote-btn'). HIS301 is a redaction exam with antidote tool allowed. Desktop mock via context.add_init_script injecting window.monExam before navigation works; PreCheck shows precheck-ok when forbiddenApps returns []. Error toast duration is 8s, fallback toast 14s — poll toasts within 1-2s of click to catch both. WebSocket to localhost in sandbox fails fast with ERR_CONNECTION_REFUSED.",
+  "rca of the issue": "N/A - all 5 specified behaviours verified working."
+}

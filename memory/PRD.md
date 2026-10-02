@@ -79,3 +79,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - main.js : filtre des fenêtres cachées (OleMainThreadWndName, Default IME…) pour éviter les faux positifs Edge/Teams en arrière-plan ; WordQ → WordQ.exe/WordQ6.exe (plus WordQMouse.exe) ; tri des exécutables par nom le plus court.
 - Antidote : bouton barre d'outils = rappel Ctrl+C+C ; indication pour activer l'Agent Antidote (Réglages → Connectix).
 - Testé : iteration_11.json (mock window.monExam).
+
+## 2026-06 — Intégration Antidote Connectix (desktop 1.2.0)
+- `lib/antidote.js` : AgentTexteur TipTap via `@druide-informatique/antidote-api-js` (WebSocket ws://localhost:PORT d'AgentConnectix) ; corrections appliquées directement dans l'éditeur.
+- main.js : IPC `antidote-port` (registre HKLM\SOFTWARE\Druide informatique inc.\Connectix → AgentConnectixConsole.exe --api), cache 60 s.
+- Bouton « Corriger avec Antidote » : API Connectix si disponible, sinon repli Ctrl+C+C.
+- Testé : iteration_12.json (replis). WebSocket réel non testable ici.
