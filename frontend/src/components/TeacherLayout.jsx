@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShieldCheck, LogOut, UserPen, KeyRound } from "lucide-react";
+import { ShieldCheck, LogOut, UserPen, KeyRound, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,9 @@ export const TeacherLayout = ({ children }) => {
             <NavLink to="/enseignant/mot-de-passe" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} title="Changer mon mot de passe" data-testid="nav-password-link"><KeyRound className="h-4 w-4" /></NavLink>
             <ProfileButton />
             <span className="hidden text-sm text-slate-500 lg:inline" data-testid="nav-user-email">{user?.email}</span>
+            <Button variant="ghost" size="sm" asChild data-testid="nav-student-space-link">
+              <Link to="/" title="Aller à l'espace élève (vous restez connecté)"><GraduationCap className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Espace élève</span></Link>
+            </Button>
             <Button
               variant="outline"
               size="sm"

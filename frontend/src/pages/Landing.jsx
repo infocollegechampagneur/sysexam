@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Brand } from "@/components/TeacherLayout";
+import { useAuth } from "@/context/AuthContext";
 import { api, formatErr } from "@/lib/api";
 
 
@@ -72,13 +73,14 @@ const JoinCard = () => {
 };
 
 export default function Landing() {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen grid-paper">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
         <Brand />
-        <Link to="/connexion">
+        <Link to="/enseignant">
           <Button variant="outline" size="sm" className="border-blue-900 text-blue-900 hover:bg-blue-50 sm:h-10 sm:px-4" data-testid="teacher-login-link">
-            Espace enseignant
+            {user ? <><ArrowLeft className="mr-1.5 h-4 w-4" />Retour à l'espace enseignant</> : "Espace enseignant"}
           </Button>
         </Link>
       </header>

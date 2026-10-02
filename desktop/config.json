@@ -1,6 +1,7 @@
 {
   "appUrl": "https://examen.champagneur.qc.ca",
   "emergencyCode": "",
+  "autoLaunchTools": true,
   "forbidden": [
     { "label": "Google Chrome", "process": "chrome.exe" },
     { "label": "Microsoft Edge", "process": "msedge.exe" },
@@ -24,28 +25,36 @@
   "tools": {
     "antidote": {
       "label": "Antidote",
-      "process": "antidote",
-      "paths": [
-        "C:\\Program Files\\Druide\\Antidote 12\\Application\\Bin64\\Antidote.exe",
-        "C:\\Program Files\\Druide\\Antidote 11\\Application\\Bin64\\Antidote.exe",
-        "C:\\Program Files\\Druide\\Antidote 10\\Application\\Bin64\\Antidote.exe"
+      "processes": ["antidote", "agentconnectix", "agentantidote", "connectix"],
+      "autoLaunch": false,
+      "search": [
+        "C:\\Program Files\\Druide\\Antidote *\\Application\\Bin64\\Antidote.exe",
+        "C:\\Program Files\\Druide\\Antidote*\\Application\\Bin64\\Antidote.exe",
+        "C:\\Program Files (x86)\\Druide\\Antidote *\\Application\\Bin\\Antidote.exe",
+        "C:\\Program Files\\Druide\\Connectix*\\Application\\Bin64\\AgentConnectix.exe"
       ]
     },
     "wordq": {
       "label": "WordQ",
-      "process": "wordq",
-      "paths": [
-        "C:\\Program Files (x86)\\WordQ 5\\WordQ.exe",
-        "C:\\Program Files\\WordQ 5\\WordQ.exe",
-        "C:\\Program Files (x86)\\WordQ\\WordQ.exe"
+      "processes": ["wordq"],
+      "autoLaunch": true,
+      "search": [
+        "C:\\Program Files\\WordQ*\\WordQ*.exe",
+        "C:\\Program Files (x86)\\WordQ*\\WordQ*.exe",
+        "C:\\Program Files\\Quillsoft\\WordQ*\\WordQ*.exe",
+        "C:\\Program Files (x86)\\Quillsoft\\WordQ*\\WordQ*.exe",
+        "%LOCALAPPDATA%\\Programs\\WordQ*\\WordQ*.exe"
       ]
     },
     "lexibar": {
       "label": "Lexibar",
-      "process": "lexibar",
-      "paths": [
-        "C:\\Program Files (x86)\\Lexibar\\Lexibar.exe",
-        "C:\\Program Files\\Lexibar\\Lexibar.exe"
+      "processes": ["lexibar"],
+      "autoLaunch": true,
+      "search": [
+        "C:\\Program Files\\Lexibar*\\Lexibar*.exe",
+        "C:\\Program Files (x86)\\Lexibar*\\Lexibar*.exe",
+        "%LOCALAPPDATA%\\Programs\\Lexibar*\\Lexibar*.exe",
+        "%LOCALAPPDATA%\\Lexibar*\\Lexibar*.exe"
       ]
     }
   }

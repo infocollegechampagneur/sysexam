@@ -30,12 +30,12 @@ export const RichEditor = ({ value, onChange, spellcheck = false, testId = "rich
   }, [allowPaste]);
   if (!editor) return null;
   const c = () => editor.chain().focus();
-  const correct = async () => {
+  const correct = () => {
     const text = stripHtml(editor.getHTML()).trim();
     if (!text) return toast.info("Écrivez d'abord votre texte, puis cliquez sur « Corriger avec Antidote ».");
-    try { await navigator.clipboard.writeText(text); } catch (e) { return toast.error("Impossible de copier le texte. Sélectionnez-le et utilisez Ctrl+C."); }
+    editor.chain().focus().selectAll().run();
     antidote.onCorrect?.(text);
-    toast.success("Texte copié ! Dans Antidote : Ctrl+V, corrigez, Ctrl+A puis Ctrl+C, et recollez ici avec Ctrl+V.", { duration: 10000 });
+    toast.success("Texte sélectionné. Appuyez maintenant deux fois rapidement sur Ctrl+C (Ctrl+C+C) : le correcteur Antidote s'ouvre avec votre texte. Une fois la correction terminée, fermez le correcteur : le texte corrigé est remis ici.", { duration: 14000 });
   };
   return (
     <div data-answer-zone="" className="overflow-hidden rounded-lg border border-slate-300 bg-white" style={{ "--editor-min": `${minHeight}px` }}>

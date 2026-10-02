@@ -117,22 +117,53 @@ ipcMain.handle("forbidden-apps", () => new Promise((resolve) => {
 
 ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
 
+function expandEnv(p) { return p.replace(/%([^%]+)%/g, (_, k) => process.env[k] || ""); }
+function globOne(pattern) {
+  const parts = expandEnv(pattern).split(/[\\/]+/);
+  let candidates = [parts[0] + "\\"];
+  for (const part of parts.slice(1)) {
+    const next = [];
+    const re = new RegExp("^" + part.replace(/[.+^${}()|[\]]/g, "\\$&").replace(/\*/g, ".*") + "$", "i");
+    for (const base of candidates) {
+      let entries = [];
+      try { entries = fs.readdirSync(base); } catch (e) { continue; }
+      for (const name of entries) if (re.test(name)) next.push(path.join(base, name));
+    }
+    candidates = next;
+    if (!candidates.length) break;
+  }
+  return candidates.filter((c) => { try { return fs.statSync(c).isFile(); } catch (e) { return false; } }).sort().reverse();
+}
+function findExe(tool) {
+  const patterns = [...(tool.search || []), ...(tool.paths || [])];
+  for (const p of patterns) { const hits = globOne(p); if (hits.length) return hits[0]; }
+  return null;
+}
+function toolProcesses(tool) { return (tool.processes || [tool.process]).filter(Boolean).map((p) => p.toLowerCase()); }
+
 ipcMain.handle("tools-running", () => new Promise((resolve) => {
   if (process.platform !== "win32") return resolve([]);
   execFile("tasklist", ["/fo", "csv", "/nh"], { windowsHide: true }, (err, out) => {
     if (err) return resolve([]);
     const list = out.toLowerCase();
-    resolve(Object.entries(config.tools || {}).filter(([, t]) => list.includes(`"${t.process.toLowerCase()}`)).map(([id]) => id));
+    resolve(Object.entries(config.tools || {}).filter(([, t]) => toolProcesses(t).some((p) => list.includes(`"${p}`))).map(([id]) => id));
   });
 }));
+
+ipcMain.handle("tools-installed", () => {
+  const out = {};
+  for (const [id, t] of Object.entries(config.tools || {})) out[id] = { installed: !!findExe(t), autoLaunch: config.autoLaunchTools !== false && t.autoLaunch !== false };
+  return out;
+});
 
 ipcMain.handle("launch-tool", async (_e, id) => {
   const tool = (config.tools || {})[id];
   if (!tool) return { ok: false, reason: "Outil inconnu" };
-  const exe = (tool.paths || []).find((p) => fs.existsSync(p));
-  if (!exe) return { ok: false, reason: `${tool.label || id} n'est pas installé sur ce poste` };
+  const exe = findExe(tool);
+  if (!exe) { log(`launch-tool ${id}: introuvable`); return { ok: false, reason: `${tool.label || id} n'a pas été trouvé sur ce poste` }; }
+  log(`launch-tool ${id}: ${exe}`);
   const err = await shell.openPath(exe);
-  return err ? { ok: false, reason: err } : { ok: true };
+  return err ? { ok: false, reason: err } : { ok: true, path: exe };
 });
 
 if (!app.requestSingleInstanceLock()) {

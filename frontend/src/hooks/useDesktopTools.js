@@ -7,7 +7,9 @@ export function useDesktopTools({ active, allowed, onEvent }) {
   const ids = TOOLS.filter((t) => t.kind === "desktop" && allowed.includes(t.id)).map((t) => t.id);
   const key = ids.join(",");
   const [running, setRunning] = useState([]);
+  const [installed, setInstalled] = useState({});
   const prev = useRef(null);
+  const autoDone = useRef(false);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
   const label = (id) => TOOLS.find((t) => t.id === id)?.label || id;
@@ -21,6 +23,19 @@ export function useDesktopTools({ active, allowed, onEvent }) {
         prev.current.filter((id) => !now.includes(id)).forEach((id) => onEventRef.current("tool_closed", `${label(id)} a été fermé`));
       } else if (now.length) {
         onEventRef.current("tool_opened", `Déjà ouvert(s) au début : ${now.map(label).join(", ")}`);
+      }
+      if (!autoDone.current && window.monExam.installedTools) {
+        autoDone.current = true;
+        const inst = await window.monExam.installedTools();
+        setInstalled(inst);
+        const missing = key.split(",").filter((id) => inst[id] && !inst[id].installed);
+        if (missing.length) toast.warning(`Non trouvé sur ce poste : ${missing.map(label).join(", ")}. Avertissez l'enseignant si vous en avez besoin.`, { duration: 8000 });
+        for (const id of key.split(",")) {
+          if (inst[id]?.installed && inst[id].autoLaunch && !now.includes(id)) {
+            const r = await window.monExam.launchTool(id);
+            if (r.ok) { toast.info(`${label(id)} s'ouvre automatiquement pour cet examen.`); onEventRef.current("tool_launch", `${label(id)} ouvert automatiquement au début de l'examen`); }
+          }
+        }
       }
       prev.current = now;
       setRunning(now);
@@ -36,7 +51,7 @@ export function useDesktopTools({ active, allowed, onEvent }) {
     else toast.error(r.reason || `Impossible d'ouvrir ${label(id)}`);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { desktop, running, launch, desktopIds: ids };
+  return { desktop, running, installed, launch, desktopIds: ids };
 }
 
 export function useForbiddenApps({ active, onEvent }) {

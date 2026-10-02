@@ -4,10 +4,10 @@ import { TOOLS } from "@/lib/tools";
 
 const ANTIDOTE_STEPS = [
   "Rédigez votre texte directement dans la zone de réponse de l'examen.",
-  "Cliquez sur le bouton vert « Corriger avec Antidote » dans la barre de l'éditeur : votre texte est copié automatiquement.",
-  "Dans Antidote, collez le texte (Ctrl+V), lancez le correcteur et appliquez les corrections.",
-  "Dans Antidote, sélectionnez tout (Ctrl+A) et copiez (Ctrl+C).",
-  "Revenez dans l'examen, sélectionnez votre ancien texte (Ctrl+A dans la zone) et collez (Ctrl+V) la version corrigée.",
+  "Cliquez sur le bouton vert « Corriger avec Antidote » (il sélectionne tout votre texte), ou sélectionnez vous-même le passage à corriger.",
+  "Appuyez deux fois rapidement sur Ctrl+C (Ctrl+C+C) : l'Agent Antidote ouvre le correcteur avec votre texte.",
+  "Appliquez les corrections dans Antidote.",
+  "Fermez le correcteur : Antidote remet automatiquement le texte corrigé dans votre zone de réponse.",
 ];
 
 const RULES = [
@@ -53,7 +53,7 @@ export const ExamIntro = ({ exam, session, onStart }) => {
           <ol className="mt-3 space-y-2 text-sm text-emerald-100/90">
             {ANTIDOTE_STEPS.map((s, i) => <li key={i} className="flex gap-3"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-700 font-mono text-xs font-bold text-white">{i + 1}</span>{s}</li>)}
           </ol>
-          <p className="mt-3 text-xs text-emerald-300/80">Le copier-coller est permis <strong>seulement dans votre zone de réponse</strong>. Chaque collage est noté et visible par l'enseignant : ne collez que votre propre texte corrigé. Copier l'énoncé, ouvrir un autre site ou une autre application reste une infraction.</p>
+          <p className="mt-3 text-xs text-emerald-300/80">Le copier-coller est permis <strong>seulement dans votre zone de réponse</strong>. Chaque collage est noté et visible par l'enseignant : ne collez que votre propre texte corrigé. Copier l'énoncé, ouvrir un autre site ou une autre application reste une infraction. Si Ctrl+C+C ne réagit pas, l'Agent Antidote n'est pas démarré : ouvrez Antidote depuis le menu Démarrer une fois, puis réessayez.</p>
         </div>
       )}
       <Button onClick={onStart} className="mt-10 h-12 w-full bg-blue-600 text-base hover:bg-blue-500" data-testid="start-exam-btn">

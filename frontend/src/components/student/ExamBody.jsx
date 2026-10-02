@@ -35,8 +35,7 @@ export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob,
   const allowPaste = tools.some((t) => ["antidote", "wordq", "lexibar"].includes(t));
   const antidote = tools.includes("antidote") ? {
     onCorrect: (text) => {
-      onEvent?.("antidote_correct", `A envoyé ${(text.match(/\S+/g) || []).length} mot(s) vers Antidote pour correction`);
-      if (desktopTools?.desktop) desktopTools.launch("antidote");
+      onEvent?.("antidote_correct", `A lancé la correction Antidote de ${(text.match(/\S+/g) || []).length} mot(s)`);
     },
   } : null;
   const inline = exam.exam_type === "document" && exam.doc_answer_mode === "inline" && !!exam.file;

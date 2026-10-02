@@ -66,6 +66,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
     const onVis = () => {
       if (!document.hidden) return back();
       if (toolActive()) leave("tool_focus", "Est allé sur un outil web autorisé");
+      else if (window.monExam && desktopAllowed.length) leave("external_focus", `La fenêtre de l'examen a été recouverte par une autre application (logiciels permis : ${desktopAllowed.join(", ")})`);
       else leave("tab_hidden", "A quitté la page de l'examen (autre onglet, autre site web ou fenêtre réduite)");
     };
     const onBlur = () => setTimeout(() => {

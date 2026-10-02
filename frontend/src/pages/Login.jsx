@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,7 @@ export default function Login() {
           </Button>
           <p className="mt-5 text-center text-xs text-slate-500" data-testid="no-register-notice">Les comptes sont créés par l'administrateur de votre école. Pas de compte ? Adressez-vous à lui.</p>
         </form>
+        <Link to="/" className="mt-5 flex items-center justify-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-blue-900" data-testid="login-back-link"><ArrowLeft className="h-4 w-4" />Retour à l'accueil (espace élève)</Link>
       </div>
     </div>
   );

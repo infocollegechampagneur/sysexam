@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld("monExam", {
   isDesktop: true,
   setLockdown: (on, opts) => ipcRenderer.invoke("set-lockdown", on, opts),
   runningTools: () => ipcRenderer.invoke("tools-running"),
+  installedTools: () => ipcRenderer.invoke("tools-installed"),
   launchTool: (id) => ipcRenderer.invoke("launch-tool", id),
   forbiddenApps: () => ipcRenderer.invoke("forbidden-apps"),
   checkLocalExit: (code) => ipcRenderer.invoke("check-local-exit", code),
