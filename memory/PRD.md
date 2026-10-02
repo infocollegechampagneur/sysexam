@@ -85,3 +85,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - main.js : IPC `antidote-port` (registre HKLM\SOFTWARE\Druide informatique inc.\Connectix → AgentConnectixConsole.exe --api), cache 60 s.
 - Bouton « Corriger avec Antidote » : API Connectix si disponible, sinon repli Ctrl+C+C.
 - Testé : iteration_12.json (replis). WebSocket réel non testable ici.
+
+## 2026-06 — Dictionnaires/Guides Antidote + rapport outils
+- RichEditor : boutons « Dictionnaires » et « Guides » (desktop + Connectix) via lanceDictionnaires/lanceGuides sur le mot sélectionné ; événements antidote_dict / antidote_guide.
+- `lib/toolUsage.js` : agrégation durée d'ouverture (tool_opened/closed), consultations web (tool_focus/returned), actions Antidote, collages. Affiché dans SessionDetail (ToolUsageCard) et dans le rapport PDF (colonne + bloc par élève).
+- Testé : iteration_13.json.

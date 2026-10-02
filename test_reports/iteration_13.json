@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 13 frontend-only: validated Antidote Dictionnaires/Guides buttons in RichEditor (desktop mock only), tool usage summary card on teacher SessionDetail, and SurveillanceReport PDF generation.\n\n(1) Desktop mock injected via add_init_script with window.monExam.antidotePort=async()=>0: joined HIS301 as 'TEST DictGuide Iter13', passed PreCheck (precheck-ok, forbiddenApps=[]), started exam, typed 'Bonjour monde fantastique', selected word 'monde', clicked exam-rich-editor-antidote-dict-btn → toast 'Antidote (Connectix) n'a pas répondu sur ce poste.' shown. Repeated with 'fantastique' + guide button → same error toast. Editor remained editable (typed ' extra' after errors). Regression: 'Corriger avec Antidote' btn still works and shows both the Connectix error toast and the Ctrl+C+C fallback toast. No pageerror.\n\n(2) Browser without window.monExam mock: joined HIS301 as 'TEST NoMock Iter13'; essay editor shows ONLY exam-rich-editor-antidote-btn; both exam-rich-editor-antidote-dict-btn and exam-rich-editor-antidote-guide-btn are ABSENT. No console errors.\n\n(3) Teacher login (lynchs2757@gmail.com) → Results of HIS301 → selected 'TEST DictGuide Iter13' session → data-testid=tool-usage card is visible with text: 'Antidote — 3 utilisation(s) (dictionnaires ×1, guides ×1, correcteur ×1)'. Selected 'TEST NoMock Iter13' (session with no tool events): tool-usage card is NOT rendered (confirming only-when-usage behaviour).\n\n(4) Clicked export-surveillance-report-btn: 9 `report-tools` blocks were rendered in the hidden DOM container (one per session), html2pdf processed without any page errors or console errors. Verified via inspection of hidden DOM before PDF export completed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "toolUsage.js: antidote_dict/guide events are counted together as actions on 'Antidote' and the usageLabel shows combined count — correct per spec. Details array uses string push ('dictionnaires'/'guides') which is clean.",
+    "SurveillanceReport renders one `report-tools` div per student; since multiple same-testid elements exist (9 in this test), querySelectorAll is required. Confirmed as spec-expected ('data-testid report-tools per student').",
+    "Results.jsx hidden report container uses `-left-[9999px]` to offscreen it for html2pdf; this works but creates 9 inline SurveillanceReport entries always mounted — minor perf concern for large classes (hundreds of sessions) but acceptable for MVP.",
+    "RichEditor only renders dict/guide buttons when antidoteApiAvailable() returns true at render time; it is not reactive to window.monExam being set later. In practice window.monExam is injected by the desktop host before React boots, so this is fine."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin)",
+  "seed_data_creation": "Student sessions on HIS301: 'TEST DictGuide Iter13' (has antidote_dict, antidote_guide, antidote_correct events) and 'TEST NoMock Iter13' (no tool events). Safe to leave for future retests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Testids: exam-rich-editor-antidote-dict-btn / exam-rich-editor-antidote-guide-btn / exam-rich-editor-antidote-btn. Dict/Guide render only when window.monExam.antidotePort exists. Teacher SessionDetail shows a 'tool-usage' card (toolUsage() from events) with Antidote utilisations and labels 'dictionnaires', 'guides', 'correcteur'. Surveillance PDF button is export-surveillance-report-btn on Results page; it renders 9 copies of SurveillanceReport inside a hidden container with one 'report-tools' testid per student. The server-side `GET /api/exams/{id}/sessions` properly includes antidote_dict/antidote_guide events (verified indirectly via the tool-usage card content).",
+  "rca of the issue": "N/A - all 5 scenarios in the review request verified working as expected."
+}
