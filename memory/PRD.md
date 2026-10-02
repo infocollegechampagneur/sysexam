@@ -101,3 +101,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - scanForbidden : PowerShell Get-Process limité aux processus interdits (bien plus rapide que tasklist /v) ; PreCheck sans scans concurrents (6 s).
 - Enseignant : +5/+10/+15 min pendant l'examen ; panneau « Outils permis pour cet élève » (PUT /sessions/{id}/tools → tools_override, fusionné dans GET /student/session). Élève : toast + outil ajouté dans la barre en ≤5 s.
 - Testé : iteration_15.json.
+
+## 2026-06 — Correctifs Antidote reconnexion + scan robuste (desktop 1.2.3)
+- antidote.js : reconnexion automatique quand la WebSocket Connectix est fermée (impl.estInitialise), cache réinitialisé à sessionTerminee, erreur explicite au lieu d'un clic muet.
+- main.js : scanForbidden PowerShell (chemin complet, -ExecutionPolicy Bypass) avec repli tasklist /v en cas d'échec ; journalisation détaillée.
+- Testé : iteration_16.json (WebSocket simulée).
