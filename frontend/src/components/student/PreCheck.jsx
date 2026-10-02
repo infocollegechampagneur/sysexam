@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Ban, CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -6,12 +6,17 @@ import { toast } from "sonner";
 export const PreCheck = ({ onClean }) => {
   const [apps, setApps] = useState(null);
   const [busy, setBusy] = useState(false);
+  const scanning = useRef(false);
   const scan = useCallback(async () => {
-    const list = await window.monExam.forbiddenApps();
-    setApps(list);
-    onClean?.(list.length === 0);
+    if (scanning.current) return;
+    scanning.current = true;
+    try {
+      const list = await window.monExam.forbiddenApps();
+      setApps(list);
+      onClean?.(list.length === 0);
+    } finally { scanning.current = false; }
   }, [onClean]);
-  useEffect(() => { scan(); const iv = setInterval(scan, 4000); return () => clearInterval(iv); }, [scan]);
+  useEffect(() => { scan(); const iv = setInterval(scan, 6000); return () => clearInterval(iv); }, [scan]);
   const closeAll = async () => {
     setBusy(true);
     try {

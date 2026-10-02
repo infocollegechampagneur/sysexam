@@ -276,6 +276,14 @@ def public_session(s: dict) -> dict:
     return {k: v for k, v in s.items() if k not in ("token",)}
 
 
+def exam_for_session(exam: dict, s: dict) -> dict:
+    out = public_exam(exam)
+    extra = [t for t in (s.get("tools_override") or []) if t not in (out["settings"].get("allowed_tools") or [])]
+    if extra:
+        out["settings"] = {**out["settings"], "allowed_tools": [*(out["settings"].get("allowed_tools") or []), *extra]}
+    return out
+
+
 def deadline_of(session: dict, exam: dict):
     if not exam.get("duration_minutes"):
         return None
@@ -679,6 +687,22 @@ async def session_extra_time(session_id: str, body: ExtraTimeIn, user: dict = De
     return {"ok": True}
 
 
+class SessionToolsIn(BaseModel):
+    tools: list[str] = Field(default_factory=list)
+
+
+@api.put("/sessions/{session_id}/tools")
+async def session_tools(session_id: str, body: SessionToolsIn, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    tools = [t for t in body.tools if t in TOOLS]
+    ev = {"type": "tools_changed", "detail": f"Outils permis pour cet élève : {', '.join(tools) if tools else 'aucun ajout'}", "at": now_iso(), "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": {"tools_override": tools}, "$push": {"events": ev}})
+    return {"ok": True, "tools_override": tools}
+
+
 # ---------- Teacher: classes ----------
 @api.get("/classes")
 async def list_classes(user: dict = Depends(current_teacher)):
@@ -776,7 +800,7 @@ async def student_exam_info(code: str):
 async def student_session(s: dict = Depends(current_session)):
     exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     dl = deadline_of(s, exam)
-    return {"session": public_session(s), "exam": public_exam(exam), "deadline": dl.isoformat() if dl else None,
+    return {"session": public_session(s), "exam": exam_for_session(exam, s), "deadline": dl.isoformat() if dl else None,
             "server_now": now_iso()}
 
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen } from "lucide-react";
+import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,7 @@ import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog
 import { LockSessionButton, ReopenSessionButton } from "@/components/TeacherControls";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
-import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount } from "@/lib/tools";
+import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount, TOOLS } from "@/lib/tools";
 import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
 import { downloadAnnotatedPdf } from "@/lib/pdf";
 
@@ -53,14 +53,43 @@ const answerText = (q, v) => (v === undefined || v === "" ? "<em>(sans réponse)
 
 const ExtraTime = ({ session, onChanged }) => {
   const [min, setMin] = useState(session.extra_minutes || 0);
-  const save = () => api.put(`/sessions/${session.id}/extra-time`, { extra_minutes: Number(min) || 0 }).then(() => { toast.success("Temps supplémentaire mis à jour"); onChanged(); }).catch((e) => toast.error(formatErr(e)));
+  useEffect(() => setMin(session.extra_minutes || 0), [session.id, session.extra_minutes]);
+  const apply = (value) => api.put(`/sessions/${session.id}/extra-time`, { extra_minutes: Math.max(0, Number(value) || 0) }).then(() => { toast.success(`Temps supplémentaire : ${Math.max(0, Number(value) || 0)} min (visible chez l'élève dans quelques secondes)`); onChanged(); }).catch((e) => toast.error(formatErr(e)));
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="extra-time-panel">
       <Clock className="h-4 w-4 text-blue-900" />
       <span className="text-slate-700">Temps supp. du plan d'intervention : <strong data-testid="extra-time-percent">{session.extra_time_percent || 0} %</strong></span>
       <span className="ml-auto text-slate-500">+ minutes accordées</span>
+      {[5, 10, 15].map((n) => <Button key={n} size="sm" variant="outline" onClick={() => apply((Number(min) || 0) + n)} data-testid={`add-extra-${n}-btn`}>+{n}</Button>)}
       <Input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} className="h-9 w-20" data-testid="extra-minutes-input" />
-      <Button size="sm" variant="outline" onClick={save} data-testid="save-extra-minutes-btn">Appliquer</Button>
+      <Button size="sm" variant="outline" onClick={() => apply(min)} data-testid="save-extra-minutes-btn">Appliquer</Button>
+    </div>
+  );
+};
+
+const SessionTools = ({ exam, session, onChanged }) => {
+  const base = exam.settings.allowed_tools || [];
+  const override = session.tools_override || [];
+  const toggle = (id) => {
+    const next = override.includes(id) ? override.filter((t) => t !== id) : [...override, id];
+    api.put(`/sessions/${session.id}/tools`, { tools: next }).then(() => { toast.success(override.includes(id) ? "Outil retiré pour cet élève" : "Outil permis pour cet élève (actif dans quelques secondes)"); onChanged(); }).catch((e) => toast.error(formatErr(e)));
+  };
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="session-tools-panel">
+      <p className="mb-2 flex items-center gap-2 font-medium text-slate-900"><Wrench className="h-4 w-4 text-blue-900" />Outils permis pour cet élève</p>
+      <div className="flex flex-wrap gap-2">
+        {TOOLS.map((t) => {
+          const inExam = base.includes(t.id);
+          const on = inExam || override.includes(t.id);
+          return (
+            <button key={t.id} type="button" disabled={inExam} onClick={() => toggle(t.id)} title={inExam ? "Déjà permis pour tout l'examen" : on ? "Cliquer pour retirer" : "Cliquer pour permettre à cet élève seulement"}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${on ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-slate-200 text-slate-500 hover:border-blue-300"} ${inExam ? "opacity-70" : ""}`} data-testid={`session-tool-${t.id}`}>
+              {on ? "✓ " : "+ "}{t.label}{inExam ? " (examen)" : ""}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-slate-500">Les outils ajoutés ici s'appliquent uniquement à cette copie, sans modifier l'examen pour les autres élèves. Ils apparaissent dans la barre de l'élève en quelques secondes.</p>
     </div>
   );
 };
@@ -121,6 +150,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       {session.status === "locked" && <LockedBanner session={session} onUnlock={unlock} />}
       <UnlockDialog open={unlockOpen} onOpenChange={setUnlockOpen} session={session} maxViolations={exam.settings.max_violations} onDone={onChanged} />
       {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
+      {session.status === "in_progress" && <SessionTools exam={exam} session={session} onChanged={onChanged} />}
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations + (session.allowance || 0)} signalement(s)</span></p>

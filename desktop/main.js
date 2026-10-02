@@ -103,16 +103,21 @@ const HIDDEN_TITLES = /^(N\/A|S\/O|OLE\w*|Default IME|MSCTFIME UI|DDE Server Win
 function scanForbidden() {
   return new Promise((resolve) => {
     if (process.platform !== "win32") return resolve([]);
-    execFile("tasklist", ["/v", "/fo", "csv", "/nh"], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
-      if (err) return resolve([]);
-      const rows = out.split(/\r?\n/).map((l) => l.split('","').map((c) => c.replace(/^"|"$/g, "")));
+    const names = (config.forbidden || []).map((f) => f.process.replace(/\.exe$/i, "").replace(/'/g, "''"));
+    if (!names.length) return resolve([]);
+    const ps = `Get-Process -Name ${names.map((n) => `'${n}'`).join(",")} -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle } | Select-Object ProcessName,MainWindowTitle | ConvertTo-Json -Compress`;
+    const t0 = Date.now();
+    execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 10000, maxBuffer: 4 * 1024 * 1024 }, (err, out) => {
+      if (err) { log(`scanForbidden: échec (${(err.message || "").split("\n")[0]})`); return resolve([]); }
+      let rows = [];
+      try { const j = JSON.parse(String(out || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch (e) { rows = []; }
       const found = {};
       for (const r of rows) {
-        const image = (r[0] || "").toLowerCase();
-        const title = (r[r.length - 1] || "").trim();
-        const app = (config.forbidden || []).find((f) => f.process.toLowerCase() === image);
+        const title = String(r.MainWindowTitle || "").trim();
+        const app = (config.forbidden || []).find((f) => f.process.replace(/\.exe$/i, "").toLowerCase() === String(r.ProcessName || "").toLowerCase());
         if (app && title && !HIDDEN_TITLES.test(title)) found[app.label] = { title, process: app.process };
       }
+      log(`scanForbidden: ${Object.keys(found).length} trouvée(s) en ${Date.now() - t0} ms`);
       resolve(Object.entries(found).map(([label, v]) => ({ label, title: v.title, process: v.process })));
     });
   });

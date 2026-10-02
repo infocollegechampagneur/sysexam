@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, formatErr } from "@/lib/api";
+import { TOOLS } from "@/lib/tools";
 import { useAntiCheat } from "@/hooks/useAntiCheat";
 import { useDesktopTools, useForbiddenApps } from "@/hooks/useDesktopTools";
 import { ExamIntro } from "@/components/student/ExamIntro";
@@ -107,6 +108,13 @@ export default function StudentExam() {
     const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => {
       setDeadline(d.deadline);
       showMessageIfAny(d.session);
+      const curTools = (data?.exam?.settings?.allowed_tools || []).join(",");
+      const newTools = (d.exam?.settings?.allowed_tools || []).join(",");
+      if (newTools !== curTools) {
+        setData((prev) => ({ ...prev, exam: d.exam, session: { ...prev.session, tools_override: d.session.tools_override } }));
+        const added = (d.exam.settings.allowed_tools || []).filter((t) => !curTools.split(",").includes(t)).map((t) => TOOLS.find((x) => x.id === t)?.label || t);
+        if (added.length) toast.success(`Votre enseignant vous permet maintenant : ${added.join(", ")}`, { duration: 10000 });
+      }
       if (d.session.status !== "in_progress") { setStatus(d.session.status); setLockedBy(d.session.locked_by); }
     }).catch(() => {}), 5000);
     return () => clearInterval(iv);
