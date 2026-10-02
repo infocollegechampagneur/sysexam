@@ -106,3 +106,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - antidote.js : reconnexion automatique quand la WebSocket Connectix est fermée (impl.estInitialise), cache réinitialisé à sessionTerminee, erreur explicite au lieu d'un clic muet.
 - main.js : scanForbidden PowerShell (chemin complet, -ExecutionPolicy Bypass) avec repli tasklist /v en cas d'échec ; journalisation détaillée.
 - Testé : iteration_16.json (WebSocket simulée).
+
+## 2026-06 — Pause (examen, élève, tous les examens) + Lexibar (desktop 1.2.4)
+- Backend : exam.paused_at/pause_message, session.paused_at/paused_seconds ; deadline_of ajoute le temps de pause ; POST /exams/{id}/pause|resume, /exams/pause-many|resume-many, /sessions/{id}/pause|resume ; GET /student/session → paused, pause_message.
+- Frontend : PausedOverlay (élève, chronomètre figé, anti-triche inactif) ; PauseControls.jsx (ExamPauseControl dans ClassControls, SessionPauseControl dans SessionDetail, AllExamsPauseControl dans Dashboard) ; badges « En pause ».
+- Lexibar : chemins LexibarLP5X / Haylem ajoutés (config.json).
+- Testé : iteration_17.json.
