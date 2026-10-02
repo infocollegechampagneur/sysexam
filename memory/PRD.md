@@ -112,3 +112,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Frontend : PausedOverlay (élève, chronomètre figé, anti-triche inactif) ; PauseControls.jsx (ExamPauseControl dans ClassControls, SessionPauseControl dans SessionDetail, AllExamsPauseControl dans Dashboard) ; badges « En pause ».
 - Lexibar : chemins LexibarLP5X / Haylem ajoutés (config.json).
 - Testé : iteration_17.json.
+
+## 2026-06 — Confirmation de remise (desktop 1.2.5)
+- POST /student/submit retourne un reçu (code 8 car., heure, questions répondues, mots, annotations) ; idempotent.
+- SubmittedScreen : reçu + bouton « Fermer l'application » (IPC quit-app) ; dialogue de remise : questions sans réponse + nb de mots ; remise avec 6 tentatives et avertissement « NE FERMEZ PAS ».
+- Testé : iteration_18.json.
