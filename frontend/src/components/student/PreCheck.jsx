@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Ban, CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export const PreCheck = ({ onClean }) => {
   const [apps, setApps] = useState(null);
@@ -13,10 +14,15 @@ export const PreCheck = ({ onClean }) => {
   useEffect(() => { scan(); const iv = setInterval(scan, 4000); return () => clearInterval(iv); }, [scan]);
   const closeAll = async () => {
     setBusy(true);
-    const r = await window.monExam.closeForbidden();
-    setApps(r.remaining);
-    onClean?.(r.remaining.length === 0);
-    setBusy(false);
+    try {
+      const r = await Promise.race([window.monExam.closeForbidden(), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 20000))]);
+      setApps(r.remaining);
+      onClean?.(r.remaining.length === 0);
+      if (r.remaining.length) toast.warning(`Impossible de fermer : ${r.remaining.map((a) => a.label).join(", ")}. Fermez-les manuellement puis cliquez « Revérifier ».`, { duration: 10000 });
+    } catch (e) {
+      toast.error("La fermeture prend trop de temps. Fermez les applications manuellement puis cliquez « Revérifier ».");
+      scan();
+    } finally { setBusy(false); }
   };
   if (apps === null) return <p className="mt-6 flex items-center gap-2 text-sm text-slate-400" data-testid="precheck-loading"><Loader2 className="h-4 w-4 animate-spin" />Vérification des applications ouvertes…</p>;
   if (!apps.length) return <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-200" data-testid="precheck-ok"><CheckCircle2 className="h-4 w-4" />Aucune application interdite n'est ouverte. Vous pouvez commencer.</p>;

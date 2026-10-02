@@ -46,10 +46,14 @@ export function useDesktopTools({ active, allowed, onEvent }) {
   }, [desktop, active, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const launch = useCallback(async (id) => {
+    if (running.includes(id) && window.monExam.focusTool) {
+      const ok = await window.monExam.focusTool(id);
+      if (ok) { toast.success(`${label(id)} mis à l'avant-plan.`); return; }
+    }
     const r = await window.monExam.launchTool(id);
     if (r.ok) { toast.success(`Ouverture de ${label(id)}…`); onEventRef.current("tool_launch", `A ouvert ${label(id)} depuis l'examen`); }
     else toast.error(r.reason || `Impossible d'ouvrir ${label(id)}`);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { desktop, running, installed, launch, desktopIds: ids };
 }

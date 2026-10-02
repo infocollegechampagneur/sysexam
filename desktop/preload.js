@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("monExam", {
   runningTools: () => ipcRenderer.invoke("tools-running"),
   installedTools: () => ipcRenderer.invoke("tools-installed"),
   launchTool: (id) => ipcRenderer.invoke("launch-tool", id),
+  focusTool: (id) => ipcRenderer.invoke("focus-tool", id),
   forbiddenApps: () => ipcRenderer.invoke("forbidden-apps"),
   closeForbidden: () => ipcRenderer.invoke("close-forbidden"),
   antidotePort: () => ipcRenderer.invoke("antidote-port"),

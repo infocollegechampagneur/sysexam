@@ -99,7 +99,7 @@ ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
   return locked;
 });
 
-const HIDDEN_TITLES = /^(N\/A|S\/O|OleMainThreadWndName|Default IME|MSCTFIME UI|DDE Server Window|GDI\+ Window.*|\.NET-BroadcastEventWindow.*|Hidden Window|CicMarshalWnd|SystemResourceNotifyWindow|Chrome_WidgetWin_\d|MediaContextNotificationWindow|Battery Meter|Program Manager)$/i;
+const HIDDEN_TITLES = /^(N\/A|S\/O|OLE\w*|Default IME|MSCTFIME UI|DDE Server Window|GDI\+ Window.*|\.NET-BroadcastEventWindow.*|Hidden Window|CicMarshalWnd|SystemResourceNotifyWindow|Chrome_WidgetWin_\d|MediaContextNotificationWindow|Battery Meter|Program Manager|Windows Push Notifications Platform|.*Broker.*)$/i;
 function scanForbidden() {
   return new Promise((resolve) => {
     if (process.platform !== "win32") return resolve([]);
@@ -121,12 +121,31 @@ ipcMain.handle("forbidden-apps", () => scanForbidden());
 
 ipcMain.handle("close-forbidden", async () => {
   const apps = await scanForbidden();
-  const closed = [];
-  for (const a of apps) {
-    await new Promise((resolve) => execFile("taskkill", ["/IM", a.process, "/F", "/T"], { windowsHide: true }, (err) => { if (!err) closed.push(a.label); log(`taskkill ${a.process}: ${err ? "échec" : "ok"}`); resolve(); }));
-  }
-  return { closed, remaining: await scanForbidden() };
+  const kill = (a) => new Promise((resolve) => {
+    const t0 = Date.now();
+    execFile("taskkill", ["/IM", a.process, "/F"], { windowsHide: true, timeout: 6000 }, (err, out) => {
+      log(`taskkill ${a.process}: ${err ? `échec (${(err.message || "").split("\n")[0]})` : "ok"} en ${Date.now() - t0} ms`);
+      if (!err) return resolve(a.label);
+      const name = a.process.replace(/\.exe$/i, "");
+      execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue`], { windowsHide: true, timeout: 8000 }, (err2) => {
+        log(`Stop-Process ${name}: ${err2 ? "échec" : "ok"}`);
+        resolve(err2 ? null : a.label);
+      });
+    });
+  });
+  const results = await Promise.all(apps.map(kill));
+  await new Promise((r) => setTimeout(r, 1200));
+  return { closed: results.filter(Boolean), remaining: await scanForbidden() };
 });
+
+function bringToFront(exePath) {
+  const name = path.basename(exePath, path.extname(exePath));
+  const ps = `$deadline=(Get-Date).AddSeconds(8); do { $p=Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; if ($p) { break }; Start-Sleep -Milliseconds 400 } while ((Get-Date) -lt $deadline); if ($p) { Add-Type @'
+using System; using System.Runtime.InteropServices;
+public class W { [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c); }
+'@; [W]::ShowWindow($p.MainWindowHandle, 9) | Out-Null; [W]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; 'ok' } else { 'nowindow' }`;
+  return new Promise((resolve) => execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 12000 }, (err, out) => { log(`bringToFront ${name}: ${err ? "échec" : String(out).trim()}`); resolve(!err); }));
+}
 
 ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
 
@@ -207,7 +226,19 @@ ipcMain.handle("launch-tool", async (_e, id) => {
   if (!exe) { log(`launch-tool ${id}: introuvable`); return { ok: false, reason: `${tool.label || id} n'a pas été trouvé sur ce poste` }; }
   log(`launch-tool ${id}: ${exe}`);
   const err = await shell.openPath(exe);
-  return err ? { ok: false, reason: err } : { ok: true, path: exe };
+  if (err) return { ok: false, reason: err };
+  const wasOnTop = win.isAlwaysOnTop();
+  if (wasOnTop) win.setAlwaysOnTop(false);
+  bringToFront(exe).then(() => { if (wasOnTop && locked) setTimeout(() => win.setAlwaysOnTop(false), 0); });
+  return { ok: true, path: exe };
+});
+
+ipcMain.handle("focus-tool", async (_e, id) => {
+  const tool = (config.tools || {})[id];
+  const exe = tool && findExe(tool);
+  if (!exe) return false;
+  if (win.isAlwaysOnTop()) win.setAlwaysOnTop(false);
+  return bringToFront(exe);
 });
 
 if (!app.requestSingleInstanceLock()) {
