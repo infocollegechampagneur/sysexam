@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 15 validated the new per-student tool-override and in-progress extra-time features. Backend pytest suite (5 tests) and full frontend E2E all PASSED.\n\nBackend (test_examsecure_v15_tools_extratime.py, 5/5):\n- PUT /api/sessions/{id}/tools with ['usito','bogus'] -> 200, tools_override=['usito'] (invalid filtered).\n- GET /api/student/session merges tools_override into exam.settings.allowed_tools; e.g. wordreference override surfaces for a FRA401 session while preserving base tools ['antidote','usito'].\n- session.events contains type 'tools_changed' after PUT.\n- Non-owner teacher calling PUT /tools or /extra-time -> 404 (own_exam returns 404 when teacher_id does not match; acceptable per spec that allows 403/404).\n- PUT /extra-time {extra_minutes:10} shifts GET /student/session deadline by 9.5-10.5 minutes.\n\nFrontend E2E (headless Chromium, 2 contexts: student + teacher):\n- Student joined FRA401, exam-timer before=59:58 (3598s), after +10 click=69:44 (4184s) => +586s (~9m46s, within next 5s poll). Timer increase confirmed.\n- Teacher at /enseignant/examens/{FRA401}/resultats -> session-detail panels visible: extra-time-panel + session-tools-panel.\n- add-extra-10-btn: toast + extra-minutes-input shows '10'. PASS.\n- session-tool-antidote is disabled (already in exam, shows '(examen)'); session-tool-wordreference click triggered within ~5s a student toast 'Votre enseignant vous permet maintenant : WordReference' and tool-button-wordreference appeared in exam-tools-bar. Clicking it opens the tool panel; no violation. PASS.\n- After student submit, teacher re-opens the submitted session: session-tools-panel is NOT rendered (session.status=='submitted' hides it). PASS.\n\nConsole: a couple of 401s on /api/auth/me on student page are pre-existing (unauthenticated AuthContext probe), unrelated.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_examsecure_v15_tools_extratime.py",
+    "/app/test_reports/pytest/iter15_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.exam_for_session merges tools_override into settings.allowed_tools without duplicates and preserves base order; clean.",
+    "session_tools filters payload against TOOLS allowlist (['usito','wordreference','antidote','wordq','lexibar']) before persisting - good.",
+    "own_exam raises 404 (not 403) for cross-teacher writes. Spec accepts either; consider 403 for clearer semantics distinguishing 'not found' from 'not yours'.",
+    "StudentExam poll compares allowed_tools via comma-joined string; relies on stable ordering returned by backend. Since backend concatenates (base + override) deterministically, this is fine; but if base ordering ever changes, a spurious toast could fire. Minor.",
+    "ExtraTime applies absolute extra_minutes via PUT; quick +5/+10/+15 buttons add to the local 'min' state before PUT, so repeated clicks accumulate - matches spec 'cumulative on current extra_minutes'.",
+    "SessionDetail only renders SessionTools when session.status==='in_progress' - confirmed hidden after submit."
+  ],
+  "updated_files": ["/app/backend/tests/test_examsecure_v15_tools_extratime.py"],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all E2E assertions passed)"},
+  "test_credentials": "Admin lynchs2757@gmail.com / Enseignant2026! (from /app/memory/test_credentials.md). An ephemeral teacher is created per module via POST /api/admin/users for the cross-teacher 404 check.",
+  "seed_data_creation": "Each run creates a FRA401 session named 'TEST E2E <ts>' (student join) and 'TEST SDET <hex>' sessions from pytest; also one ephemeral teacher user 'test_sdet_<hex>@example.com' via admin. These are harmless but accumulate; cleanup not implemented.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "FRA401 exam id = 5b82923c-023b-4c34-bfbf-055aa36d822b (allowed_tools=['antidote','usito'], duration 60 min). Use 2 Playwright contexts to test student + teacher simultaneously. Student poll interval is 5s - wait >=6s after teacher mutations before asserting on student UI. tool-button-* only renders for web tools (usito, wordreference); desktop-only tools (antidote, wordq, lexibar) show as tool-badge-* when window.monExam.tools contains them.",
+  "rca of the issue": "N/A - all features behave per spec."
+}

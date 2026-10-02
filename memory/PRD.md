@@ -96,3 +96,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Filtre fenêtres cachées élargi (OLE*, *Broker*, Push Notifications).
 - bringToFront (PowerShell SetForegroundWindow) après lancement ; IPC focus-tool ; bouton outil déjà ouvert → avant-plan ; alwaysOnTop relâché quand des outils desktop sont permis.
 - Testé : iteration_14.json (mocks).
+
+## 2026-06 — Scan rapide + temps/outils en direct (desktop 1.2.2)
+- scanForbidden : PowerShell Get-Process limité aux processus interdits (bien plus rapide que tasklist /v) ; PreCheck sans scans concurrents (6 s).
+- Enseignant : +5/+10/+15 min pendant l'examen ; panneau « Outils permis pour cet élève » (PUT /sessions/{id}/tools → tools_override, fusionné dans GET /student/session). Élève : toast + outil ajouté dans la barre en ≤5 s.
+- Testé : iteration_15.json.
