@@ -36,14 +36,18 @@
     },
     "wordq": {
       "label": "WordQ",
-      "processes": ["wordq"],
+      "processes": ["wordq.exe", "wordq6.exe", "wordq5.exe", "wordq 5", "wordq 6"],
       "autoLaunch": true,
       "search": [
-        "C:\\Program Files\\WordQ*\\WordQ*.exe",
-        "C:\\Program Files (x86)\\WordQ*\\WordQ*.exe",
-        "C:\\Program Files\\Quillsoft\\WordQ*\\WordQ*.exe",
-        "C:\\Program Files (x86)\\Quillsoft\\WordQ*\\WordQ*.exe",
-        "%LOCALAPPDATA%\\Programs\\WordQ*\\WordQ*.exe"
+        "C:\\Program Files (x86)\\WordQ*\\WordQ.exe",
+        "C:\\Program Files\\WordQ*\\WordQ.exe",
+        "C:\\Program Files (x86)\\WordQ*\\WordQ6.exe",
+        "C:\\Program Files\\WordQ*\\WordQ6.exe",
+        "C:\\Program Files (x86)\\WordQ*\\WordQ5.exe",
+        "C:\\Program Files\\WordQ*\\WordQ5.exe",
+        "C:\\Program Files (x86)\\Quillsoft\\WordQ*\\WordQ.exe",
+        "C:\\Program Files\\Quillsoft\\WordQ*\\WordQ.exe",
+        "%LOCALAPPDATA%\\Programs\\WordQ*\\WordQ.exe"
       ]
     },
     "lexibar": {
@@ -51,10 +55,12 @@
       "processes": ["lexibar"],
       "autoLaunch": true,
       "search": [
+        "C:\\Program Files\\Lexibar*\\Lexibar.exe",
+        "C:\\Program Files (x86)\\Lexibar*\\Lexibar.exe",
+        "%LOCALAPPDATA%\\Programs\\Lexibar*\\Lexibar.exe",
+        "%LOCALAPPDATA%\\Lexibar*\\Lexibar.exe",
         "C:\\Program Files\\Lexibar*\\Lexibar*.exe",
-        "C:\\Program Files (x86)\\Lexibar*\\Lexibar*.exe",
-        "%LOCALAPPDATA%\\Programs\\Lexibar*\\Lexibar*.exe",
-        "%LOCALAPPDATA%\\Lexibar*\\Lexibar*.exe"
+        "C:\\Program Files (x86)\\Lexibar*\\Lexibar*.exe"
       ]
     }
   }

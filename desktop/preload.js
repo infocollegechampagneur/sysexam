@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("monExam", {
   installedTools: () => ipcRenderer.invoke("tools-installed"),
   launchTool: (id) => ipcRenderer.invoke("launch-tool", id),
   forbiddenApps: () => ipcRenderer.invoke("forbidden-apps"),
+  closeForbidden: () => ipcRenderer.invoke("close-forbidden"),
   checkLocalExit: (code) => ipcRenderer.invoke("check-local-exit", code),
   onEmergency: (cb) => {
     const h = () => cb();

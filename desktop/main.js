@@ -99,21 +99,34 @@ ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
   return locked;
 });
 
-ipcMain.handle("forbidden-apps", () => new Promise((resolve) => {
-  if (process.platform !== "win32") return resolve([]);
-  execFile("tasklist", ["/v", "/fo", "csv", "/nh"], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
-    if (err) return resolve([]);
-    const rows = out.split(/\r?\n/).map((l) => l.split('","').map((c) => c.replace(/^"|"$/g, "")));
-    const found = {};
-    for (const r of rows) {
-      const image = (r[0] || "").toLowerCase();
-      const title = r[r.length - 1] || "";
-      const app = (config.forbidden || []).find((f) => f.process.toLowerCase() === image);
-      if (app && title && title !== "N/A" && title !== "S/O") found[app.label] = title;
-    }
-    resolve(Object.entries(found).map(([label, title]) => ({ label, title })));
+const HIDDEN_TITLES = /^(N\/A|S\/O|OleMainThreadWndName|Default IME|MSCTFIME UI|DDE Server Window|GDI\+ Window.*|\.NET-BroadcastEventWindow.*|Hidden Window|CicMarshalWnd|SystemResourceNotifyWindow|Chrome_WidgetWin_\d|MediaContextNotificationWindow|Battery Meter|Program Manager)$/i;
+function scanForbidden() {
+  return new Promise((resolve) => {
+    if (process.platform !== "win32") return resolve([]);
+    execFile("tasklist", ["/v", "/fo", "csv", "/nh"], { windowsHide: true, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      if (err) return resolve([]);
+      const rows = out.split(/\r?\n/).map((l) => l.split('","').map((c) => c.replace(/^"|"$/g, "")));
+      const found = {};
+      for (const r of rows) {
+        const image = (r[0] || "").toLowerCase();
+        const title = (r[r.length - 1] || "").trim();
+        const app = (config.forbidden || []).find((f) => f.process.toLowerCase() === image);
+        if (app && title && !HIDDEN_TITLES.test(title)) found[app.label] = { title, process: app.process };
+      }
+      resolve(Object.entries(found).map(([label, v]) => ({ label, title: v.title, process: v.process })));
+    });
   });
-}));
+}
+ipcMain.handle("forbidden-apps", () => scanForbidden());
+
+ipcMain.handle("close-forbidden", async () => {
+  const apps = await scanForbidden();
+  const closed = [];
+  for (const a of apps) {
+    await new Promise((resolve) => execFile("taskkill", ["/IM", a.process, "/F", "/T"], { windowsHide: true }, (err) => { if (!err) closed.push(a.label); log(`taskkill ${a.process}: ${err ? "échec" : "ok"}`); resolve(); }));
+  }
+  return { closed, remaining: await scanForbidden() };
+});
 
 ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
 
@@ -132,7 +145,7 @@ function globOne(pattern) {
     candidates = next;
     if (!candidates.length) break;
   }
-  return candidates.filter((c) => { try { return fs.statSync(c).isFile(); } catch (e) { return false; } }).sort().reverse();
+  return candidates.filter((c) => { try { return fs.statSync(c).isFile(); } catch (e) { return false; } }).sort((a, b) => path.basename(a).length - path.basename(b).length || b.localeCompare(a));
 }
 function findExe(tool) {
   const patterns = [...(tool.search || []), ...(tool.paths || [])];

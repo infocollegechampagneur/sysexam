@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ShieldCheck, Globe, Monitor, Ban, Maximize, ClipboardX, Eye, SpellCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TOOLS } from "@/lib/tools";
+import { PreCheck } from "@/components/student/PreCheck";
 
 const ANTIDOTE_STEPS = [
   "Rédigez votre texte directement dans la zone de réponse de l'examen.",
@@ -18,6 +20,8 @@ const RULES = [
 
 export const ExamIntro = ({ exam, session, onStart }) => {
   const st = exam.settings;
+  const desktop = !!window.monExam?.forbiddenApps;
+  const [clean, setClean] = useState(!desktop);
   const allowed = TOOLS.filter((t) => st.allowed_tools.includes(t.id));
   const rules = RULES.filter((_, i) => (i === 0 ? st.require_fullscreen : i === 2 ? st.block_clipboard : true));
   return (
@@ -53,10 +57,12 @@ export const ExamIntro = ({ exam, session, onStart }) => {
           <ol className="mt-3 space-y-2 text-sm text-emerald-100/90">
             {ANTIDOTE_STEPS.map((s, i) => <li key={i} className="flex gap-3"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-700 font-mono text-xs font-bold text-white">{i + 1}</span>{s}</li>)}
           </ol>
-          <p className="mt-3 text-xs text-emerald-300/80">Le copier-coller est permis <strong>seulement dans votre zone de réponse</strong>. Chaque collage est noté et visible par l'enseignant : ne collez que votre propre texte corrigé. Copier l'énoncé, ouvrir un autre site ou une autre application reste une infraction. Si Ctrl+C+C ne réagit pas, l'Agent Antidote n'est pas démarré : ouvrez Antidote depuis le menu Démarrer une fois, puis réessayez.</p>
+          <p className="mt-3 text-xs text-emerald-300/80">Le copier-coller est permis <strong>seulement dans votre zone de réponse</strong>. Chaque collage est noté et visible par l'enseignant : ne collez que votre propre texte corrigé. Copier l'énoncé, ouvrir un autre site ou une autre application reste une infraction.</p>
+          <p className="mt-2 rounded-md bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100" data-testid="antidote-agent-hint"><strong>Si Ctrl+C+C ne réagit pas :</strong> l'Agent Antidote n'est pas activé sur ce poste. Ouvrez Antidote → menu <em>Outils</em> (ou <em>Antidote</em>) → <em>Réglages</em> → <em>Connectix</em> → cochez <em>Activer l'Agent Antidote</em>. Une fois fait, le raccourci fonctionne dans toutes les applications.</p>
         </div>
       )}
-      <Button onClick={onStart} className="mt-10 h-12 w-full bg-blue-600 text-base hover:bg-blue-500" data-testid="start-exam-btn">
+      {desktop && <PreCheck onClean={setClean} />}
+      <Button onClick={onStart} disabled={!clean} className="mt-10 h-12 w-full bg-blue-600 text-base hover:bg-blue-500" data-testid="start-exam-btn">
         {st.require_fullscreen ? "Passer en plein écran et commencer" : "Commencer l'examen"}
       </Button>
     </div>

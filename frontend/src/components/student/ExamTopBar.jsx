@@ -1,4 +1,5 @@
 import { Globe, Monitor, CloudCheck, ShieldAlert, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ExamTimer } from "@/components/student/ExamTimer";
@@ -19,7 +20,7 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
               <Globe className="mr-1 h-3.5 w-3.5" />{t.label}
             </Button>
           ) : desktopTools?.desktop ? (
-            <Button key={t.id} size="sm" variant="outline" onClick={() => desktopTools.launch(t.id)} className="h-8 border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800 hover:text-white" title={desktopTools.running.includes(t.id) ? "Ouvert sur ce poste" : "Cliquer pour ouvrir"} data-testid={`tool-launch-${t.id}`}>
+            <Button key={t.id} size="sm" variant="outline" onClick={() => t.id === "antidote" ? toast.info("Antidote : sélectionnez votre texte dans la zone de réponse, puis appuyez deux fois rapidement sur Ctrl+C (Ctrl+C+C). Le correcteur s'ouvre et remet le texte corrigé à sa fermeture.", { duration: 12000 }) : desktopTools.launch(t.id)} className="h-8 border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800 hover:text-white" title={desktopTools.running.includes(t.id) ? (t.id === "antidote" ? "Agent Antidote actif — Ctrl+C+C sur le texte" : "Ouvert sur ce poste") : (t.id === "antidote" ? "Comment corriger avec Antidote" : "Cliquer pour ouvrir")} data-testid={`tool-launch-${t.id}`}>
               <span className={`mr-1.5 h-2 w-2 rounded-full ${desktopTools.running.includes(t.id) ? "bg-emerald-400" : "bg-slate-500"}`} />
               <Monitor className="mr-1 h-3.5 w-3.5" />{t.label}
             </Button>
