@@ -25,6 +25,7 @@ class AgentTexteurTipTap extends AgentTexteur {
     this.editor = editor;
     this.title = title;
     this.onDone = null;
+    this.onSession = null;
   }
   async configuration() {
     return { titreDocument: this.title, retourCharriot: "\n", permetRetourCharriot: false, permetEspaceInsecable: true, permetEspaceFine: false, remplaceSansSelection: true, filtreActif: "texte" };
@@ -64,23 +65,28 @@ class AgentTexteurTipTap extends AgentTexteur {
   }
   retourneAuTexteur() { this.editor.commands.focus(); this.onDone?.(); }
   metsFocusSurLeDocument() { this.editor.commands.focus(); }
-  sessionTerminee() { this.onDone?.(); }
+  sessionTerminee() { this.onDone?.(); this.onDone = null; this.onSession?.(); }
 }
 
 let current = null;
 
 export const antidoteApiAvailable = () => !!window.monExam?.antidotePort;
 
+const isReady = (agent) => !!(agent.impl ? agent.impl.estInitialise : agent.estInitialise);
+
 async function agentFor(editor, title, onDone) {
   const port = await window.monExam.antidotePort();
   if (!port) throw new Error("Connectix introuvable");
-  if (!current || current.editor !== editor) {
+  if (current && (current.editor !== editor || current.editor.isDestroyed)) { try { current.agent.ferme(); } catch (e) { /* ignore */ } current = null; }
+  if (!current) {
     const texteur = new AgentTexteurTipTap(editor, title);
     const agent = new AgentConnectix(texteur, async () => port);
-    await agent.connecteAvecAntidote();
+    texteur.onSession = () => { if (current?.agent === agent) current = null; };
     current = { agent, editor, texteur };
   }
   current.texteur.onDone = onDone;
+  if (!isReady(current.agent)) await current.agent.connecteAvecAntidote();
+  if (!isReady(current.agent)) { current = null; throw new Error("Connexion à Antidote impossible"); }
   return current.agent;
 }
 
