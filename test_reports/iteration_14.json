@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 14 frontend-only tests of PreCheck.closeAll (20s timeout + remaining handling) and useDesktopTools.launch (focusTool-when-running). Used Playwright add_init_script to inject window.monExam mocks keyed by URL ?mock= param (A/B/C/D1/D2) on HIS301 (wordq allowed). All 5 scenarios PASSED.\n\n- Mock A (closeForbidden → {closed:[], remaining:[Teams]} after 1s): precheck-close-btn clicked, warning toast 'Impossible de fermer : Teams. …' shown, spinner stopped (no animate-spin in btn), precheck-forbidden still visible, start-exam-btn still disabled. PASS.\n- Mock B (closeForbidden never resolves): clicked → spinner active during busy; after waiting 21s the 20s timeout fired, error toast 'La fermeture prend trop de temps…' shown, spinner stopped, precheck-forbidden still visible (rescan was triggered but forbiddenApps still returned [Teams]). PASS.\n- Mock C (closeForbidden → {closed:[Teams], remaining:[]} and forbiddenApps then returns []): precheck-ok appeared, start-exam-btn enabled (disabled attr null). PASS.\n- Mock D1 (runningTools=['wordq'], focusTool→true): after start-exam, waited ~1.5s for first poll, clicked tool-launch-wordq → window.__focused=['wordq'], window.__launched=[], toast 'WordQ mis à l'avant-plan.' shown. PASS.\n- Mock D2 (same page, dynamically set runningTools=[] then waited 6s for next 5s poll, re-clicked): window.__launched=['wordq'], window.__focused=[], toast 'Ouverture de WordQ…' shown. PASS.\n- Regression (no mock injected): /examen page loads, window.monExam undefined, no page errors. PASS.\n\nIrrelevant 401 console errors come from AuthContext checking /api/auth/me on unauthenticated student page — pre-existing, not related to this change.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PreCheck.closeAll uses Promise.race with a 20s setTimeout — correctly rejects with Error('timeout'). The catch handler shows toast.error and triggers scan(); setBusy(false) in finally is correct. Clean implementation.",
+    "On the warning path (remaining non-empty), scan() is NOT called explicitly; apps state is set from r.remaining and the 4s useEffect interval will refresh anyway. Acceptable but could be made more consistent with explicit scan() for immediate parity.",
+    "useDesktopTools.launch: focusTool branch returns early only when ok truthy; falls back to launchTool otherwise — robust. 'running' is captured in useCallback dep [running], so the hook re-creates launch on each poll — fine for small arrays.",
+    "ExamIntro renders PreCheck only when window.monExam?.forbiddenApps exists; the start button disabled state is driven by `clean` which is set by PreCheck.onClean. The warning path sets clean=false (remaining.length !== 0) — correct."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (5/5 scenarios)"},
+  "test_credentials": "N/A (no login needed; mocks drive student flow). Admin lynchs2757@gmail.com / Enseignant2026! available but only used by curl to confirm HIS301 allows wordq.",
+  "seed_data_creation": "Created HIS301 sessions named 'TEST MockA|B|C|D <ts>' as a side-effect of /student/join during PreCheck tests. Harmless.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "To test window.monExam-dependent flows, use page.add_init_script with a scenario selector read from URL ?mock=... — this lets a single page handle multiple scenarios across page.goto() calls. HIS301 (allowed_tools includes wordq, lexibar, antidote, usito, wordreference) is the easiest exam for desktop-tools tests. PreCheck shows only when window.monExam.forbiddenApps exists. useDesktopTools polls runningTools every 5s; after setting running state dynamically, wait ~6s before re-clicking tool-launch to see updated behaviour.",
+  "rca of the issue": "N/A - all behaviors verified as per spec."
+}

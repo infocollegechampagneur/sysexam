@@ -90,3 +90,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - RichEditor : boutons « Dictionnaires » et « Guides » (desktop + Connectix) via lanceDictionnaires/lanceGuides sur le mot sélectionné ; événements antidote_dict / antidote_guide.
 - `lib/toolUsage.js` : agrégation durée d'ouverture (tool_opened/closed), consultations web (tool_focus/returned), actions Antidote, collages. Affiché dans SessionDetail (ToolUsageCard) et dans le rapport PDF (colonne + bloc par élève).
 - Testé : iteration_13.json.
+
+## 2026-06 — Fermeture des applis + avant-plan WordQ (desktop 1.2.1)
+- close-forbidden : taskkill en parallèle avec timeout 6 s, repli PowerShell Stop-Process ; PreCheck : timeout 20 s + avertissement si applis restantes.
+- Filtre fenêtres cachées élargi (OLE*, *Broker*, Push Notifications).
+- bringToFront (PowerShell SetForegroundWindow) après lancement ; IPC focus-tool ; bouton outil déjà ouvert → avant-plan ; alwaysOnTop relâché quand des outils desktop sont permis.
+- Testé : iteration_14.json (mocks).
