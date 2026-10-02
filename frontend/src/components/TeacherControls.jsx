@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { api, formatErr } from "@/lib/api";
+import { fmtTime } from "@/lib/tools";
+import { ExamPauseControl } from "@/components/PauseControls";
 
 const call = async (fn, ok, done) => {
   try { const r = await fn(); toast.success(typeof ok === "function" ? ok(r.data) : ok); done?.(); } catch (e) { toast.error(formatErr(e)); }
@@ -48,7 +50,7 @@ export const ReopenSessionButton = ({ session, onDone }) => (
   </AlertDialog>
 );
 
-export const ClassControls = ({ examId, sessions, onDone }) => {
+export const ClassControls = ({ examId, exam, sessions, onDone }) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const active = sessions.filter((s) => s.status === "in_progress").length;
@@ -56,6 +58,8 @@ export const ClassControls = ({ examId, sessions, onDone }) => {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3" data-testid="class-controls">
       <span className="mr-2 text-sm font-semibold text-slate-700">Toute la classe :</span>
+      {exam && <ExamPauseControl exam={exam} onDone={onDone} />}
+      {exam?.paused_at && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900" data-testid="exam-paused-badge">En pause depuis {fmtTime(exam.paused_at)}</span>}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild><Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-50" data-testid="broadcast-open-btn"><Megaphone className="mr-1.5 h-4 w-4" />Message à tous</Button></DialogTrigger>
         <DialogContent className="max-w-lg">

@@ -288,7 +288,35 @@ def deadline_of(session: dict, exam: dict):
     if not exam.get("duration_minutes"):
         return None
     minutes = exam["duration_minutes"] * (1 + (session.get("extra_time_percent") or 0) / 100) + (session.get("extra_minutes") or 0)
-    return datetime.fromisoformat(session["started_at"]) + timedelta(minutes=minutes)
+    paused = session.get("paused_seconds") or 0
+    since = pause_since(session, exam)
+    if since:
+        paused += (datetime.now(timezone.utc) - since).total_seconds()
+    return datetime.fromisoformat(session["started_at"]) + timedelta(minutes=minutes, seconds=paused)
+
+
+def pause_since(session: dict, exam: dict):
+    ts = session.get("paused_at") or exam.get("paused_at")
+    return datetime.fromisoformat(ts) if ts else None
+
+
+def pause_info(session: dict, exam: dict) -> dict:
+    since = pause_since(session, exam)
+    return {"paused": bool(since) and session.get("status") == "in_progress", "pause_message": (session.get("pause_message") if session.get("paused_at") else exam.get("pause_message")) or ""}
+
+
+async def resume_sessions(query: dict, exam_pause_at: str | None, detail: str):
+    now = datetime.now(timezone.utc)
+    count = 0
+    async for s in db.sessions.find({**query, "status": "in_progress"}, {"_id": 0, "id": 1, "paused_at": 1, "paused_seconds": 1}):
+        since = s.get("paused_at") or exam_pause_at
+        if not since:
+            continue
+        secs = (now - datetime.fromisoformat(since)).total_seconds()
+        ev = {"type": "resumed", "detail": f"{detail} ({round(secs / 60)} min ajoutées au chronomètre)", "at": now_iso(), "counted": False}
+        await db.sessions.update_one({"id": s["id"]}, {"$set": {"paused_at": None, "pause_message": ""}, "$inc": {"paused_seconds": secs}, "$push": {"events": ev}})
+        count += 1
+    return count
 
 
 # ---------- Auth ----------
@@ -652,6 +680,91 @@ async def lock_all(exam_id: str, user: dict = Depends(current_teacher)):
     return {"count": r.modified_count}
 
 
+class PauseIn(BaseModel):
+    message: str = Field(default="", max_length=300)
+    exam_ids: list[str] | None = None
+
+
+async def pause_exam(exam: dict, message: str) -> int:
+    if exam.get("paused_at"):
+        return 0
+    ts = now_iso()
+    await db.exams.update_one({"id": exam["id"]}, {"$set": {"paused_at": ts, "pause_message": message}})
+    ev = {"type": "paused", "detail": f"Examen mis en pause par l'enseignant{(' : ' + message) if message else ''}", "at": ts, "counted": False}
+    r = await db.sessions.update_many({"exam_id": exam["id"], "status": "in_progress"}, {"$push": {"events": ev}})
+    return r.modified_count
+
+
+async def resume_exam(exam: dict) -> int:
+    if not exam.get("paused_at"):
+        return 0
+    count = await resume_sessions({"exam_id": exam["id"]}, exam["paused_at"], "Reprise de l'examen")
+    await db.exams.update_one({"id": exam["id"]}, {"$set": {"paused_at": None, "pause_message": ""}})
+    return count
+
+
+@api.post("/exams/{exam_id}/pause")
+async def exam_pause(exam_id: str, body: PauseIn, user: dict = Depends(current_teacher)):
+    exam = await own_exam(exam_id, user)
+    return {"count": await pause_exam(exam, body.message.strip())}
+
+
+@api.post("/exams/{exam_id}/resume")
+async def exam_resume(exam_id: str, user: dict = Depends(current_teacher)):
+    exam = await own_exam(exam_id, user)
+    return {"count": await resume_exam(exam)}
+
+
+@api.post("/exams/pause-many")
+async def exams_pause_many(body: PauseIn, user: dict = Depends(current_teacher)):
+    q = {"teacher_id": user["id"], "status": "open"}
+    if body.exam_ids:
+        q["id"] = {"$in": body.exam_ids}
+    total, exams = 0, 0
+    async for exam in db.exams.find(q, {"_id": 0}):
+        total += await pause_exam(exam, body.message.strip())
+        exams += 1
+    return {"exams": exams, "count": total}
+
+
+@api.post("/exams/resume-many")
+async def exams_resume_many(body: PauseIn, user: dict = Depends(current_teacher)):
+    q = {"teacher_id": user["id"], "paused_at": {"$ne": None}}
+    if body.exam_ids:
+        q["id"] = {"$in": body.exam_ids}
+    total, exams = 0, 0
+    async for exam in db.exams.find(q, {"_id": 0}):
+        total += await resume_exam(exam)
+        exams += 1
+    return {"exams": exams, "count": total}
+
+
+@api.post("/sessions/{session_id}/pause")
+async def session_pause(session_id: str, body: PauseIn, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    if s["status"] != "in_progress":
+        raise HTTPException(status_code=400, detail="Seule une copie en cours peut être mise en pause")
+    if s.get("paused_at"):
+        return {"ok": True}
+    ts = now_iso()
+    ev = {"type": "paused", "detail": f"Copie mise en pause par l'enseignant{(' : ' + body.message.strip()) if body.message.strip() else ''}", "at": ts, "counted": False}
+    await db.sessions.update_one({"id": session_id}, {"$set": {"paused_at": ts, "pause_message": body.message.strip()}, "$push": {"events": ev}})
+    return {"ok": True}
+
+
+@api.post("/sessions/{session_id}/resume")
+async def session_resume(session_id: str, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    count = await resume_sessions({"id": session_id}, None, "Reprise de la copie")
+    return {"ok": True, "count": count}
+
+
 @api.post("/exams/{exam_id}/unlock-all")
 async def unlock_all(exam_id: str, user: dict = Depends(current_teacher)):
     await own_exam(exam_id, user)
@@ -801,7 +914,7 @@ async def student_session(s: dict = Depends(current_session)):
     exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     dl = deadline_of(s, exam)
     return {"session": public_session(s), "exam": exam_for_session(exam, s), "deadline": dl.isoformat() if dl else None,
-            "server_now": now_iso()}
+            "server_now": now_iso(), **pause_info(s, exam)}
 
 
 @api.put("/student/answers")

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Clock } from "lucide-react";
 
-export const ExamTimer = ({ deadline, offsetMs, onExpire }) => {
+export const ExamTimer = ({ deadline, offsetMs, onExpire, paused }) => {
   const [left, setLeft] = useState(null);
   const fired = useRef(false);
   useEffect(() => {
-    if (!deadline) return;
+    if (!deadline || paused) return;
     const tick = () => {
       const ms = new Date(deadline).getTime() - (Date.now() + offsetMs);
       setLeft(Math.max(0, ms));
@@ -14,7 +14,7 @@ export const ExamTimer = ({ deadline, offsetMs, onExpire }) => {
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
-  }, [deadline, offsetMs, onExpire]);
+  }, [deadline, offsetMs, onExpire, paused]);
   if (!deadline || left === null) return null;
   const m = Math.floor(left / 60000);
   const s = Math.floor((left % 60000) / 1000);

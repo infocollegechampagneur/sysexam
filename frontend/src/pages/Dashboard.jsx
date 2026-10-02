@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { TeacherLayout } from "@/components/TeacherLayout";
 import { api, formatErr } from "@/lib/api";
 import { TOOLS, STATUS_LABELS } from "@/lib/tools";
+import { AllExamsPauseControl } from "@/components/PauseControls";
 
 const TYPE_ICON = { form: ListChecks, redaction: PenLine, document: FileText };
 const TYPE_LABEL = { form: "Formulaire", redaction: "Rédaction", document: "Document" };
@@ -28,6 +29,7 @@ const ExamCard = ({ exam, onDelete }) => {
       <div className="flex items-start justify-between gap-3">
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue-800"><Icon className="h-3.5 w-3.5" />{TYPE_LABEL[exam.exam_type]}</span>
         <Badge variant="outline" className={STATUS_CLS[exam.status]} data-testid={`exam-status-${exam.code}`}>{STATUS_LABELS[exam.status]}</Badge>
+        {exam.paused_at && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900" data-testid={`exam-paused-${exam.code}`}>En pause</Badge>}
       </div>
       <h3 className="mt-3 font-display text-lg font-semibold leading-snug text-slate-900">{exam.title}</h3>
       <p className="text-sm text-slate-500">{exam.subject || "—"}</p>
@@ -97,6 +99,7 @@ export default function Dashboard() {
           <Button className="h-11 bg-blue-900 px-5 hover:bg-blue-800" data-testid="create-exam-btn"><Plus className="mr-2 h-4 w-4" />Créer un examen</Button>
         </Link>
       </div>
+      {exams && <div className="mt-4 flex flex-wrap items-center gap-2" data-testid="dashboard-pause-bar"><AllExamsPauseControl exams={exams} onDone={load} />{exams.some((e) => e.paused_at) && <span className="text-sm text-amber-800">{exams.filter((e) => e.paused_at).length} examen(s) en pause</span>}</div>}
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat icon={ClipboardList} label="Examens ouverts" value={list.filter((e) => e.status === "open").length} testId="stat-open-exams" />
         <Stat icon={Users} label="Copies reçues" value={list.reduce((a, e) => a + e.session_count, 0)} testId="stat-sessions" />

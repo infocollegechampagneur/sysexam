@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen, Wrench } from "lucide-react";
+import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen, Wrench, PauseCircle } from "lucide-react";
+import { SessionPauseControl } from "@/components/PauseControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,6 +151,13 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       {session.status === "locked" && <LockedBanner session={session} onUnlock={unlock} />}
       <UnlockDialog open={unlockOpen} onOpenChange={setUnlockOpen} session={session} maxViolations={exam.settings.max_violations} onDone={onChanged} />
       {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
+      {session.status === "in_progress" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="session-pause-panel">
+          <PauseCircle className="h-4 w-4 text-amber-600" />
+          <span className="text-slate-700">{session.paused_at ? <>Copie <strong>en pause</strong> depuis {fmtTime(session.paused_at)}</> : "Pause individuelle (chronomètre arrêté, écran voilé)"}</span>
+          <span className="ml-auto" /><SessionPauseControl session={session} onDone={onChanged} />
+        </div>
+      )}
       {session.status === "in_progress" && <SessionTools exam={exam} session={session} onChanged={onChanged} />}
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">

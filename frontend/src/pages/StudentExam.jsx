@@ -9,7 +9,7 @@ import { useDesktopTools, useForbiddenApps } from "@/hooks/useDesktopTools";
 import { ExamIntro } from "@/components/student/ExamIntro";
 import { ExamTopBar } from "@/components/student/ExamTopBar";
 import { ExamBody } from "@/components/student/ExamBody";
-import { LockedOverlay, FullscreenOverlay, SubmittedScreen, TeacherMessageOverlay, EmergencyExitDialog } from "@/components/student/Overlays";
+import { LockedOverlay, FullscreenOverlay, SubmittedScreen, TeacherMessageOverlay, EmergencyExitDialog, PausedOverlay } from "@/components/student/Overlays";
 
 export default function StudentExam() {
   const token = sessionStorage.getItem("exam_token");
@@ -51,6 +51,9 @@ export default function StudentExam() {
   const [message, setMessage] = useState(null);
   const [lockedBy, setLockedBy] = useState(null);
   const [exitOpen, setExitOpen] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [pauseMsg, setPauseMsg] = useState("");
+  useEffect(() => { if (data?.paused !== undefined) { setPaused(!!data.paused); setPauseMsg(data.pause_message || ""); } }, [data]);
 
   useEffect(() => window.monExam?.onEmergency?.(() => setExitOpen(true)), []);
   useEffect(() => { if (data?.session) setLockedBy(data.session.locked_by); }, [data]);
@@ -85,7 +88,7 @@ export default function StudentExam() {
     } catch (e) { /* network issue: ignore */ }
   }, [sapi]);
 
-  const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress", settings, onEvent });
+  const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress" && !paused, settings, onEvent });
   const desktopTools = useDesktopTools({ active: phase === "exam" && status === "in_progress", allowed: settings?.allowed_tools || [], onEvent });
   useForbiddenApps({ active: phase === "exam" && status === "in_progress", onEvent });
 
@@ -108,6 +111,8 @@ export default function StudentExam() {
     const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => {
       setDeadline(d.deadline);
       showMessageIfAny(d.session);
+      setPaused((p) => { if (!p && d.paused) toast.info("Examen en pause par votre enseignant."); if (p && !d.paused) toast.success("L'examen reprend. Le temps de pause a été ajouté à votre chronomètre."); return !!d.paused; });
+      setPauseMsg(d.pause_message || "");
       const curTools = (data?.exam?.settings?.allowed_tools || []).join(",");
       const newTools = (d.exam?.settings?.allowed_tools || []).join(",");
       if (newTools !== curTools) {
@@ -162,10 +167,11 @@ export default function StudentExam() {
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
       <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
-        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} />
+        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} desktopTools={desktopTools} onEvent={onEvent} />
       )}
+      {paused && status === "in_progress" && <PausedOverlay message={pauseMsg} />}
       {status === "locked" && <LockedOverlay violations={violations} byTeacher={lockedBy === "teacher"} onEmergency={window.monExam?.isDesktop ? () => setExitOpen(true) : null} />}
       <EmergencyExitDialog open={exitOpen} onOpenChange={setExitOpen} onSubmit={emergencyExit} />
       {needFs && status !== "locked" && !message && <FullscreenOverlay toolOpen={toolOpen} onResume={enterFullscreen} onCloseTool={closeTool} />}

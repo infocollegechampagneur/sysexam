@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning } from "lucide-react";
+import { Lock, Maximize, Globe, CheckCircle2, MessageSquareWarning, PauseCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -7,6 +7,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 const Shell = ({ children, testId }) => (
   <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/95 px-4 backdrop-blur-md" data-testid={testId}>
     <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center fade-up">{children}</div>
+  </div>
+);
+
+export const PausedOverlay = ({ message }) => (
+  <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/95 px-4" data-testid="paused-overlay">
+    <div className="max-w-lg text-center fade-up">
+      <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-amber-500/20 text-amber-300"><PauseCircle className="h-9 w-9" /></div>
+      <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Examen en pause</h2>
+      <p className="mt-3 text-base text-slate-300">Votre enseignant a mis l'examen en pause. Le chronomètre est arrêté : le temps de pause vous sera redonné. Écoutez les consignes.</p>
+      {message && <p className="mt-4 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100" data-testid="paused-message">{message}</p>}
+      <p className="mt-6 text-xs text-slate-500">L'examen reprendra automatiquement.</p>
+    </div>
   </div>
 );
 

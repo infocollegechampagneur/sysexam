@@ -93,7 +93,7 @@ export default function Results() {
       <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
       </div>
-      {sessions.length > 0 && <ClassControls examId={id} sessions={sessions} onDone={load} />}
+      {sessions.length > 0 && <ClassControls examId={id} exam={exam} sessions={sessions} onDone={() => { load(); api.get(`/exams/${id}`).then((r) => setExam(r.data)).catch(() => {}); }} />}
       {sessions.some((s) => s.status === "locked") && (
         <div className="mt-4 rounded-xl border-2 border-rose-400 bg-rose-50 p-4" data-testid="locked-alert">
           <p className="flex items-center gap-2 font-semibold text-rose-800"><Lock className="h-4 w-4" />Examens bloqués en attente de votre décision</p>

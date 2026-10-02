@@ -5,7 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ExamTimer } from "@/components/student/ExamTimer";
 import { TOOLS } from "@/lib/tools";
 
-export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, desktopTools, onTool, onSubmit, submitting, onExpire }) => {
+export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violations, limit, desktopTools, onTool, onSubmit, submitting, onExpire, paused }) => {
   const allowed = TOOLS.filter((t) => exam.settings.allowed_tools.includes(t.id));
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
@@ -36,7 +36,7 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
         <span className="hidden items-center gap-1 text-xs text-emerald-400 sm:flex" data-testid="autosave-indicator">
           <CloudCheck className="h-4 w-4" />{savedAt ? `Sauvegardé à ${new Date(savedAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Non sauvegardé"}
         </span>
-        <ExamTimer deadline={deadline} offsetMs={offsetMs} onExpire={onExpire} />
+        <ExamTimer deadline={deadline} offsetMs={offsetMs} onExpire={onExpire} paused={paused} />
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500" disabled={submitting} data-testid="submit-exam-btn">
