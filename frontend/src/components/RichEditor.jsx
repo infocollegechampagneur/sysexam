@@ -3,6 +3,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { Bold, Italic, Underline, Heading2, List, ListOrdered, Undo2, Redo2, SpellCheck } from "lucide-react";
 import { toast } from "sonner";
 import { stripHtml } from "@/lib/tools";
+import { antidoteApiAvailable, launchAntidoteCorrector } from "@/lib/antidote";
 
 const Btn = ({ onClick, active, children, label }) => (
   <button
@@ -30,11 +31,19 @@ export const RichEditor = ({ value, onChange, spellcheck = false, testId = "rich
   }, [allowPaste]);
   if (!editor) return null;
   const c = () => editor.chain().focus();
-  const correct = () => {
+  const correct = async () => {
     const text = stripHtml(editor.getHTML()).trim();
     if (!text) return toast.info("Écrivez d'abord votre texte, puis cliquez sur « Corriger avec Antidote ».");
-    editor.chain().focus().selectAll().run();
     antidote.onCorrect?.(text);
+    if (antidoteApiAvailable()) {
+      try {
+        await launchAntidoteCorrector(editor, "Réponse d'examen", () => toast.success("Corrections Antidote appliquées dans votre réponse."));
+        return toast.success("Le correcteur Antidote s'ouvre avec votre texte. Les corrections seront appliquées directement ici.", { duration: 8000 });
+      } catch (e) {
+        toast.error("Antidote (Connectix) n'a pas répondu sur ce poste. Utilisez Ctrl+C+C sur le texte sélectionné.", { duration: 8000 });
+      }
+    }
+    editor.chain().focus().selectAll().run();
     toast.success("Texte sélectionné. Appuyez maintenant deux fois rapidement sur Ctrl+C (Ctrl+C+C) : le correcteur Antidote s'ouvre avec votre texte. Une fois la correction terminée, fermez le correcteur : le texte corrigé est remis ici.", { duration: 14000 });
   };
   return (

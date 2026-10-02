@@ -6,10 +6,10 @@ import { PreCheck } from "@/components/student/PreCheck";
 
 const ANTIDOTE_STEPS = [
   "Rédigez votre texte directement dans la zone de réponse de l'examen.",
-  "Cliquez sur le bouton vert « Corriger avec Antidote » (il sélectionne tout votre texte), ou sélectionnez vous-même le passage à corriger.",
-  "Appuyez deux fois rapidement sur Ctrl+C (Ctrl+C+C) : l'Agent Antidote ouvre le correcteur avec votre texte.",
-  "Appliquez les corrections dans Antidote.",
-  "Fermez le correcteur : Antidote remet automatiquement le texte corrigé dans votre zone de réponse.",
+  "Cliquez sur le bouton vert « Corriger avec Antidote » dans la barre de l'éditeur.",
+  "Le correcteur Antidote s'ouvre avec votre texte : appliquez les corrections comme d'habitude.",
+  "Chaque correction acceptée est appliquée immédiatement dans votre zone de réponse.",
+  "Fermez le correcteur pour revenir à l'examen. (Solution de rechange : sélectionnez le texte et appuyez sur Ctrl+C+C.)",
 ];
 
 const RULES = [

@@ -130,6 +130,37 @@ ipcMain.handle("close-forbidden", async () => {
 
 ipcMain.handle("check-local-exit", (_e, code) => !!config.emergencyCode && String(code).trim() === String(config.emergencyCode));
 
+let antidotePortCache = { port: 0, at: 0 };
+function connectixConsole() {
+  return new Promise((resolve) => {
+    execFile("reg", ["query", "HKLM\\SOFTWARE\\Druide informatique inc.\\Connectix", "/v", "DossierConnectix"], { windowsHide: true }, (err, out) => {
+      const m = !err && out.match(/DossierConnectix\s+REG_\w+\s+(.+)/);
+      const fromReg = m ? path.join(m[1].trim(), "AgentConnectixConsole.exe") : null;
+      if (fromReg && fs.existsSync(fromReg)) return resolve(fromReg);
+      for (const p of ["C:\\Program Files\\Druide\\Connectix*\\Application\\Bin64\\AgentConnectixConsole.exe", "C:\\Program Files\\Druide\\Connectix*\\Application\\Bin\\AgentConnectixConsole.exe", "C:\\Program Files (x86)\\Druide\\Connectix*\\Application\\Bin\\AgentConnectixConsole.exe", "C:\\Program Files\\Druide\\Antidote*\\Application\\Bin64\\AgentConnectixConsole.exe"]) {
+        const hits = globOne(p);
+        if (hits.length) return resolve(hits[0]);
+      }
+      resolve(null);
+    });
+  });
+}
+ipcMain.handle("antidote-port", async () => {
+  if (process.platform !== "win32") return 0;
+  if (antidotePortCache.port && Date.now() - antidotePortCache.at < 60000) return antidotePortCache.port;
+  const exe = await connectixConsole();
+  if (!exe) { log("antidote-port: AgentConnectixConsole introuvable"); return 0; }
+  return new Promise((resolve) => {
+    execFile(exe, ["--api"], { windowsHide: true, timeout: 8000 }, (err, out) => {
+      let port = 0;
+      try { port = Number(JSON.parse(String(out || "").trim()).port) || 0; } catch (e) { const m = String(out || "").match(/"port"\s*:\s*(\d+)/); port = m ? Number(m[1]) : 0; }
+      log(`antidote-port: ${exe} → ${port}${err ? ` (${err.message})` : ""}`);
+      antidotePortCache = { port, at: Date.now() };
+      resolve(port);
+    });
+  });
+});
+
 function expandEnv(p) { return p.replace(/%([^%]+)%/g, (_, k) => process.env[k] || ""); }
 function globOne(pattern) {
   const parts = expandEnv(pattern).split(/[\\/]+/);
