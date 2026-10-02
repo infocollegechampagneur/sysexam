@@ -73,3 +73,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Desktop : détection des exécutables par jokers (`search`), WordQ 5/6 et Lexibar ; processus multiples (`processes`) ; auto-ouverture WordQ/Lexibar au début de l'examen (`autoLaunchTools`) ; `tools-installed` IPC ; avertissement si outil non trouvé.
 - Anti-triche desktop : fenêtre recouverte (document.hidden) avec outils permis → `external_focus` non compté.
 - Testé : iteration_10.json (frontend OK). Desktop non testable ici.
+
+## 2026-06 — Pré-vérification des applications (desktop 1.1.1)
+- PreCheck.jsx (desktop seulement) : liste les applications interdites ouvertes avant le démarrage, bouton « Fermer automatiquement » (IPC close-forbidden → taskkill), démarrage bloqué tant que non propre.
+- main.js : filtre des fenêtres cachées (OleMainThreadWndName, Default IME…) pour éviter les faux positifs Edge/Teams en arrière-plan ; WordQ → WordQ.exe/WordQ6.exe (plus WordQMouse.exe) ; tri des exécutables par nom le plus court.
+- Antidote : bouton barre d'outils = rappel Ctrl+C+C ; indication pour activer l'Agent Antidote (Réglages → Connectix).
+- Testé : iteration_11.json (mock window.monExam).

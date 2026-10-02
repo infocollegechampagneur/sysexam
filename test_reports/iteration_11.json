@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend-only iteration 11: validated PreCheck component gating. Browser (no window.monExam): FRA401 ExamIntro has no precheck elements, start-exam-btn enabled, exam-shell loads on click. Desktop mock (add_init_script injecting window.monExam.forbiddenApps returning Microsoft Teams): precheck-forbidden with precheck-app-Microsoft Teams visible, start-exam-btn disabled; after precheck-close-btn click, precheck-ok shown and start-exam-btn enabled. Desktop mock + HIS301 (antidote allowed): antidote-agent-hint paragraph visible in intro with Agent Antidote/Connectix guidance; after start, clicking tool-launch-antidote fires toast containing 'Ctrl+C+C' (no launchTool invocation). Regression: teacher login via /connexion with lynchs2757@gmail.com lands on /enseignant dashboard with exams listing (8 ouverts, 34 copies).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PreCheck.jsx key={a.label} may collide if two forbidden apps share label; prefer a.process or composite key.",
+    "ExamIntro reads desktop = !!window.monExam?.forbiddenApps at render time but useState(!desktop) initial only runs once; this is fine for session-long window.monExam but any post-mount injection won't reactivate PreCheck (acceptable).",
+    "ExamTopBar antidote branch bypasses desktopTools.launch regardless of installed state — correct per spec, but the title tooltip still says 'Cliquer pour ouvrir' when not running; toast is only informational."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin)",
+  "seed_data_creation": "Student sessions created: FRA401 ('TEST NoMock1','TEST DeskMock1'), HIS301 ('TEST DeskAnti1'). Safe to leave.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "PreCheck + antidote-agent-hint + Ctrl+C+C toast flow confirmed working with window.monExam mock via Playwright context.add_init_script. HIS301 confirmed allows antidote (tool-launch-antidote renders in topbar in desktop mode). Login route is /connexion (not /enseignant/connexion); teacher-login-btn testid is 'teacher-login-btn' and inputs are 'auth-email-input'/'auth-password-input'.",
+  "rca of the issue": "N/A - all specified behaviours implemented correctly."
+}
