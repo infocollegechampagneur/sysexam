@@ -18,7 +18,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
   title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate",
-  settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false },
+  settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false, partial_credit: false, shuffle_options: false },
 };
 const FIELDS = Object.keys(EMPTY);
 
@@ -151,7 +151,7 @@ export default function ExamBuilder() {
           {showQuestions && (
             <div>
               <h3 className="mb-3 font-display text-lg font-semibold text-slate-900">Questions {form.exam_type === "document" && <span className="text-sm font-normal text-slate-500">(facultatif)</span>}</h3>
-              <QuestionEditor questions={form.questions} onChange={(q) => set("questions", q)} />
+              <QuestionEditor questions={form.questions} onChange={(q) => set("questions", q)} subject={form.subject} />
             </div>
           )}
         </TabsContent>

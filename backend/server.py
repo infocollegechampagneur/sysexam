@@ -139,6 +139,8 @@ class ExamSettings(BaseModel):
     browser_spellcheck: bool = False
     require_desktop: bool = False
     exit_code: str = ""
+    partial_credit: bool = False
+    shuffle_options: bool = False
 
 
 class ExamIn(BaseModel):
@@ -241,6 +243,39 @@ async def own_exam(exam_id: str, user: dict) -> dict:
     return exam
 
 
+BANK_KEYS = ("type", "text", "options", "correct", "expected", "hint", "points")
+
+
+def bank_question(q: dict) -> dict:
+    return {k: q.get(k, [] if k in ("options", "correct") else "" if k != "points" else 1) for k in BANK_KEYS}
+
+
+async def sync_bank(teacher_id: str, exam: dict):
+    ts = now_iso()
+    for q in exam.get("questions") or []:
+        if not (q.get("text") or "").strip():
+            continue
+        await db.question_bank.update_one(
+            {"teacher_id": teacher_id, "question_id": q["id"]},
+            {"$set": {"question": bank_question(q), "subject": exam.get("subject") or "", "exam_title": exam.get("title") or "", "exam_id": exam["id"], "updated_at": ts},
+             "$setOnInsert": {"id": str(uuid.uuid4()), "teacher_id": teacher_id, "question_id": q["id"], "source": "auto", "hidden": False, "created_at": ts}},
+            upsert=True)
+
+
+def auto_score(q: dict, v, partial: bool):
+    correct = q.get("correct") or []
+    if q.get("type") != "mcq" or not correct:
+        return None
+    good = {q["options"][k] for k in correct if k < len(q.get("options") or [])}
+    given = set(v) if isinstance(v, list) else set() if v in (None, "") else {v}
+    pts = float(q.get("points") or 0)
+    if given == good:
+        return pts
+    if partial and len(correct) > 1:
+        return round(max(0.0, (len(given & good) - len(given - good)) / len(good)) * pts, 2)
+    return 0.0
+
+
 async def current_session(x_session_token: str = Header(None)) -> dict:
     if not x_session_token:
         raise HTTPException(status_code=401, detail="Session élève manquante")
@@ -282,6 +317,12 @@ def public_session(s: dict) -> dict:
 
 def exam_for_session(exam: dict, s: dict) -> dict:
     out = public_exam(exam)
+    if (exam.get("settings") or {}).get("shuffle_options"):
+        for q in out["questions"]:
+            if q.get("type") == "mcq":
+                opts = list(q.get("options") or [])
+                random.Random(f"{s['id']}:{q['id']}").shuffle(opts)
+                q["options"] = opts
     extra = [t for t in (s.get("tools_override") or []) if t not in (out["settings"].get("allowed_tools") or [])]
     if extra:
         out["settings"] = {**out["settings"], "allowed_tools": [*(out["settings"].get("allowed_tools") or []), *extra]}
@@ -523,6 +564,7 @@ async def create_exam(body: ExamIn, user: dict = Depends(current_teacher)):
     exam = {**data, "id": str(uuid.uuid4()), "teacher_id": user["id"], "code": code, "file": None, "created_at": now_iso()}
     await db.exams.insert_one(exam)
     exam.pop("_id", None)
+    await sync_bank(user["id"], exam)
     return exam
 
 
@@ -537,7 +579,9 @@ async def update_exam(exam_id: str, body: ExamIn, user: dict = Depends(current_t
     data = body.model_dump()
     data["settings"]["exit_code"] = data["settings"].get("exit_code") or new_exit_code()
     await db.exams.update_one({"id": exam_id}, {"$set": data})
-    return await own_exam(exam_id, user)
+    exam = await own_exam(exam_id, user)
+    await sync_bank(user["id"], exam)
+    return exam
 
 
 @api.delete("/exams/{exam_id}")
@@ -592,6 +636,83 @@ async def exam_sessions(exam_id: str, user: dict = Depends(current_teacher)):
     await own_exam(exam_id, user)
     sessions = await db.sessions.find({"exam_id": exam_id}, {"_id": 0, "token": 0}).sort("started_at", 1).to_list(1000)
     return sessions
+
+
+@api.get("/exams/{exam_id}/stats")
+async def exam_stats(exam_id: str, user: dict = Depends(current_teacher)):
+    exam = await own_exam(exam_id, user)
+    partial = bool((exam.get("settings") or {}).get("partial_credit"))
+    sessions = await db.sessions.find({"exam_id": exam_id, "status": {"$in": ["submitted", "locked", "in_progress"]}}, {"_id": 0, "answers": 1, "grade": 1, "status": 1}).to_list(1000)
+    out = []
+    for q in exam.get("questions") or []:
+        pts = float(q.get("points") or 0)
+        answered = 0
+        ratios = []
+        dist = {o: 0 for o in (q.get("options") or [])} if q.get("type") == "mcq" else None
+        for s in sessions:
+            v = (s.get("answers") or {}).get(q["id"])
+            empty = v in (None, "", "<p></p>") or (isinstance(v, list) and not v)
+            if not empty:
+                answered += 1
+            if dist is not None and not empty:
+                for o in (v if isinstance(v, list) else [v]):
+                    if o in dist:
+                        dist[o] += 1
+            a = auto_score(q, v, partial)
+            if a is None:
+                g = ((s.get("grade") or {}).get("per_question") or {}).get(q["id"], {}).get("points")
+                if g is not None and pts > 0:
+                    ratios.append(min(1.0, max(0.0, float(g) / pts)))
+            elif not empty or s.get("status") == "submitted":
+                ratios.append(a / pts if pts > 0 else 0.0)
+        out.append({"id": q["id"], "type": q["type"], "text": q["text"], "points": pts, "answered": answered, "total": len(sessions),
+                    "graded": len(ratios), "success_rate": round(sum(ratios) / len(ratios) * 100) if ratios else None,
+                    "full_marks": sum(1 for r in ratios if r >= 0.999), "distribution": dist,
+                    "correct": [q["options"][k] for k in (q.get("correct") or []) if k < len(q.get("options") or [])]})
+    return {"total": len(sessions), "submitted": sum(1 for s in sessions if s["status"] == "submitted"), "questions": out}
+
+
+class BankIn(BaseModel):
+    question: Question
+    subject: str = ""
+
+
+@api.get("/bank")
+async def list_bank(q: str = "", type: str = "", subject: str = "", user: dict = Depends(current_teacher)):
+    flt: dict = {"teacher_id": user["id"], "hidden": {"$ne": True}}
+    if type:
+        flt["question.type"] = type
+    if subject:
+        flt["subject"] = {"$regex": re.escape(subject), "$options": "i"}
+    if q:
+        flt["question.text"] = {"$regex": re.escape(q), "$options": "i"}
+    items = await db.question_bank.find(flt, {"_id": 0}).sort("updated_at", -1).to_list(500)
+    subjects = sorted({i["subject"] for i in await db.question_bank.find({"teacher_id": user["id"], "hidden": {"$ne": True}}, {"_id": 0, "subject": 1}).to_list(2000) if i.get("subject")})
+    return {"items": items, "subjects": subjects}
+
+
+@api.post("/bank")
+async def add_bank(body: BankIn, user: dict = Depends(current_teacher)):
+    if not body.question.text.strip():
+        raise HTTPException(status_code=400, detail="L'énoncé est vide")
+    ts = now_iso()
+    qd = body.question.model_dump()
+    existing = await db.question_bank.find_one({"teacher_id": user["id"], "question_id": qd["id"]}, {"_id": 0})
+    if existing:
+        await db.question_bank.update_one({"id": existing["id"]}, {"$set": {"question": bank_question(qd), "source": "manual", "hidden": False, "subject": body.subject or existing.get("subject", ""), "updated_at": ts}})
+        return {**existing, "source": "manual", "hidden": False}
+    item = {"id": str(uuid.uuid4()), "teacher_id": user["id"], "question_id": qd["id"], "question": bank_question(qd), "subject": body.subject, "exam_title": "", "exam_id": None, "source": "manual", "hidden": False, "created_at": ts, "updated_at": ts}
+    await db.question_bank.insert_one(item)
+    item.pop("_id", None)
+    return item
+
+
+@api.delete("/bank/{item_id}")
+async def delete_bank(item_id: str, user: dict = Depends(current_teacher)):
+    r = await db.question_bank.update_one({"id": item_id, "teacher_id": user["id"]}, {"$set": {"hidden": True}})
+    if not r.matched_count:
+        raise HTTPException(status_code=404, detail="Question introuvable")
+    return {"ok": True}
 
 
 @api.put("/sessions/{session_id}/grade")

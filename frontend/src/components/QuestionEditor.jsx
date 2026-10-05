@@ -1,13 +1,17 @@
-import { Plus, Trash2, ArrowUp, ArrowDown, X, Check } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, ArrowUp, ArrowDown, X, Check, Library, BookmarkPlus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankDialog } from "@/components/BankDialog";
+import { api, formatErr } from "@/lib/api";
 
 const QTYPES = { mcq: "Choix multiple", short: "Réponse courte", long: "Développement" };
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
-const QuestionCard = ({ q, i, total, update, remove, move }) => (
+const QuestionCard = ({ q, i, total, update, remove, move, toBank }) => (
   <div className="rounded-xl border border-slate-200 bg-white p-5" data-testid={`question-card-${i}`}>
     <div className="flex flex-wrap items-center gap-2">
       <span className="grid h-7 w-7 place-items-center rounded-md bg-blue-900 font-mono text-sm font-bold text-white">{i + 1}</span>
@@ -20,6 +24,7 @@ const QuestionCard = ({ q, i, total, update, remove, move }) => (
         <span className="mr-2 text-xs text-slate-500">pts</span>
         <Button size="icon" variant="ghost" className="h-8 w-8" disabled={i === 0} onClick={() => move(-1)} data-testid={`question-up-${i}`}><ArrowUp className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" className="h-8 w-8" disabled={i === total - 1} onClick={() => move(1)} data-testid={`question-down-${i}`}><ArrowDown className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-800" onClick={toBank} title="Enregistrer dans la banque de questions" data-testid={`question-to-bank-${i}`}><BookmarkPlus className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={remove} data-testid={`question-delete-${i}`}><Trash2 className="h-4 w-4" /></Button>
       </div>
     </div>
@@ -59,8 +64,14 @@ const QuestionCard = ({ q, i, total, update, remove, move }) => (
   </div>
 );
 
-export const QuestionEditor = ({ questions, onChange }) => {
-  const add = (type) => onChange([...questions, { id: uid(), type, text: "", options: type === "mcq" ? ["", ""] : [], points: type === "long" ? 5 : 1 }]);
+export const QuestionEditor = ({ questions, onChange, subject = "" }) => {
+  const [bankOpen, setBankOpen] = useState(false);
+  const add = (type) => onChange([...questions, { id: uid(), type, text: "", options: type === "mcq" ? ["", ""] : [], correct: [], hint: "", expected: "", points: type === "long" ? 5 : 1 }]);
+  const pick = (q) => onChange([...questions, { ...q, id: uid(), options: [...(q.options || [])], correct: [...(q.correct || [])] }]);
+  const toBank = async (q) => {
+    if (!q.text.trim()) return toast.error("Écrivez d'abord l'énoncé");
+    try { await api.post("/bank", { question: q, subject }); toast.success("Question enregistrée dans la banque"); } catch (e) { toast.error(formatErr(e)); }
+  };
   const move = (i, d) => { const a = [...questions]; [a[i], a[i + d]] = [a[i + d], a[i]]; onChange(a); };
   return (
     <div className="space-y-4" data-testid="question-editor">
@@ -68,6 +79,7 @@ export const QuestionEditor = ({ questions, onChange }) => {
         <QuestionCard key={q.id} q={q} i={i} total={questions.length}
           update={(nq) => onChange(questions.map((x, k) => (k === i ? nq : x)))}
           remove={() => onChange(questions.filter((_, k) => k !== i))}
+          toBank={() => toBank(q)}
           move={(d) => move(i, d)} />
       ))}
       <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-slate-300 p-4">
@@ -75,7 +87,9 @@ export const QuestionEditor = ({ questions, onChange }) => {
         {Object.entries(QTYPES).map(([k, v]) => (
           <Button key={k} size="sm" variant="outline" onClick={() => add(k)} data-testid={`add-question-${k}`}><Plus className="mr-1 h-4 w-4" />{v}</Button>
         ))}
+        <Button size="sm" variant="outline" className="ml-auto border-blue-300 text-blue-900" onClick={() => setBankOpen(true)} data-testid="open-bank-btn"><Library className="mr-1 h-4 w-4" />Importer depuis la banque</Button>
       </div>
+      <BankDialog open={bankOpen} onOpenChange={setBankOpen} onPick={pick} />
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TeacherLayout } from "@/components/TeacherLayout";
 import { SessionDetail } from "@/components/SessionDetail";
+import { StatsPanel } from "@/components/StatsPanel";
 import { CopyContent } from "@/components/CopyContent";
 import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
 import { api, formatErr } from "@/lib/api";
@@ -41,6 +42,7 @@ export default function Results() {
   const [exam, setExam] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sel, setSel] = useState(null);
+  const [view, setView] = useState("copies");
   const lockedRef = useRef(null);
   const pasteRef = useRef(null);
 
@@ -106,7 +108,14 @@ export default function Results() {
           </div>
         </div>
       )}
-      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+      <div className="mt-6 flex gap-1 rounded-lg bg-slate-100 p-1 w-fit" data-testid="results-view-tabs">
+        {[["copies", "Copies et surveillance"], ["stats", "Statistiques par question"]].map(([k, l]) => (
+          <button key={k} type="button" onClick={() => setView(k)} data-testid={`results-tab-${k}`}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${view === k ? "bg-white text-blue-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>{l}</button>
+        ))}
+      </div>
+      {view === "stats" && exam && <div className="mt-4"><StatsPanel examId={id} /></div>}
+      {view === "copies" && <div className="mt-4 grid gap-6 lg:grid-cols-12">
         <aside className="space-y-2 lg:col-span-4" data-testid="sessions-list">
           {sessions.map((s, i) => <SessionRow key={s.id} s={s} i={i} active={s.id === sel} onClick={() => setSel(s.id)} />)}
           {!sessions.length && (
@@ -120,7 +129,7 @@ export default function Results() {
             <div className="grid h-64 place-items-center rounded-xl border border-slate-200 bg-white text-sm text-slate-500">Sélectionnez une copie pour la consulter.</div>
           )}
         </section>
-      </div>
+      </div>}
       {exam && (
         <div className="fixed -left-[9999px] top-0 w-[760px] bg-white p-6" aria-hidden>
           <div ref={groupRef}>

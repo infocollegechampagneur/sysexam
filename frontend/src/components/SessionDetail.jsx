@@ -53,20 +53,25 @@ const LockedBanner = ({ session, onUnlock }) => (
 const esc = (s) => String(s).replace(/</g, "&lt;");
 const answerText = (q, v) => (v === undefined || v === "" || (Array.isArray(v) && !v.length) ? "<em>(sans réponse)</em>" : q.type === "long" ? v : Array.isArray(v) ? v.map(esc).join("<br/>") : esc(v));
 
-export const autoScore = (q, v) => {
+export const autoScore = (q, v, partial = false) => {
   if (q.type !== "mcq" || !(q.correct || []).length) return null;
   const good = q.correct.map((k) => q.options[k]);
   const given = Array.isArray(v) ? v : v === undefined || v === "" ? [] : [v];
   const ok = good.length === given.length && good.every((g) => given.includes(g));
-  return { ok, points: ok ? Number(q.points || 0) : 0, good };
+  let points = ok ? Number(q.points || 0) : 0;
+  if (!ok && partial && good.length > 1) {
+    const hit = given.filter((x) => good.includes(x)).length, miss = given.length - hit;
+    points = Math.round(Math.max(0, (hit - miss) / good.length) * Number(q.points || 0) * 100) / 100;
+  }
+  return { ok, points, good, partial: !ok && points > 0 };
 };
 
-const AutoBadge = ({ q, v, i }) => {
-  const a = autoScore(q, v);
+const AutoBadge = ({ q, v, i, partial }) => {
+  const a = autoScore(q, v, partial);
   if (!a) return null;
   return (
-    <p className={`mt-2 text-xs font-medium ${a.ok ? "text-emerald-700" : "text-rose-700"}`} data-testid={`grade-auto-${i}`}>
-      {a.ok ? "✓ Bonne réponse" : "✗ Mauvaise réponse"} · auto : {a.points} / {q.points} pts
+    <p className={`mt-2 text-xs font-medium ${a.ok ? "text-emerald-700" : a.partial ? "text-amber-700" : "text-rose-700"}`} data-testid={`grade-auto-${i}`}>
+      {a.ok ? "✓ Bonne réponse" : a.partial ? "◐ Partiellement correct" : "✗ Mauvaise réponse"} · auto : {a.points} / {q.points} pts
       {!a.ok && <span className="font-normal text-slate-600"> — attendu : {a.good.join(", ")}</span>}
     </p>
   );
@@ -124,14 +129,15 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
 
   useEffect(() => {
     const g = session.grade;
+    const partial = !!exam.settings?.partial_credit;
     if (g?.per_question) { setPer(g.per_question); }
     else {
       const auto = {};
-      exam.questions.forEach((q) => { const a = autoScore(q, session.answers?.[q.id]); if (a) auto[q.id] = { points: a.points }; });
+      exam.questions.forEach((q) => { const a = autoScore(q, session.answers?.[q.id], partial); if (a) auto[q.id] = { points: a.points }; });
       setPer(auto);
     }
-    const autoTotal = exam.questions.reduce((s, q) => s + (autoScore(q, session.answers?.[q.id])?.points || 0), 0);
-    const hasAuto = exam.questions.some((q) => autoScore(q, session.answers?.[q.id]));
+    const autoTotal = exam.questions.reduce((s, q) => s + (autoScore(q, session.answers?.[q.id], partial)?.points || 0), 0);
+    const hasAuto = exam.questions.some((q) => autoScore(q, session.answers?.[q.id], partial));
     setGrade({ score: g?.score ?? (hasAuto && exam.exam_type === "form" ? autoTotal : ""), max_score: g?.max_score ?? (qMax || 100), comment: g?.comment || "" });
   }, [session.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -201,7 +207,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           <div key={q.id} className="rounded-xl border border-slate-200 bg-white p-4" data-testid={`grade-question-${i}`}>
             <p className="font-medium text-slate-900">{i + 1}. {q.text} <span className="text-sm font-normal text-slate-500">({q.points} pts)</span></p>
             <div className="doc-html mt-2 rounded-md bg-slate-50 px-3 py-2 text-sm" dangerouslySetInnerHTML={{ __html: answerText(q, session.answers?.[q.id]) }} />
-            <AutoBadge q={q} v={session.answers?.[q.id]} i={i} />
+            <AutoBadge q={q} v={session.answers?.[q.id]} i={i} partial={!!exam.settings?.partial_credit} />
             {q.expected && <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900" data-testid={`grade-expected-${i}`}><span className="font-semibold">Réponse attendue :</span> <span className="whitespace-pre-wrap">{q.expected}</span></p>}
             <div className="mt-3 flex flex-wrap gap-2">
               <Input type="number" step={0.5} placeholder="Points" value={per[q.id]?.points ?? ""} onChange={(e) => setQ(q.id, "points", e.target.value === "" ? undefined : Number(e.target.value))} className="w-28" data-testid={`grade-points-${i}`} />

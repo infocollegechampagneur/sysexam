@@ -66,6 +66,13 @@ export const SettingsPanel = ({ settings, onChange }) => {
           </p>
         </div>
       </section>
+      <section>
+        <h3 className="font-display text-lg font-semibold text-slate-900">Correction et affichage des questions</h3>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Row title="Barème partiel (choix multiples à plusieurs réponses)" desc="Points × (bonnes cochées − mauvaises cochées) ÷ nombre de bonnes réponses, minimum 0. Désactivé : tout ou rien." checked={!!settings.partial_credit} onChange={(v) => set("partial_credit", v)} testId="setting-partial-credit" />
+          <Row title="Mélanger les choix de réponse" desc="Chaque élève voit les choix des questions à choix multiple dans un ordre différent." checked={!!settings.shuffle_options} onChange={(v) => set("shuffle_options", v)} testId="setting-shuffle-options" />
+        </div>
+      </section>
       <div className="flex gap-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-900" data-testid="settings-limits-note">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
