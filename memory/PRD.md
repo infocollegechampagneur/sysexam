@@ -122,3 +122,9 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Question: `correct` (indices, plusieurs possibles), `hint` (élève), `expected` (enseignant). Masqués côté élève (`public_exam`), flag `multi` exposé.
 - Élève : cases à cocher si plusieurs bonnes réponses (réponse = liste), sinon radio ; `hint` affiché.
 - Enseignant : badge ✓/✗ auto + points/score préremplis dans SessionDetail ; corrigé affiché. Testé iteration_19 (6/6 backend, e2e OK).
+
+## 2026-06 — Barème partiel, mélange des choix, statistiques, banque de questions
+- Réglages d'examen : `partial_credit` (points × max(0, bonnes − mauvaises)/nb bonnes) et `shuffle_options` (mélange déterministe par session côté serveur dans `exam_for_session`).
+- `GET /api/exams/{id}/stats` + onglet « Statistiques par question » (StatsPanel) dans Résultats : taux de réussite, répartition des choix.
+- Banque de questions (collection `question_bank`) : auto-remplie à chaque sauvegarde d'examen (`sync_bank`), ajout manuel (signet), retrait (hidden), import via BankDialog. Endpoints `/api/bank`.
+- Testé iteration_20 : backend 11/11, e2e OK.

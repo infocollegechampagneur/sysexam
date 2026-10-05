@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 20 testing (4 new features: partial_credit, shuffle_options, per-question stats, question bank). Backend: 11/11 pytest assertions pass (parametric partial credit matches spec exactly: 50/0/100/50 and 0 when disabled; shuffle deterministic per session and preserves set; stats endpoint returns correct distribution/success_rate/full_marks/correct; manual grading of short questions properly averaged; bank auto-populated with source=auto, empty-text excluded, PUT /api/exams does NOT duplicate entries thanks to question_id upsert, filters q/type/subject work case-insensitive, DELETE hides item). Frontend: Settings panel exposes both new switches (setting-partial-credit, setting-shuffle-options) and toggle persists aria-checked. Question editor has open-bank-btn opening bank-dialog with items, bank-search-input filtering, bank-add-N copies a question into editor. Results page tabs results-tab-stats / results-tab-copies both work; stats-panel renders stats-total, stats-avg, stat-question-N with distributions marking correct options with ✓.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter20_new_features.py",
+    "/app/test_reports/pytest/iter20.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 1189 lines — splitting into routers/ modules (auth, exams, bank, student, admin) would improve maintainability but is not blocking.",
+    "GET /api/bank: the `subjects` list is computed with a second DB query — minor perf concern on large banks; could be a $group aggregation.",
+    "auto_score partial formula at server.py:275 and front-end autoScore in SessionDetail.jsx:62 are duplicated; keep them in sync (currently equivalent, verified by matching 50/0/100/50 cases).",
+    "exam_for_session uses random.Random(seed).shuffle — deterministic as required; good."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin, from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Each test creates its own TEST_* prefixed exam via POST /api/exams. Not cleaned up (sessions tied to tests remain). Minor housekeeping, not functional.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iter20 features verified end-to-end. Backend pytest file at /app/backend/tests/test_iter20_new_features.py is reusable regression suite. For UI, use data-testids: setting-partial-credit, setting-shuffle-options (3. Outils et sécurité tab), open-bank-btn (2. Type et contenu tab after adding at least one question), bank-dialog/bank-search-input/bank-add-N/bank-remove-N, question-to-bank-N, results-tab-stats/results-tab-copies, stats-panel/stats-total/stats-avg/stat-question-N/stat-rate-N/stat-dist-N, grade-auto-N (SessionDetail autoscore badge).",
+  "rca of the issue": "N/A — no issues found."
+}
