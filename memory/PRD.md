@@ -117,3 +117,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - POST /student/submit retourne un reçu (code 8 car., heure, questions répondues, mots, annotations) ; idempotent.
 - SubmittedScreen : reçu + bouton « Fermer l'application » (IPC quit-app) ; dialogue de remise : questions sans réponse + nb de mots ; remise avec 6 tentatives et avertissement « NE FERMEZ PAS ».
 - Testé : iteration_18.json.
+
+## 2026-06 — Bonnes réponses QCM (multi) + consignes/corrigé
+- Question: `correct` (indices, plusieurs possibles), `hint` (élève), `expected` (enseignant). Masqués côté élève (`public_exam`), flag `multi` exposé.
+- Élève : cases à cocher si plusieurs bonnes réponses (réponse = liste), sinon radio ; `hint` affiché.
+- Enseignant : badge ✓/✗ auto + points/score préremplis dans SessionDetail ; corrigé affiché. Testé iteration_19 (6/6 backend, e2e OK).
