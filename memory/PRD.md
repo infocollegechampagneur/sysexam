@@ -128,3 +128,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - `GET /api/exams/{id}/stats` + onglet « Statistiques par question » (StatsPanel) dans Résultats : taux de réussite, répartition des choix.
 - Banque de questions (collection `question_bank`) : auto-remplie à chaque sauvegarde d'examen (`sync_bank`), ajout manuel (signet), retrait (hidden), import via BankDialog. Endpoints `/api/bank`.
 - Testé iteration_20 : backend 11/11, e2e OK.
+
+## 2026-06 — Correctif bouton « Fermer » après remise (web)
+- `window.close()` est ignoré par les navigateurs pour un onglet non ouvert par script. Désormais : token de session effacé, puis redirection vers l'accueil « / » si la fenêtre n'est pas fermée (app Windows : quitApp inchangé). Vérifié par screenshot e2e.

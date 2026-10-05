@@ -71,7 +71,13 @@ export const FullscreenOverlay = ({ toolOpen, onResume, onCloseTool }) => (
 
 export const SubmittedScreen = ({ name, receipt }) => {
   const [closing, setClosing] = useState(false);
-  const close = () => { setClosing(true); if (window.monExam?.quitApp) window.monExam.quitApp(); else { window.close(); setTimeout(() => setClosing(false), 1500); } };
+  const close = () => {
+    setClosing(true);
+    sessionStorage.removeItem("exam_token");
+    if (window.monExam?.quitApp) return window.monExam.quitApp();
+    window.close();
+    setTimeout(() => { if (!window.closed) window.location.replace("/"); }, 400);
+  };
   return (
     <div className="grid min-h-screen place-items-center bg-slate-950 px-4" data-testid="submitted-screen">
       <div className="w-full max-w-md text-center fade-up">
@@ -88,7 +94,7 @@ export const SubmittedScreen = ({ name, receipt }) => {
           </div>
         )}
         <p className="mt-5 text-sm text-slate-400">Vous pouvez maintenant fermer {window.monExam ? "l'application" : "cette page"} en toute sécurité. Notez le numéro de confirmation si votre enseignant·e le demande.</p>
-        <Button onClick={close} disabled={closing} className="mt-5 h-11 w-full bg-emerald-600 hover:bg-emerald-500" data-testid="close-after-submit-btn"><LogOut className="mr-2 h-4 w-4" />{window.monExam ? "Fermer l'application" : "Fermer"}</Button>
+        <Button onClick={close} disabled={closing} className="mt-5 h-11 w-full bg-emerald-600 hover:bg-emerald-500" data-testid="close-after-submit-btn"><LogOut className="mr-2 h-4 w-4" />{window.monExam ? "Fermer l'application" : "Terminer et quitter"}</Button>
       </div>
     </div>
   );
