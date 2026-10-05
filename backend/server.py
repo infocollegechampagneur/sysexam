@@ -124,6 +124,9 @@ class Question(BaseModel):
     type: str  # mcq | short | long
     text: str
     options: List[str] = []
+    correct: List[int] = []
+    expected: str = ""
+    hint: str = ""
     points: float = 1
 
 
@@ -266,6 +269,7 @@ def match_roster(students: list, name: str, number: str):
 def public_exam(exam: dict) -> dict:
     keys = ["id", "title", "subject", "instructions", "exam_type", "duration_minutes", "questions", "writing_prompt", "settings", "status", "doc_answer_mode"]
     out = {k: exam.get(k) for k in keys}
+    out["questions"] = [{**{k: v for k, v in q.items() if k not in ("correct", "expected")}, "multi": len(q.get("correct") or []) > 1} for q in (exam.get("questions") or [])]
     out["settings"] = {k: v for k, v in (exam.get("settings") or {}).items() if k != "exit_code"}
     f = exam.get("file")
     out["file"] = {"filename": f["filename"], "content_type": f["content_type"], "kind": f["kind"], "html": f.get("html")} if f else None
@@ -1002,7 +1006,7 @@ async def student_submit(body: AnswersIn, s: dict = Depends(current_session)):
 def submit_receipt(s: dict, exam: dict) -> dict:
     answers = s.get("answers") or {}
     questions = exam.get("questions") or []
-    answered = sum(1 for q in questions if str(answers.get(q["id"], "")).strip() not in ("", "<p></p>"))
+    answered = sum(1 for q in questions if str(answers.get(q["id"], "") or "").strip() not in ("", "<p></p>", "[]"))
     words = len(re.sub(r"<[^>]+>", " ", s.get("essay_html") or "").split())
     return {"receipt": s.get("receipt") or "", "submitted_at": s.get("submitted_at"), "answered": answered, "questions": len(questions),
             "essay_words": words, "annotations": len(s.get("annotations") or []), "student_name": s.get("student_name"), "exam_title": exam.get("title")}

@@ -1,4 +1,4 @@
-import { Plus, Trash2, ArrowUp, ArrowDown, X } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,14 +26,34 @@ const QuestionCard = ({ q, i, total, update, remove, move }) => (
     <Textarea value={q.text} onChange={(e) => update({ ...q, text: e.target.value })} placeholder="Énoncé de la question" className="mt-4" data-testid={`question-text-${i}`} />
     {q.type === "mcq" && (
       <div className="mt-3 space-y-2">
-        {q.options.map((o, j) => (
-          <div key={j} className="flex items-center gap-2">
-            <span className="h-4 w-4 rounded-full border-2 border-slate-300" />
-            <Input value={o} placeholder={`Choix ${j + 1}`} onChange={(e) => update({ ...q, options: q.options.map((x, k) => (k === j ? e.target.value : x)) })} className="h-9" data-testid={`question-${i}-option-${j}`} />
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => update({ ...q, options: q.options.filter((_, k) => k !== j) })} data-testid={`question-${i}-option-remove-${j}`}><X className="h-4 w-4" /></Button>
-          </div>
-        ))}
+        <p className="text-xs text-slate-500">Cliquez sur le cercle pour marquer la ou les bonnes réponses (invisible pour l'élève).</p>
+        {q.options.map((o, j) => {
+          const ok = (q.correct || []).includes(j);
+          return (
+            <div key={j} className="flex items-center gap-2">
+              <button type="button" aria-label={ok ? "Bonne réponse" : "Marquer comme bonne réponse"} title="Bonne réponse"
+                onClick={() => update({ ...q, correct: ok ? q.correct.filter((k) => k !== j) : [...(q.correct || []), j].sort((a, b) => a - b) })}
+                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-colors ${ok ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 hover:border-emerald-500"}`}
+                data-testid={`question-${i}-correct-${j}`}>{ok && <Check className="h-3 w-3" />}</button>
+              <Input value={o} placeholder={`Choix ${j + 1}`} onChange={(e) => update({ ...q, options: q.options.map((x, k) => (k === j ? e.target.value : x)) })} className={`h-9 ${ok ? "border-emerald-500 bg-emerald-50" : ""}`} data-testid={`question-${i}-option-${j}`} />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => update({ ...q, options: q.options.filter((_, k) => k !== j), correct: (q.correct || []).filter((k) => k !== j).map((k) => (k > j ? k - 1 : k)) })} data-testid={`question-${i}-option-remove-${j}`}><X className="h-4 w-4" /></Button>
+            </div>
+          );
+        })}
         <Button size="sm" variant="ghost" className="text-blue-800" onClick={() => update({ ...q, options: [...q.options, ""] })} data-testid={`question-${i}-add-option`}><Plus className="mr-1 h-4 w-4" />Ajouter un choix</Button>
+        {!(q.correct || []).length && <p className="text-xs text-amber-700" data-testid={`question-${i}-no-correct`}>Aucune bonne réponse définie : la correction automatique sera désactivée pour cette question.</p>}
+      </div>
+    )}
+    {q.type !== "mcq" && (
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600">Consignes / précisions <span className="font-normal text-slate-400">(affichées à l'élève)</span></label>
+          <Textarea value={q.hint || ""} onChange={(e) => update({ ...q, hint: e.target.value })} placeholder="Ex. : Répondez en 2 ou 3 phrases complètes." rows={2} data-testid={`question-hint-${i}`} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600">Réponse attendue / corrigé <span className="font-normal text-slate-400">(enseignant seulement)</span></label>
+          <Textarea value={q.expected || ""} onChange={(e) => update({ ...q, expected: e.target.value })} placeholder="Éléments de réponse attendus pour la correction" rows={2} className="border-emerald-200 bg-emerald-50/40" data-testid={`question-expected-${i}`} />
+        </div>
       </div>
     )}
   </div>

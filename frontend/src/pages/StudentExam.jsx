@@ -181,7 +181,7 @@ export default function StudentExam() {
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
       <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
         onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused}
-        unanswered={exam.questions.filter((q) => String(answers[q.id] ?? "").trim() === "" || answers[q.id] === "<p></p>").length} essayWords={exam.exam_type !== "form" ? wordCount(essay) : null} />
+        unanswered={exam.questions.filter((q) => { const v = answers[q.id]; return Array.isArray(v) ? v.length === 0 : String(v ?? "").trim() === "" || v === "<p></p>"; }).length} essayWords={exam.exam_type !== "form" ? wordCount(essay) : null} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} desktopTools={desktopTools} onEvent={onEvent} />
       )}

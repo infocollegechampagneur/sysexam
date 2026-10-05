@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RichEditor } from "@/components/RichEditor";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
@@ -12,8 +13,23 @@ const QuestionBlock = ({ q, i, value, onChange, spellcheck, allowPaste, antidote
       <p className="flex-1 whitespace-pre-wrap font-medium text-slate-900">{q.text}</p>
       <span className="shrink-0 text-xs text-slate-500">{q.points} pt{q.points > 1 ? "s" : ""}</span>
     </div>
+    {q.hint && <p className="mt-2 whitespace-pre-wrap pl-10 text-sm text-slate-600" data-testid={`exam-question-${i}-hint`}>{q.hint}</p>}
     <div className="mt-4 pl-10">
-      {q.type === "mcq" && (
+      {q.type === "mcq" && q.multi && (
+        <div className="space-y-2" data-testid={`exam-question-${i}-multi`}>
+          <p className="text-xs text-slate-500">Plusieurs réponses possibles</p>
+          {q.options.map((o, j) => {
+            const sel = Array.isArray(value) && value.includes(o);
+            return (
+              <label key={j} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${sel ? "border-blue-900 bg-blue-50" : "border-slate-200 hover:border-blue-300"}`}>
+                <Checkbox checked={sel} onCheckedChange={(c) => onChange(c ? [...(Array.isArray(value) ? value : []), o] : (value || []).filter((x) => x !== o))} data-testid={`exam-question-${i}-option-${j}`} />
+                <span className="text-slate-800">{o}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+      {q.type === "mcq" && !q.multi && (
         <RadioGroup value={value ?? ""} onValueChange={onChange} className="space-y-2">
           {q.options.map((o, j) => (
             <label key={j} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${value === o ? "border-blue-900 bg-blue-50" : "border-slate-200 hover:border-blue-300"}`}>

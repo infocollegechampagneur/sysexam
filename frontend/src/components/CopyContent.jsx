@@ -1,6 +1,6 @@
 import { fmtTime, wordCount } from "@/lib/tools";
 
-export const answerText = (q, v) => (v === undefined || v === "" ? "<em>(sans réponse)</em>" : q.type === "long" ? v : String(v).replace(/</g, "&lt;"));
+export const answerText = (q, v) => (v === undefined || v === "" || (Array.isArray(v) && !v.length) ? "<em>(sans réponse)</em>" : q.type === "long" ? v : (Array.isArray(v) ? v : [v]).map((x) => String(x).replace(/</g, "&lt;")).join("<br/>"));
 
 export const CopyContent = ({ exam, session, grade, per }) => {
   const g = grade || session.grade || {};
