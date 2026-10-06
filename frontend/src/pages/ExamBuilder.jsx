@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check, HandHelping } from "lucide-react";
+import { RecipientsPicker } from "@/components/RecipientsPicker";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
-  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate",
+  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [],
   settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false, partial_credit: false, shuffle_options: false },
 };
 const FIELDS = Object.keys(EMPTY);
@@ -43,6 +45,7 @@ const TypePicker = ({ value, onChange }) => (
 export default function ExamBuilder() {
   const { id } = useParams();
   const nav = useNavigate();
+  const { user } = useAuth();
   const [form, setForm] = useState(EMPTY);
   const [meta, setMeta] = useState({ id: null, code: null, file: null });
   const [saving, setSaving] = useState(false);
@@ -121,6 +124,11 @@ export default function ExamBuilder() {
                 </SelectContent>
               </Select>
               <p className="mt-1.5 text-xs text-slate-500">Avec une classe, seuls les élèves inscrits peuvent rejoindre, et leur temps supplémentaire est appliqué. Gérez vos listes dans l'onglet « Classes ».</p>
+            </div>
+            <div className="md:col-span-2" data-testid="help-recipients-section">
+              <Label className="flex items-center gap-1.5"><HandHelping className="h-4 w-4 text-amber-600" />Collègues avertis quand un élève demande de l'aide</Label>
+              <p className="mb-2 mt-1 text-xs text-slate-500">Vous recevez toujours les demandes « J'ai besoin d'aide ». Cochez les collègues (surveillants, techniciens) qui doivent aussi les recevoir — dans l'application et dans Teams s'ils l'ont configuré.</p>
+              <RecipientsPicker value={form.help_recipients} onChange={(v) => set("help_recipients", v)} excludeId={user?.id} testId="help-recipient" />
             </div>
           </div>
         </TabsContent>

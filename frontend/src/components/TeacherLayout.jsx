@@ -4,7 +4,9 @@ import { ShieldCheck, LogOut, UserPen, KeyRound, GraduationCap } from "lucide-re
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TeamsSettings } from "@/components/TeamsSettings";
+import { HelpBell } from "@/components/HelpBell";
 import { useAuth } from "@/context/AuthContext";
 import { api, formatErr } from "@/lib/api";
 
@@ -36,11 +38,14 @@ const ProfileButton = () => {
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="text-slate-700" data-testid="profile-name-btn"><UserPen className="h-4 w-4 sm:mr-1.5" /><span className="hidden max-w-[140px] truncate sm:inline">{user?.name}</span></Button>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Nom de l'enseignant</DialogTitle></DialogHeader>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogHeader><DialogTitle>Mon profil</DialogTitle></DialogHeader>
         <p className="text-sm text-slate-500">Ce nom est affiché automatiquement aux élèves pour les examens liés à une liste de classe.</p>
-        <Input value={name} onChange={(e) => setName(e.target.value)} data-testid="profile-name-input" />
-        <DialogFooter><Button onClick={save} disabled={!name.trim()} className="bg-blue-900 hover:bg-blue-800" data-testid="profile-name-save-btn">Enregistrer</Button></DialogFooter>
+        <div className="flex gap-2">
+          <Input value={name} onChange={(e) => setName(e.target.value)} data-testid="profile-name-input" />
+          <Button onClick={save} disabled={!name.trim()} className="bg-blue-900 hover:bg-blue-800" data-testid="profile-name-save-btn">Enregistrer</Button>
+        </div>
+        <TeamsSettings user={user} setUser={setUser} />
       </DialogContent>
     </Dialog>
   );
@@ -59,6 +64,7 @@ export const TeacherLayout = ({ children }) => {
             <NavLink to="/enseignant/classes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-classes-link">Classes</NavLink>
             {user?.role === "admin" && <NavLink to="/enseignant/comptes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-users-link">Comptes</NavLink>}
             <NavLink to="/enseignant/mot-de-passe" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} title="Changer mon mot de passe" data-testid="nav-password-link"><KeyRound className="h-4 w-4" /></NavLink>
+            <HelpBell />
             <ProfileButton />
             <span className="hidden text-sm text-slate-500 lg:inline" data-testid="nav-user-email">{user?.email}</span>
             <Button variant="ghost" size="sm" asChild data-testid="nav-student-space-link">

@@ -17,6 +17,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 
 import unicodedata
+import httpx
 import mammoth
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
 from starlette.middleware.cors import CORSMiddleware
@@ -155,6 +156,7 @@ class ExamIn(BaseModel):
     status: str = "draft"  # draft | open | closed
     class_id: Optional[str] = None
     doc_answer_mode: str = "separate"  # separate | inline
+    help_recipients: List[str] = []
 
 
 class RosterStudent(BaseModel):
@@ -223,6 +225,7 @@ async def current_teacher(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Utilisateur introuvable")
     if user.get("active") is False:
         raise HTTPException(status_code=403, detail="Ce compte a été désactivé")
+    user["teams_configured"] = bool(user.pop("teams_webhook", None))
     return user
 
 
@@ -244,6 +247,38 @@ async def own_exam(exam_id: str, user: dict) -> dict:
 
 
 BANK_KEYS = ("type", "text", "options", "correct", "expected", "hint", "points")
+
+
+async def send_teams(url: str, title: str, facts: list) -> tuple:
+    card = {"type": "message", "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "contentUrl": None, "content": {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.2",
+        "body": [{"type": "TextBlock", "text": title, "weight": "Bolder", "size": "Medium", "wrap": True},
+                 {"type": "FactSet", "facts": [{"title": t, "value": v} for t, v in facts]}]}}]}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(url, json=card)
+        if r.status_code >= 300:
+            return False, f"HTTP {r.status_code}"
+        return True, ""
+    except httpx.HTTPError as e:
+        logging.warning("Teams webhook failed: %s", type(e).__name__)
+        return False, type(e).__name__
+
+
+async def help_recipient_ids(exam: dict) -> list:
+    defaults = await db.app_settings.find_one({"key": "default_help_recipients"}, {"_id": 0}) or {}
+    ids = [exam["teacher_id"], *(exam.get("help_recipients") or []), *(defaults.get("value") or [])]
+    return list(dict.fromkeys(ids))
+
+
+async def notify_help_teams(req: dict, exam: dict):
+    users = await db.users.find({"id": {"$in": req["recipients"]}, "teams_webhook": {"$exists": True, "$nin": ["", None]}}, {"_id": 0, "teams_webhook": 1, "id": 1}).to_list(100)
+    facts = [("Élève", req["student_name"]), ("Examen", exam.get("title") or ""), ("Heure", datetime.now(timezone.utc).astimezone().strftime("%H:%M"))]
+    if req.get("reason"):
+        facts.append(("Motif", req["reason"]))
+    results = await asyncio.gather(*[send_teams(u["teams_webhook"], f"🙋 {req['student_name']} a besoin d'aide", facts) for u in users])
+    sent = [u["id"] for u, (ok, _) in zip(users, results) if ok]
+    await db.help_requests.update_one({"id": req["id"]}, {"$set": {"teams_sent": sent}})
 
 
 def bank_question(q: dict) -> dict:
@@ -522,12 +557,89 @@ async def me(user: dict = Depends(current_teacher)):
 
 class ProfileIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    teams_webhook: Optional[str] = None
 
 
 @api.put("/auth/me")
 async def update_me(body: ProfileIn, user: dict = Depends(current_teacher)):
-    await db.users.update_one({"id": user["id"]}, {"$set": {"name": body.name.strip()}})
-    return {**user, "name": body.name.strip()}
+    upd = {"name": body.name.strip()}
+    if body.teams_webhook is not None:
+        url = body.teams_webhook.strip()
+        if url and not (url.startswith("https://") and len(url) > 30):
+            raise HTTPException(status_code=400, detail="L'URL du webhook Teams doit commencer par https://")
+        upd["teams_webhook"] = url
+    await db.users.update_one({"id": user["id"]}, {"$set": upd})
+    return {**user, "name": upd["name"], "teams_configured": bool(upd.get("teams_webhook", user.get("teams_configured")))}
+
+
+@api.post("/auth/me/teams-test")
+async def teams_test(user: dict = Depends(current_teacher)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "teams_webhook": 1})
+    if not (u or {}).get("teams_webhook"):
+        raise HTTPException(status_code=400, detail="Aucun webhook Teams enregistré")
+    ok, err = await send_teams(u["teams_webhook"], "Test MonExamEnLigne", [("Destinataire", user["name"]), ("Message", "Si vous voyez cette carte, les alertes d'aide fonctionneront.")])
+    if not ok:
+        raise HTTPException(status_code=502, detail=f"Teams a refusé le message : {err}")
+    return {"ok": True}
+
+
+@api.get("/teachers")
+async def list_teachers(user: dict = Depends(current_teacher)):
+    users = await db.users.find({"active": {"$ne": False}}, {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1, "teams_webhook": 1}).sort("name", 1).to_list(1000)
+    return [{"id": u["id"], "name": u["name"], "email": u["email"], "role": u["role"], "teams_configured": bool(u.get("teams_webhook"))} for u in users]
+
+
+# ---------- Demandes d'aide ----------
+class RecipientsIn(BaseModel):
+    recipients: List[str] = []
+
+
+@api.get("/help-requests")
+async def list_help_requests(status: str = "open", exam_id: str = "", user: dict = Depends(current_teacher)):
+    flt: dict = {}
+    if status:
+        flt["status"] = status
+    if exam_id:
+        flt["exam_id"] = exam_id
+    if user.get("role") != "admin":
+        flt["recipients"] = user["id"]
+    return await db.help_requests.find(flt, {"_id": 0}).sort("created_at", -1).to_list(200)
+
+
+@api.put("/help-requests/{req_id}/handle")
+async def handle_help_request(req_id: str, user: dict = Depends(current_teacher)):
+    req = await db.help_requests.find_one({"id": req_id}, {"_id": 0})
+    if not req or (user.get("role") != "admin" and user["id"] not in req["recipients"]):
+        raise HTTPException(status_code=404, detail="Demande introuvable")
+    ts = now_iso()
+    await db.help_requests.update_one({"id": req_id}, {"$set": {"status": "handled", "handled_by": user["name"], "handled_at": ts}})
+    await db.sessions.update_one({"id": req["session_id"]}, {"$push": {"events": {"type": "help_handled", "detail": f"Prise en charge par {user['name']}", "at": ts, "counted": False}}})
+    return {**req, "status": "handled", "handled_by": user["name"], "handled_at": ts}
+
+
+@api.get("/admin/help-settings")
+async def admin_help_settings(_: dict = Depends(current_admin)):
+    doc = await db.app_settings.find_one({"key": "default_help_recipients"}, {"_id": 0}) or {}
+    exams = await db.exams.find({}, {"_id": 0, "id": 1, "title": 1, "code": 1, "status": 1, "teacher_id": 1, "help_recipients": 1}).sort("created_at", -1).to_list(500)
+    names = {u["id"]: u["name"] for u in await db.users.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
+    for e in exams:
+        e["teacher_name"] = names.get(e["teacher_id"], "?")
+        e["help_recipients"] = e.get("help_recipients") or []
+    return {"default_recipients": doc.get("value") or [], "exams": exams}
+
+
+@api.put("/admin/help-settings/default")
+async def admin_set_default_recipients(body: RecipientsIn, _: dict = Depends(current_admin)):
+    await db.app_settings.update_one({"key": "default_help_recipients"}, {"$set": {"value": body.recipients, "updated_at": now_iso()}}, upsert=True)
+    return {"default_recipients": body.recipients}
+
+
+@api.put("/admin/exams/{exam_id}/help-recipients")
+async def admin_set_exam_recipients(exam_id: str, body: RecipientsIn, _: dict = Depends(current_admin)):
+    r = await db.exams.update_one({"id": exam_id}, {"$set": {"help_recipients": body.recipients}})
+    if not r.matched_count:
+        raise HTTPException(status_code=404, detail="Examen introuvable")
+    return {"help_recipients": body.recipients}
 
 
 @api.post("/auth/refresh")
@@ -1038,8 +1150,36 @@ async def student_exam_info(code: str):
 async def student_session(s: dict = Depends(current_session)):
     exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     dl = deadline_of(s, exam)
+    help_req = await db.help_requests.find_one({"session_id": s["id"], "status": "open"}, {"_id": 0, "id": 1, "created_at": 1})
     return {"session": public_session(s), "exam": exam_for_session(exam, s), "deadline": dl.isoformat() if dl else None,
-            "server_now": now_iso(), **pause_info(s, exam)}
+            "server_now": now_iso(), "help_pending": help_req, **pause_info(s, exam)}
+
+
+class HelpIn(BaseModel):
+    reason: str = Field(default="", max_length=300)
+
+
+@api.post("/student/help", status_code=201)
+async def student_help(body: HelpIn, s: dict = Depends(current_session)):
+    if s["status"] not in ("in_progress", "locked"):
+        raise HTTPException(status_code=403, detail="La copie est remise")
+    if await db.help_requests.find_one({"session_id": s["id"], "status": "open"}):
+        raise HTTPException(status_code=409, detail="Votre demande d'aide est déjà envoyée. Votre enseignant·e arrive.")
+    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
+    ts = now_iso()
+    req = {"id": str(uuid.uuid4()), "exam_id": exam["id"], "exam_title": exam.get("title") or "", "session_id": s["id"], "student_name": s["student_name"],
+           "reason": body.reason.strip(), "status": "open", "recipients": await help_recipient_ids(exam), "created_at": ts, "teams_sent": []}
+    await db.help_requests.insert_one(req)
+    req.pop("_id", None)
+    await db.sessions.update_one({"id": s["id"]}, {"$push": {"events": {"type": "help_request", "detail": req["reason"] or "Demande d'aide", "at": ts, "counted": False}}})
+    asyncio.create_task(notify_help_teams(req, exam))
+    return req
+
+
+@api.delete("/student/help")
+async def student_cancel_help(s: dict = Depends(current_session)):
+    await db.help_requests.update_many({"session_id": s["id"], "status": "open"}, {"$set": {"status": "cancelled", "handled_at": now_iso()}})
+    return {"ok": True}
 
 
 @api.put("/student/answers")

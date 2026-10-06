@@ -15,6 +15,7 @@ export default function StudentExam() {
   const token = sessionStorage.getItem("exam_token");
   const sapi = useMemo(() => studentApi(), [token]); // eslint-disable-line react-hooks/exhaustive-deps
   const [data, setData] = useState(null);
+  const [helpPending, setHelpPending] = useState(null);
   const [phase, setPhase] = useState("intro");
   const [status, setStatus] = useState("in_progress");
   const [violations, setViolations] = useState(0);
@@ -38,6 +39,7 @@ export default function StudentExam() {
       setStatus(d.session.status);
       setViolations(d.session.violations);
       setAnswers(d.session.answers || {});
+      setHelpPending(d.help_pending || null);
       setEssay(essay0);
       setAnnotationsS(d.session.annotations || []);
       setSavedAt(d.session.last_saved_at);
@@ -113,6 +115,7 @@ export default function StudentExam() {
       showMessageIfAny(d.session);
       setPaused((p) => { if (!p && d.paused) toast.info("Examen en pause par votre enseignant."); if (p && !d.paused) toast.success("L'examen reprend. Le temps de pause a été ajouté à votre chronomètre."); return !!d.paused; });
       setPauseMsg(d.pause_message || "");
+      setHelpPending((p) => { if (p && !d.help_pending) toast.success("Votre enseignant·e a pris votre demande d'aide en charge.", { duration: 8000 }); return d.help_pending || null; });
       const curTools = (data?.exam?.settings?.allowed_tools || []).join(",");
       const newTools = (d.exam?.settings?.allowed_tools || []).join(",");
       if (newTools !== curTools) {
@@ -180,7 +183,7 @@ export default function StudentExam() {
   return (
     <div className="lockdown min-h-screen bg-slate-900" data-testid="exam-shell">
       <ExamTopBar exam={exam} session={session} deadline={deadline} offsetMs={data.offsetMs} savedAt={savedAt} violations={violations} limit={limit} desktopTools={desktopTools}
-        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused}
+        onTool={openTool} onSubmit={submit} submitting={submitting} onExpire={onExpire} paused={paused} sapi={sapi} helpPending={helpPending} onHelpChange={setHelpPending}
         unanswered={exam.questions.filter((q) => { const v = answers[q.id]; return Array.isArray(v) ? v.length === 0 : String(v ?? "").trim() === "" || v === "<p></p>"; }).length} essayWords={exam.exam_type !== "form" ? wordCount(essay) : null} />
       {!needFs && status !== "locked" && (
         <ExamBody exam={exam} answers={answers} setAnswer={setAnswer} essay={essay} setEssay={setEssayV} fetchBlob={fetchBlob} annotations={annotations} setAnnotations={setAnnotations} desktopTools={desktopTools} onEvent={onEvent} />

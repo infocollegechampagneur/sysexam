@@ -23,7 +23,7 @@ export const EVENT_LABELS = {
   contextmenu: "Clic droit", tool_focus: "Outil web permis", external_focus: "Logiciel externe (permis)",
   fullscreen_exit_tool: "Plein écran (outil)", returned: "Retour dans l'examen", time_up: "Temps écoulé",
   locked: "Examen bloqué", extra_time: "Temps supp.", tools_changed: "Outils permis modifiés", paused: "Mise en pause", resumed: "Reprise", message_read: "Message lu", teacher_message: "Avertissement envoyé",
-  clipboard_tool: "Copier/coller (zone de réponse, permis)", antidote_correct: "Correction Antidote", antidote_dict: "Dictionnaires Antidote", antidote_guide: "Guides Antidote", tool_opened: "Logiciel permis ouvert", tool_closed: "Logiciel permis fermé", tool_launch: "Lancement d'un logiciel permis",
+  help_request: "Demande d'aide à l'enseignant", help_handled: "Demande d'aide prise en charge", clipboard_tool: "Copier/coller (zone de réponse, permis)", antidote_correct: "Correction Antidote", antidote_dict: "Dictionnaires Antidote", antidote_guide: "Guides Antidote", tool_opened: "Logiciel permis ouvert", tool_closed: "Logiciel permis fermé", tool_launch: "Lancement d'un logiciel permis",
   forbidden_app: "Application interdite", emergency_exit: "Sortie d'urgence", emergency_exit_failed: "Code d'urgence incorrect", reopened: "Copie rouverte",
 };
 

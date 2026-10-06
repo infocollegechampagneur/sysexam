@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, ClipboardPaste } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, ClipboardPaste, HandHelping } from "lucide-react";
+import { useHelpRequests, HelpRequestRow } from "@/components/HelpBell";
 import { SurveillanceReport } from "@/components/SurveillanceReport";
 import { ClassControls } from "@/components/TeacherControls";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ export default function Results() {
   const [sessions, setSessions] = useState([]);
   const [sel, setSel] = useState(null);
   const [view, setView] = useState("copies");
+  const help = useHelpRequests(id);
   const lockedRef = useRef(null);
   const pasteRef = useRef(null);
 
@@ -96,6 +98,12 @@ export default function Results() {
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
       </div>
       {sessions.length > 0 && <ClassControls examId={id} exam={exam} sessions={sessions} onDone={() => { load(); api.get(`/exams/${id}`).then((r) => setExam(r.data)).catch(() => {}); }} />}
+      {help.items.length > 0 && (
+        <div className="mt-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-4" data-testid="help-alert">
+          <p className="flex items-center gap-2 font-semibold text-amber-900"><HandHelping className="h-4 w-4" />Élèves qui demandent de l'aide</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">{help.items.map((h, i) => <HelpRequestRow key={h.id} h={h} i={i} onHandle={help.handle} />)}</div>
+        </div>
+      )}
       {sessions.some((s) => s.status === "locked") && (
         <div className="mt-4 rounded-xl border-2 border-rose-400 bg-rose-50 p-4" data-testid="locked-alert">
           <p className="flex items-center gap-2 font-semibold text-rose-800"><Lock className="h-4 w-4" />Examens bloqués en attente de votre décision</p>

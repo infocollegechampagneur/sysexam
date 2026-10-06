@@ -1,10 +1,10 @@
 {
   "name": "monexamenligne-desktop",
   "productName": "MonExamEnLigne",
-  "version": "1.2.5",
-  "description": "Application Windows MonExamEnLigne (examen verrouillé)",
+  "version": "1.2.6",
+  "description": "MonExamEnLigne — Collège Champagneur (examen verrouillé)",
   "main": "main.js",
-  "author": "MonExamEnLigne",
+  "author": "Collège Champagneur",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
