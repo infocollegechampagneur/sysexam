@@ -139,3 +139,4 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Destinataires : `exams.help_recipients` (éditeur, onglet 1) + surveillants par défaut admin (`app_settings.default_help_recipients`) + édition par examen (Comptes → Alertes d'aide). `GET /api/teachers`.
 - Marque : titre/description « Collège Champagneur », scripts Emergent/PostHog retirés de index.html, author desktop mis à jour.
 - Testé iteration_21 : backend 6/6, e2e OK.
+- Correctif déploiement Render : `httpx==0.28.1` ajouté à `backend/requirements-prod.txt` (ModuleNotFoundError au démarrage). Import de `server.py` vérifié dans un venv propre avec requirements-prod.
