@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 21 testing of 'J'ai besoin d'aide' feature + Teams webhook + per-exam/default help recipients + updated page title. Backend: 6/6 pytest tests pass covering (a) complete student→teacher help flow (POST 201 with correct recipients list, 409 duplicate, GET /student/session.help_pending populated, PUT handle clears help_pending, DELETE cancels), (b) recipient isolation (second teacher created via /admin/users does not see other-exam help requests until added via /admin/exams/{id}/help-recipients; admin sees all), (c) teams_webhook validation (http:// → 400, valid https ≥30 chars → 200 teams_configured true, GET /auth/me never returns teams_webhook, POST /auth/me/teams-test → 502 for invalid host, empty string clears), (d) GET /api/teachers exposes teams_configured and never raw webhook, (e) help request still succeeds even with invalid webhook configured — teams_sent stays []. Frontend UI: page title 'MonExamEnLigne — Collège Champagneur' confirmed; teacher-login-link visible on homepage; HelpBell shows help-bell-count badge (2 open requests), help-bell-panel opens; profile dialog opens teams-settings (teams-webhook-input/save/remove/toggle/steps all work, status toggles between 'Non configuré' and '✓ Teams configuré'); student exam page shows help-request-btn → opens help-dialog with help-reason-1 chips → help-send-btn creates request and switches to help-pending-btn with success toast; admin Comptes/tab-aide exposes help-settings with 14 help-default-* checkboxes, help-default-save-btn, help-exam-0 with 12 help-exam-0-rcpt-{id} entries and conditional help-exam-save-0; ExamBuilder tab 1 shows help-recipients-section listing colleagues with persistent checked state.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter21_help_teams.py",
+    "/app/test_reports/pytest/iter21.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py now 1328 lines — splitting into routers (help, teams, admin_help) would improve maintainability but is non-blocking.",
+    "notify_help_teams runs via asyncio.create_task without logging per-recipient result; invalid webhooks silently fail. Consider persisting failure reason on help_requests.teams_sent entries for admin troubleshooting.",
+    "ProfileIn validates webhook with `url.startswith('https://') and len(url) > 30` — accepts any https URL ≥31 chars. Consider validating host matches Microsoft Teams webhook domains (outlook.office.com, *.logic.azure.com, *.powerautomate.com).",
+    "GET /api/teachers returns ALL active users including admins — frontend RecipientsPicker filters by excludeId only, so admins appear in surveillant lists. Acceptable but worth confirming product intent."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin). Student join via code BC2PXU on home page.",
+  "seed_data_creation": "Each backend test creates its own TEST_* exam, student session, and a second teacher account (TEST T2 ...@example.com with password TempPass2026!/NewPass2026! after forced change). Admin webhook temporarily set and cleared. Admin default_help_recipients reset to [] during isolation test — restore manually if needed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "data-testids present: help-request-btn, help-dialog, help-reason-{0..3}, help-reason-input, help-send-btn, help-pending-btn, help-bell-btn, help-bell-count, help-bell-panel, help-bell-empty, help-request-{i}, help-handle-{i}, help-alert, teams-settings, teams-webhook-input, teams-webhook-save-btn, teams-webhook-test-btn, teams-webhook-remove-btn, teams-status, teams-help-toggle, teams-help-steps, help-settings, help-default-{id}, help-default-save-btn, help-exam-{i}, help-exam-{i}-rcpt-{teacherId}, help-exam-{i}-rcpt-picker, help-exam-save-{i} (only when dirty), help-recipients-section (ExamBuilder tab 1), profile-name-btn, teacher-login-link, student-join-code-input, student-name-input, student-number-input, teacher-name-input, student-join-submit-btn, tab-aide. GET /admin/help-settings returns {default_recipients, exams:[...]} — note key is default_recipients NOT defaults. POST /admin/users REQUIRES password in body.",
+  "rca of the issue": "N/A — no issues found."
+}

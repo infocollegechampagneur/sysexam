@@ -131,3 +131,11 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 
 ## 2026-06 — Correctif bouton « Fermer » après remise (web)
 - `window.close()` est ignoré par les navigateurs pour un onglet non ouvert par script. Désormais : token de session effacé, puis redirection vers l'accueil « / » si la fenêtre n'est pas fermée (app Windows : quitApp inchangé). Vérifié par screenshot e2e.
+
+## 2026-06 — Demandes d'aide élèves + alertes Teams + destinataires (desktop 1.2.6)
+- Élève : bouton « J'ai besoin d'aide » (motif facultatif) → `POST /api/student/help` ; une seule demande ouverte ; annulation `DELETE`. `help_pending` dans `/student/session`.
+- Enseignant : cloche HelpBell (toutes pages, poll 10 s, toast) + bannière Résultats, « Pris en charge » (`PUT /api/help-requests/{id}/handle`). Events `help_request`/`help_handled`.
+- Teams : webhook Workflows par enseignant (`PUT /auth/me {teams_webhook}`, jamais renvoyé, `teams_configured`), test `POST /auth/me/teams-test`, carte Adaptive Card envoyée à chaque destinataire (`send_teams`). Instructions pas-à-pas dans le profil.
+- Destinataires : `exams.help_recipients` (éditeur, onglet 1) + surveillants par défaut admin (`app_settings.default_help_recipients`) + édition par examen (Comptes → Alertes d'aide). `GET /api/teachers`.
+- Marque : titre/description « Collège Champagneur », scripts Emergent/PostHog retirés de index.html, author desktop mis à jour.
+- Testé iteration_21 : backend 6/6, e2e OK.
