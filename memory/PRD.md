@@ -152,3 +152,7 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - `settings.clipboard_internal` (défaut true, sous « Bloquer copier/coller ») : copier/couper dans l'examen permis (event `clipboard_internal`), collage permis seulement si le texte correspond au dernier texte copié dans l'examen ; collage externe bloqué + `paste_attempt` compté. Règle adaptée dans ExamIntro.
 - Diagnostic postes : Electron `machine-info` (hostname, user, version, OS) ; PreCheck envoie `POST /api/student/device` (outils détectés + chemins, apps fermées/restantes) → `session.device`, event `device_check`, collection `devices` (upsert par hostname). Admin : Comptes → « Postes » (DevicesPanel : recherche, filtres « X manquant »). SessionDetail : bloc `session-device`. PreCheck affiche ✓/✗ des logiciels permis.
 - Testé iteration_23 : backend 8/8, e2e OK.
+
+## 2026-06 — Vider les copies + pagination des exports
+- `DELETE /api/exams/{id}/sessions` (toutes les copies, help_requests, pause) et `DELETE /api/sessions/{id}`. UI : « Vider les copies » (confirmation en tapant SUPPRIMER) dans Résultats ; « Supprimer » dans le détail d'une copie.
+- Exports : `exportUtils.js` — html2pdf en mode css+legacy avec `avoid` sur p/li/h/tr/[data-avoid-break] et styles `.export-root` injectés ; Word avec `@page`, `page-break-inside: avoid`, `keep-with-next`. CopyContent : blocs courts insécables, en-têtes collés au contenu, réponses longues coupées entre paragraphes seulement.
