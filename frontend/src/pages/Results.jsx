@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, Cl
 import { useHelpRequests, HelpRequestRow } from "@/components/HelpBell";
 import { SurveillanceReport } from "@/components/SurveillanceReport";
 import { ClassControls } from "@/components/TeacherControls";
+import { ClearSessionsButton } from "@/components/DeleteSessions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TeacherLayout } from "@/components/TeacherLayout";
@@ -93,6 +94,7 @@ export default function Results() {
         <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />Toutes (PDF)</Button>
         <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />Toutes (Word)</Button>
         <Button size="sm" onClick={() => { if (!sessions.length) return toast.error("Aucune copie"); exportPdf(reportRef.current, `${slug(exam?.title)}_rapport_surveillance`); }} className="bg-rose-700 hover:bg-rose-800" data-testid="export-surveillance-report-btn"><ShieldAlert className="mr-1.5 h-4 w-4" />Rapport de surveillance (PDF)</Button>
+        {exam && <ClearSessionsButton exam={exam} sessions={sessions} onDone={() => { setSel(null); load(); }} />}
       </div>
       <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
         {counts.map(([k, n]) => <span key={k} className="flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${DOT[k]}`} />{SESSION_LABELS[k]} : <strong data-testid={`count-${k}`}>{n}</strong></span>)}
@@ -140,15 +142,15 @@ export default function Results() {
       </div>}
       {exam && (
         <div className="fixed -left-[9999px] top-0 w-[760px] bg-white p-6" aria-hidden>
-          <div ref={groupRef}>
+          <div ref={groupRef} className="export-root">
             {sessions.map((s, i) => (
               <div key={s.id}>
-                {i > 0 && <p className="html2pdf__page-break" style={{ pageBreakBefore: "always", margin: 0 }} />}
+                {i > 0 && <div className="html2pdf__page-break" style={{ pageBreakBefore: "always", breakBefore: "page", height: 0, margin: 0 }} />}
                 <CopyContent exam={exam} session={s} />
               </div>
             ))}
           </div>
-          <div ref={reportRef} className="mt-10"><SurveillanceReport exam={exam} sessions={sessions} /></div>
+          <div ref={reportRef} className="mt-10 export-root"><SurveillanceReport exam={exam} sessions={sessions} /></div>
         </div>
       )}
     </TeacherLayout>

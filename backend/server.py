@@ -827,6 +827,27 @@ async def delete_exam(exam_id: str, user: dict = Depends(current_teacher)):
     await drop_file(exam.get("file"))
     await db.exams.delete_one({"id": exam_id})
     await db.sessions.delete_many({"exam_id": exam_id})
+    await db.help_requests.delete_many({"exam_id": exam_id})
+    return {"ok": True}
+
+
+@api.delete("/exams/{exam_id}/sessions")
+async def clear_exam_sessions(exam_id: str, user: dict = Depends(current_teacher)):
+    await own_exam(exam_id, user)
+    r = await db.sessions.delete_many({"exam_id": exam_id})
+    await db.help_requests.delete_many({"exam_id": exam_id})
+    await db.exams.update_one({"id": exam_id}, {"$unset": {"paused_at": "", "pause_message": ""}})
+    return {"deleted": r.deleted_count}
+
+
+@api.delete("/sessions/{session_id}")
+async def delete_session(session_id: str, user: dict = Depends(current_teacher)):
+    s = await db.sessions.find_one({"id": session_id}, {"_id": 0, "exam_id": 1})
+    if not s:
+        raise HTTPException(status_code=404, detail="Copie introuvable")
+    await own_exam(s["exam_id"], user)
+    await db.sessions.delete_one({"id": session_id})
+    await db.help_requests.delete_many({"session_id": session_id})
     return {"ok": True}
 
 

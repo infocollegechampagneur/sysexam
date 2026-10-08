@@ -12,6 +12,7 @@ import { ToolUsageCard } from "@/components/ToolUsageCard";
 import { PasteHistory } from "@/components/PasteHistory";
 import { SendMessageDialog, MessageStatus } from "@/components/SendMessageDialog";
 import { LockSessionButton, ReopenSessionButton } from "@/components/TeacherControls";
+import { DeleteSessionButton } from "@/components/DeleteSessions";
 import { PdfAnnotator } from "@/components/PdfAnnotator";
 import { api, formatErr } from "@/lib/api";
 import { EVENT_LABELS, SESSION_LABELS, fmtTime, wordCount, TOOLS } from "@/lib/tools";
@@ -178,6 +179,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
           <Button variant="outline" onClick={() => exportPdf(printRef.current, fname)} data-testid="export-pdf-report-btn"><FileDown className="mr-1.5 h-4 w-4" />PDF</Button>
           <Button variant="outline" onClick={() => exportWord(printRef.current, fname)} data-testid="export-word-report-btn"><FileType2 className="mr-1.5 h-4 w-4" />Word</Button>
           {inlinePdf && <Button variant="outline" onClick={annotated} data-testid="export-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />PDF annoté</Button>}
+          <DeleteSessionButton session={session} onDone={onChanged} />
         </div>
       </div>
 
@@ -254,7 +256,7 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       </section>
 
       <div className="fixed -left-[9999px] top-0 w-[760px] bg-white p-6" aria-hidden>
-        <div ref={printRef}><CopyContent exam={exam} session={session} grade={grade} per={per} /></div>
+        <div ref={printRef} className="export-root"><CopyContent exam={exam} session={session} grade={grade} per={per} /></div>
       </div>
     </div>
   );
