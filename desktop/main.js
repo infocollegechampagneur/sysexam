@@ -226,10 +226,39 @@ function globOne(pattern) {
   }
   return candidates.filter((c) => { try { return fs.statSync(c).isFile(); } catch (e) { return false; } }).sort((a, b) => path.basename(a).length - path.basename(b).length || b.localeCompare(a));
 }
-function findExe(tool) {
-  const patterns = [...(tool.search || []), ...(tool.paths || [])];
+function findExe(tool, id) {
+  const patterns = [...(extraToolPaths[id] || []), ...(tool.search || []), ...(tool.paths || [])];
   for (const p of patterns) { const hits = globOne(p); if (hits.length) return hits[0]; }
-  return null;
+  if (id && registryHits[id] === undefined) registryHits[id] = null;
+  return registryHits[id] || null;
+}
+let extraToolPaths = {};
+const registryHits = {};
+ipcMain.handle("set-tool-paths", (_e, paths) => { extraToolPaths = paths && typeof paths === "object" ? paths : {}; log(`set-tool-paths: ${JSON.stringify(extraToolPaths)}`); return true; });
+
+function discoverViaWindows(tool, id) {
+  const names = toolProcesses(tool).map((p) => p.replace(/\.exe$/i, ""));
+  const ps = `$ErrorActionPreference='SilentlyContinue'; $names=@(${names.map((n) => `'${n.replace(/'/g, "''")}'`).join(",")});
+$found=@()
+foreach ($k in @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*')) {
+  Get-ItemProperty $k | ForEach-Object { $dn=[string]$_.DisplayName; foreach ($n in $names) { if ($dn -and $dn.ToLower().Contains($n)) {
+    if ($_.DisplayIcon) { $found += ($_.DisplayIcon -split ',')[0].Trim('"') }
+    if ($_.InstallLocation) { Get-ChildItem -Path $_.InstallLocation -Filter *.exe -Recurse -Depth 2 | ForEach-Object { $found += $_.FullName } } } } } }
+foreach ($d in @("$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs","$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs","$env:PUBLIC\\Desktop","$env:USERPROFILE\\Desktop")) {
+  Get-ChildItem -Path $d -Filter *.lnk -Recurse | ForEach-Object { $b=$_.BaseName.ToLower(); foreach ($n in $names) { if ($b.Contains($n)) { $t=(New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName).TargetPath; if ($t) { $found += $t } } } } }
+$found | Where-Object { $_ -and $_.ToLower().EndsWith('.exe') -and (Test-Path $_) -and ($_.ToLower() -notmatch 'unins|setup|update|crash|helper|report') } | Select-Object -Unique`;
+  return new Promise((resolve) => execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 20000 }, (err, out) => {
+    const hits = String(out || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const pick = hits.find((h) => names.some((n) => path.basename(h).toLowerCase().includes(n))) || hits[0] || null;
+    log(`discover ${id}: ${err ? "erreur" : hits.length + " candidat(s)"} → ${pick || "aucun"}`);
+    resolve(pick);
+  }));
+}
+async function discoverAll() {
+  if (process.platform !== "win32") return;
+  for (const [id, t] of Object.entries(config.tools || {})) {
+    if (!findExe(t, id)) registryHits[id] = await discoverViaWindows(t, id);
+  }
 }
 function toolProcesses(tool) { return (tool.processes || [tool.process]).filter(Boolean).map((p) => p.toLowerCase()); }
 
@@ -242,16 +271,19 @@ ipcMain.handle("tools-running", () => new Promise((resolve) => {
   });
 }));
 
-ipcMain.handle("tools-installed", () => {
+ipcMain.handle("tools-installed", async () => {
+  await discoverAll();
   const out = {};
-  for (const [id, t] of Object.entries(config.tools || {})) out[id] = { installed: !!findExe(t), autoLaunch: config.autoLaunchTools !== false && t.autoLaunch !== false };
+  for (const [id, t] of Object.entries(config.tools || {})) { const exe = findExe(t, id); out[id] = { installed: !!exe, path: exe, autoLaunch: config.autoLaunchTools !== false && t.autoLaunch !== false }; }
+  log(`tools-installed: ${JSON.stringify(out)}`);
   return out;
 });
 
 ipcMain.handle("launch-tool", async (_e, id) => {
   const tool = (config.tools || {})[id];
   if (!tool) return { ok: false, reason: "Outil inconnu" };
-  const exe = findExe(tool);
+  let exe = findExe(tool, id);
+  if (!exe) { registryHits[id] = await discoverViaWindows(tool, id); exe = registryHits[id]; }
   if (!exe) { log(`launch-tool ${id}: introuvable`); return { ok: false, reason: `${tool.label || id} n'a pas été trouvé sur ce poste` }; }
   log(`launch-tool ${id}: ${exe}`);
   const err = await shell.openPath(exe);
@@ -264,7 +296,7 @@ ipcMain.handle("launch-tool", async (_e, id) => {
 
 ipcMain.handle("focus-tool", async (_e, id) => {
   const tool = (config.tools || {})[id];
-  const exe = tool && findExe(tool);
+  const exe = tool && findExe(tool, id);
   if (!exe) return false;
   if (win.isAlwaysOnTop()) win.setAlwaysOnTop(false);
   return bringToFront(exe);

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api, formatErr } from "@/lib/api";
+import { playAlert, flashTitle, stopFlash } from "@/lib/alertSound";
 
 const since = (iso) => {
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -14,7 +15,12 @@ export const useHelpRequests = (examId = "") => {
   const [items, setItems] = useState([]);
   const seen = useRef(null);
   const load = useCallback(() => api.get("/help-requests", { params: { status: "open", exam_id: examId } }).then((r) => {
-    if (seen.current) r.data.filter((h) => !seen.current.has(h.id)).forEach((h) => toast.warning(`🙋 ${h.student_name} a besoin d'aide (${h.exam_title})${h.reason ? ` — ${h.reason}` : ""}`, { duration: 15000 }));
+    if (seen.current) {
+      const fresh = r.data.filter((h) => !seen.current.has(h.id));
+      fresh.forEach((h) => toast.warning(`🙋 ${h.student_name} a besoin d'aide (${h.exam_title})${h.reason ? ` — ${h.reason}` : ""}`, { duration: 15000 }));
+      if (fresh.length && !examId) { playAlert(); flashTitle(`${fresh[0].student_name} a besoin d'aide`, r.data.length); }
+    }
+    if (!r.data.length) stopFlash();
     seen.current = new Set(r.data.map((h) => h.id));
     setItems(r.data);
   }).catch(() => {}), [examId]);

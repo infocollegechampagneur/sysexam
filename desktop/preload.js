@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("monExam", {
   closeForbidden: () => ipcRenderer.invoke("close-forbidden"),
   antidotePort: () => ipcRenderer.invoke("antidote-port"),
   quitApp: () => ipcRenderer.invoke("quit-app"),
+  setToolPaths: (paths) => ipcRenderer.invoke("set-tool-paths", paths),
   checkLocalExit: (code) => ipcRenderer.invoke("check-local-exit", code),
   onEmergency: (cb) => {
     const h = () => cb();

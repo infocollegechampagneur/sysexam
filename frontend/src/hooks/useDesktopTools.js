@@ -26,6 +26,9 @@ export function useDesktopTools({ active, allowed, onEvent }) {
       }
       if (!autoDone.current && window.monExam.installedTools) {
         autoDone.current = true;
+        if (window.monExam.setToolPaths) {
+          try { const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/tool-paths`); await window.monExam.setToolPaths(await r.json()); } catch (e) { /* chemins par défaut */ }
+        }
         const inst = await window.monExam.installedTools();
         setInstalled(inst);
         const missing = key.split(",").filter((id) => inst[id] && !inst[id].installed);

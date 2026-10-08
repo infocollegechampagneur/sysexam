@@ -61,3 +61,21 @@ def send_welcome(to: str, name: str, password: str, reset: bool = False) -> bool
     except Exception as e:  # noqa: BLE001
         log.error("Envoi du courriel à %s échoué : %s", to, type(e).__name__)
         return False
+
+
+def send_help_alert(to: str, student: str, exam_title: str, reason: str, when: str) -> bool:
+    if not mail_configured():
+        return False
+    subject = f"🙋 {student} a besoin d'aide — {exam_title}"
+    text = f"L'élève {student} demande de l'aide pendant l'examen « {exam_title} » ({when}).\n" + (f"Motif : {reason}\n" if reason else "") + f"\nSurveillance : {site_url()}/enseignant"
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:560px;color:#0f172a">
+<h2 style="color:#b45309;margin:0 0 8px">🙋 {escape(student)} a besoin d'aide</h2>
+<p style="margin:0 0 12px">Examen : <strong>{escape(exam_title)}</strong> · {escape(when)}</p>
+{f'<p style="margin:0 0 12px">Motif : {escape(reason)}</p>' if reason else ''}
+<p><a href="{escape(site_url())}/enseignant" style="background:#1e3a8a;color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none">Ouvrir la surveillance</a></p></div>"""
+    try:
+        send_mail(to, subject, text, html)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log.error("Alerte d'aide à %s échouée : %s", to, type(e).__name__)
+        return False

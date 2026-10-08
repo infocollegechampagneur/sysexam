@@ -124,6 +124,9 @@
       "autoLaunch": true,
       "search": [
         "C:\\Program Files\\LexibarLP5X\\Lexibar*.exe",
+        "C:\\Program Files\\LexibarLP5X\\*.exe",
+        "C:\\Program Files (x86)\\LexibarLP5X\\*.exe",
+        "C:\\ProgramData\\Haylem\\Lexibar*\\*.exe",
         "C:\\Program Files (x86)\\LexibarLP5X\\Lexibar*.exe",
         "C:\\Program Files\\Lexibar*\\Lexibar*.exe",
         "C:\\Program Files (x86)\\Lexibar*\\Lexibar*.exe",

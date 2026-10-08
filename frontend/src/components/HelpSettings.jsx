@@ -3,6 +3,8 @@ import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RecipientsPicker, useTeachers } from "@/components/RecipientsPicker";
+import { SoundSettings } from "@/components/SoundSettings";
+import { ToolPathsSettings } from "@/components/ToolPathsSettings";
 import { api, formatErr } from "@/lib/api";
 import { STATUS_LABELS } from "@/lib/tools";
 
@@ -33,8 +35,9 @@ export const HelpSettings = () => {
   const [data, setData] = useState(null);
   const [defaults, setDefaults] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [sound, setSound] = useState({ configured: false, name: "" });
   const load = () => api.get("/admin/help-settings").then((r) => { setData(r.data); setDefaults(r.data.default_recipients); }).catch((e) => toast.error(formatErr(e)));
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); api.get("/admin/alert-sound").then((r) => setSound(r.data)).catch(() => {}); }, []);
   const saveDefaults = async () => {
     setBusy(true);
     try { await api.put("/admin/help-settings/default", { recipients: defaults }); toast.success("Surveillants par défaut enregistrés"); load(); } catch (e) { toast.error(formatErr(e)); } finally { setBusy(false); }
@@ -42,6 +45,8 @@ export const HelpSettings = () => {
   if (!data) return <p className="py-8 text-center text-sm text-slate-500">Chargement…</p>;
   return (
     <div className="space-y-6" data-testid="help-settings">
+      <SoundSettings scope="admin" status={sound} onChange={setSound} />
+      <ToolPathsSettings />
       <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-5">
         <h3 className="font-display text-lg font-semibold text-slate-900">Surveillants par défaut</h3>
         <p className="mt-1 text-sm text-slate-600">Ces personnes reçoivent la demande « J'ai besoin d'aide » de <strong>tous</strong> les examens, en plus de l'enseignant·e responsable et des collègues choisis par examen. Celles avec l'icône Teams reçoivent aussi une carte dans Teams.</p>

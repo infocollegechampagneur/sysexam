@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { TeamsSettings } from "@/components/TeamsSettings";
+import { SoundSettings } from "@/components/SoundSettings";
 import { HelpBell } from "@/components/HelpBell";
 import { useAuth } from "@/context/AuthContext";
 import { api, formatErr } from "@/lib/api";
@@ -46,6 +47,7 @@ const ProfileButton = () => {
           <Button onClick={save} disabled={!name.trim()} className="bg-blue-900 hover:bg-blue-800" data-testid="profile-name-save-btn">Enregistrer</Button>
         </div>
         <TeamsSettings user={user} setUser={setUser} />
+        <SoundSettings scope="me" status={user?.alert_sound} onChange={(d) => setUser({ ...user, alert_sound: d.alert_sound })} />
       </DialogContent>
     </Dialog>
   );

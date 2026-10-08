@@ -38,7 +38,7 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
           <CloudCheck className="h-4 w-4" />{savedAt ? `Sauvegardé à ${new Date(savedAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Non sauvegardé"}
         </span>
         <ExamTimer deadline={deadline} offsetMs={offsetMs} onExpire={onExpire} paused={paused} />
-        {sapi && <HelpButton sapi={sapi} pending={helpPending} onChange={onHelpChange} />}
+        {sapi && exam.settings?.help_button !== false && <HelpButton sapi={sapi} pending={helpPending} onChange={onHelpChange} />}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-500" disabled={submitting} data-testid="submit-exam-btn">

@@ -1,7 +1,7 @@
 {
   "name": "monexamenligne-desktop",
   "productName": "MonExamEnLigne",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "MonExamEnLigne — Collège Champagneur (examen verrouillé)",
   "main": "main.js",
   "author": "Collège Champagneur",

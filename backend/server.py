@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
                   decode_token, set_auth_cookies, extract_token)
-from mailer import send_welcome, mail_configured
+from mailer import send_welcome, mail_configured, send_help_alert
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorGridFSBucket
 from seed import sample_exams
@@ -142,6 +142,7 @@ class ExamSettings(BaseModel):
     exit_code: str = ""
     partial_credit: bool = False
     shuffle_options: bool = False
+    help_button: bool = True
 
 
 class ExamIn(BaseModel):
@@ -226,6 +227,9 @@ async def current_teacher(request: Request) -> dict:
     if user.get("active") is False:
         raise HTTPException(status_code=403, detail="Ce compte a été désactivé")
     user["teams_configured"] = bool(user.pop("teams_webhook", None))
+    user["teams_email"] = user.get("teams_email") or ""
+    user["notify_email"] = bool(user.get("notify_email"))
+    user["alert_sound"] = "custom" if user.pop("alert_sound_id", None) else "default"
     return user
 
 
@@ -236,7 +240,9 @@ async def current_admin(user: dict = Depends(current_teacher)) -> dict:
 
 
 def public_user(u: dict) -> dict:
-    return {k: u.get(k) for k in ("id", "email", "name", "role", "active", "must_change_password", "created_at", "last_login_at")}
+    out = {k: u.get(k) for k in ("id", "email", "name", "role", "active", "must_change_password", "created_at", "last_login_at")}
+    out.update({"teams_configured": bool(u.get("teams_webhook")), "teams_email": u.get("teams_email") or "", "notify_email": bool(u.get("notify_email")), "alert_sound": "custom" if u.get("alert_sound_id") else "default"})
+    return out
 
 
 async def own_exam(exam_id: str, user: dict) -> dict:
@@ -272,13 +278,17 @@ async def help_recipient_ids(exam: dict) -> list:
 
 
 async def notify_help_teams(req: dict, exam: dict):
-    users = await db.users.find({"id": {"$in": req["recipients"]}, "teams_webhook": {"$exists": True, "$nin": ["", None]}}, {"_id": 0, "teams_webhook": 1, "id": 1}).to_list(100)
-    facts = [("Élève", req["student_name"]), ("Examen", exam.get("title") or ""), ("Heure", datetime.now(timezone.utc).astimezone().strftime("%H:%M"))]
+    users = await db.users.find({"id": {"$in": req["recipients"]}}, {"_id": 0, "teams_webhook": 1, "teams_email": 1, "email": 1, "id": 1, "notify_email": 1}).to_list(100)
+    when = datetime.now(timezone.utc).astimezone().strftime("%H:%M")
+    facts = [("Élève", req["student_name"]), ("Examen", exam.get("title") or ""), ("Heure", when)]
     if req.get("reason"):
         facts.append(("Motif", req["reason"]))
-    results = await asyncio.gather(*[send_teams(u["teams_webhook"], f"🙋 {req['student_name']} a besoin d'aide", facts) for u in users])
-    sent = [u["id"] for u, (ok, _) in zip(users, results) if ok]
-    await db.help_requests.update_one({"id": req["id"]}, {"$set": {"teams_sent": sent}})
+    hooks = [u for u in users if u.get("teams_webhook")]
+    results = await asyncio.gather(*[send_teams(u["teams_webhook"], f"🙋 {req['student_name']} a besoin d'aide", facts) for u in hooks])
+    sent = [u["id"] for u, (ok, _) in zip(hooks, results) if ok]
+    addresses = {u["teams_email"] for u in users if u.get("teams_email")} | {u["email"] for u in users if u.get("notify_email")}
+    mailed = await asyncio.gather(*[asyncio.to_thread(send_help_alert, a, req["student_name"], exam.get("title") or "", req.get("reason") or "", when) for a in addresses])
+    await db.help_requests.update_one({"id": req["id"]}, {"$set": {"teams_sent": sent, "emails_sent": [a for a, ok in zip(addresses, mailed) if ok]}})
 
 
 def bank_question(q: dict) -> dict:
@@ -558,6 +568,8 @@ async def me(user: dict = Depends(current_teacher)):
 class ProfileIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     teams_webhook: Optional[str] = None
+    teams_email: Optional[str] = None
+    notify_email: Optional[bool] = None
 
 
 @api.put("/auth/me")
@@ -568,19 +580,38 @@ async def update_me(body: ProfileIn, user: dict = Depends(current_teacher)):
         if url and not (url.startswith("https://") and len(url) > 30):
             raise HTTPException(status_code=400, detail="L'URL du webhook Teams doit commencer par https://")
         upd["teams_webhook"] = url
+    if body.teams_email is not None:
+        em = body.teams_email.strip().lower()
+        if em and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", em):
+            raise HTTPException(status_code=400, detail="Adresse courriel du canal Teams invalide")
+        upd["teams_email"] = em
+    if body.notify_email is not None:
+        upd["notify_email"] = body.notify_email
     await db.users.update_one({"id": user["id"]}, {"$set": upd})
-    return {**user, "name": upd["name"], "teams_configured": bool(upd.get("teams_webhook", user.get("teams_configured")))}
+    fresh = await db.users.find_one({"id": user["id"]}, {"_id": 0, "teams_webhook": 1, "teams_email": 1, "notify_email": 1})
+    return {**user, "name": upd["name"], "teams_configured": bool(fresh.get("teams_webhook")), "teams_email": fresh.get("teams_email") or "", "notify_email": bool(fresh.get("notify_email"))}
 
 
 @api.post("/auth/me/teams-test")
 async def teams_test(user: dict = Depends(current_teacher)):
-    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "teams_webhook": 1})
-    if not (u or {}).get("teams_webhook"):
-        raise HTTPException(status_code=400, detail="Aucun webhook Teams enregistré")
-    ok, err = await send_teams(u["teams_webhook"], "Test MonExamEnLigne", [("Destinataire", user["name"]), ("Message", "Si vous voyez cette carte, les alertes d'aide fonctionneront.")])
-    if not ok:
-        raise HTTPException(status_code=502, detail=f"Teams a refusé le message : {err}")
-    return {"ok": True}
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "teams_webhook": 1, "teams_email": 1, "email": 1, "notify_email": 1})
+    when = datetime.now(timezone.utc).astimezone().strftime("%H:%M")
+    done = []
+    if u.get("teams_webhook"):
+        ok, err = await send_teams(u["teams_webhook"], "Test MonExamEnLigne", [("Destinataire", user["name"]), ("Message", "Si vous voyez cette carte, les alertes d'aide fonctionneront.")])
+        if not ok:
+            raise HTTPException(status_code=502, detail=f"Teams a refusé le message : {err}")
+        done.append("webhook")
+    targets = [a for a in (u.get("teams_email"), u["email"] if u.get("notify_email") else None) if a]
+    if targets and not mail_configured():
+        raise HTTPException(status_code=503, detail="L'envoi de courriels n'est pas configuré sur le serveur (SMTP)")
+    for a in targets:
+        if not await asyncio.to_thread(send_help_alert, a, "Élève test", "Test MonExamEnLigne", "Ceci est un test : les alertes d'aide fonctionnent.", when):
+            raise HTTPException(status_code=502, detail=f"Échec de l'envoi du courriel à {a}")
+        done.append(a)
+    if not done:
+        raise HTTPException(status_code=400, detail="Aucun moyen de notification configuré (courriel du canal Teams, courriel personnel ou webhook)")
+    return {"ok": True, "sent": done}
 
 
 @api.get("/teachers")
@@ -640,6 +671,99 @@ async def admin_set_exam_recipients(exam_id: str, body: RecipientsIn, _: dict = 
     if not r.matched_count:
         raise HTTPException(status_code=404, detail="Examen introuvable")
     return {"help_recipients": body.recipients}
+
+
+# ---------- Sonnerie d'alerte ----------
+SOUND_TYPES = {"audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav", "audio/ogg": "ogg"}
+
+
+async def store_sound(file: UploadFile) -> dict:
+    ctype = (file.content_type or "").split(";")[0].lower()
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ctype not in SOUND_TYPES and ext not in ("mp3", "wav", "ogg"):
+        raise HTTPException(status_code=400, detail="Format accepté : MP3, WAV ou OGG")
+    data = await file.read()
+    if len(data) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 2 Mo)")
+    if not data:
+        raise HTTPException(status_code=400, detail="Fichier vide")
+    ctype = ctype if ctype in SOUND_TYPES else {"mp3": "audio/mpeg", "wav": "audio/wav", "ogg": "audio/ogg"}[ext]
+    fid = await files_bucket.upload_from_stream(file.filename or f"sonnerie.{ext}", data, metadata={"contentType": ctype, "kind": "alert_sound"})
+    return {"gridfs_id": str(fid), "content_type": ctype, "name": file.filename or "", "size": len(data)}
+
+
+async def sound_response(file_doc: Optional[dict]):
+    if not file_doc:
+        return Response(status_code=204)
+    data = await read_file(file_doc)
+    return Response(content=data, media_type=file_doc["content_type"], headers={"Cache-Control": "private, max-age=60"})
+
+
+@api.get("/alert-sound")
+async def get_alert_sound(user: dict = Depends(current_teacher)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "alert_sound_id": 1})
+    if u.get("alert_sound_id"):
+        return await sound_response(u["alert_sound_id"])
+    doc = await db.app_settings.find_one({"key": "default_alert_sound"}, {"_id": 0})
+    return await sound_response((doc or {}).get("value"))
+
+
+@api.post("/auth/me/alert-sound")
+async def upload_my_sound(file: UploadFile = File(...), user: dict = Depends(current_teacher)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "alert_sound_id": 1})
+    await drop_file(u.get("alert_sound_id"))
+    doc = await store_sound(file)
+    await db.users.update_one({"id": user["id"]}, {"$set": {"alert_sound_id": doc}})
+    return {"alert_sound": "custom", "name": doc["name"]}
+
+
+@api.delete("/auth/me/alert-sound")
+async def delete_my_sound(user: dict = Depends(current_teacher)):
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "alert_sound_id": 1})
+    await drop_file(u.get("alert_sound_id"))
+    await db.users.update_one({"id": user["id"]}, {"$unset": {"alert_sound_id": ""}})
+    return {"alert_sound": "default"}
+
+
+@api.get("/admin/alert-sound")
+async def admin_get_default_sound(_: dict = Depends(current_admin)):
+    doc = await db.app_settings.find_one({"key": "default_alert_sound"}, {"_id": 0})
+    return {"configured": bool((doc or {}).get("value")), "name": ((doc or {}).get("value") or {}).get("name", "")}
+
+
+@api.post("/admin/alert-sound")
+async def admin_upload_default_sound(file: UploadFile = File(...), _: dict = Depends(current_admin)):
+    doc = await db.app_settings.find_one({"key": "default_alert_sound"}, {"_id": 0})
+    await drop_file((doc or {}).get("value"))
+    new = await store_sound(file)
+    await db.app_settings.update_one({"key": "default_alert_sound"}, {"$set": {"value": new, "updated_at": now_iso()}}, upsert=True)
+    return {"configured": True, "name": new["name"]}
+
+
+@api.delete("/admin/alert-sound")
+async def admin_delete_default_sound(_: dict = Depends(current_admin)):
+    doc = await db.app_settings.find_one({"key": "default_alert_sound"}, {"_id": 0})
+    await drop_file((doc or {}).get("value"))
+    await db.app_settings.delete_one({"key": "default_alert_sound"})
+    return {"configured": False, "name": ""}
+
+
+# ---------- Chemins des logiciels d'aide (app Windows) ----------
+class ToolPathsIn(BaseModel):
+    paths: Dict[str, List[str]] = {}
+
+
+@api.get("/tool-paths")
+async def get_tool_paths():
+    doc = await db.app_settings.find_one({"key": "tool_paths"}, {"_id": 0})
+    return (doc or {}).get("value") or {}
+
+
+@api.put("/admin/tool-paths")
+async def set_tool_paths(body: ToolPathsIn, _: dict = Depends(current_admin)):
+    clean = {k: [p.strip() for p in v if p.strip()] for k, v in body.paths.items() if k in ("wordq", "lexibar", "antidote")}
+    await db.app_settings.update_one({"key": "tool_paths"}, {"$set": {"value": clean, "updated_at": now_iso()}}, upsert=True)
+    return clean
 
 
 @api.post("/auth/refresh")
@@ -1163,9 +1287,11 @@ class HelpIn(BaseModel):
 async def student_help(body: HelpIn, s: dict = Depends(current_session)):
     if s["status"] not in ("in_progress", "locked"):
         raise HTTPException(status_code=403, detail="La copie est remise")
+    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
+    if (exam.get("settings") or {}).get("help_button") is False:
+        raise HTTPException(status_code=403, detail="Le bouton d'aide est désactivé pour cet examen")
     if await db.help_requests.find_one({"session_id": s["id"], "status": "open"}):
         raise HTTPException(status_code=409, detail="Votre demande d'aide est déjà envoyée. Votre enseignant·e arrive.")
-    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0})
     ts = now_iso()
     req = {"id": str(uuid.uuid4()), "exam_id": exam["id"], "exam_title": exam.get("title") or "", "session_id": s["id"], "student_name": s["student_name"],
            "reason": body.reason.strip(), "status": "open", "recipients": await help_recipient_ids(exam), "created_at": ts, "teams_sent": []}
