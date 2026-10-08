@@ -21,12 +21,12 @@ export const DevicesPanel = () => {
   const load = () => api.get("/admin/devices").then((r) => setRows(r.data)).catch((e) => toast.error(formatErr(e)));
   useEffect(() => { load(); }, []);
   const list = useMemo(() => (rows || []).filter((d) => {
-    if (filter !== "all" && !(d.missing_tools || []).includes(filter)) return false;
+    if (filter !== "all" && !(d.tools?.[filter] && !d.tools[filter].installed)) return false;
     const s = q.trim().toLowerCase();
     return !s || [d.hostname, d.user, d.student_name, d.exam_title].some((v) => (v || "").toLowerCase().includes(s));
   }), [rows, q, filter]);
   if (!rows) return <p className="py-8 text-center text-sm text-slate-500">Chargement…</p>;
-  const missingCount = (id) => rows.filter((d) => (d.missing_tools || []).includes(id)).length;
+  const missingCount = (id) => rows.filter((d) => d.tools?.[id] && !d.tools[id].installed).length;
   return (
     <div className="space-y-4" data-testid="devices-panel">
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">

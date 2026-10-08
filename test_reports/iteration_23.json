@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 23 testing: clipboard_internal exam setting + /student/device + /admin/devices + DevicesPanel + SessionDetail session-device + student clipboard events. Backend: 8/8 pytest tests PASS in /app/backend/tests/test_iter23_clipboard_devices.py. Covers: (a) exam settings.clipboard_internal default true and explicit false round-trips via GET /api/student/session; (b) POST /api/student/device with tools wordq(installed)/lexibar(absent) + forbidden_closed ['Microsoft Teams'] → 200 missing_tools=['lexibar']; GET /api/student/session reflects session.device + events contains device_check; GET /api/admin/devices contains the hostname with checks=1; second POST same hostname → single row with checks=2 and updated app_version (upsert ok); non-admin teacher (freshly created via admin + password-change) GET /api/admin/devices → 403; no X-Session-Token → 401. Frontend admin: Comptes → tab-postes shows devices-panel with 4 postes, devices-count renders, devices-search 'TEST-LAB' narrows to 3 rows, devices-filter-lexibar isolates missing-Lexibar rows (3) and renders '✗' in cells, devices-filter-all + devices-refresh-btn work. ExamBuilder → builder-tab-security: setting-clipboard-internal is VISIBLE when setting-block-clipboard is checked and HIDDEN when it is unchecked (reactive toggle verified). Student ExamIntro: adaptive rule 'Le copier-coller n'est permis qu'avec du texte provenant de l'examen' present when clipboard_internal=true. In-exam clipboard events: dispatching a ClipboardEvent paste with external text 'TEXTE EXTERNE XYZ 1234' on the answer input → paste_attempt counted event with detail « A tenté de coller un texte externe à l'examen : « TEXTE EXTERNE XYZ 1234 » » (visible in SessionDetail as 1/10 signalement). After forcing a real selection on the question text (user-select override), dispatching copy fires clipboard_internal (A copié 3 mot(s) dans l'examen (permis)); subsequent matching paste fires clipboard_internal (A collé 3 mot(s) provenant de l'examen (permis)). Teacher Résultats → open student copy → session-device block renders « Poste : TEST-UI-LAB01 (eleve) · app v1.0.0 · ✗ Lexibar ✓ WordQ · fermées au PreCheck : Microsoft Teams » and a device_check event appears in history (« Vérification du poste (PreCheck) »).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ExamBuilder (3. Outils et sécurité)", "issues": ["Le texte explicatif en encart jaune au-dessus de la Sécurité dit toujours « le copier/coller est donc permis dans la zone de réponse » même quand clipboard_internal est actif ; aucune mention explicite du nouveau mode intra-examen. Minor cosmétique — pas bloquant."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter23_clipboard_devices.py",
+    "/app/test_reports/pytest/iter23.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py now 1486 lines — same note as iter22: approaching maintainability limits; please extract student/*, admin/* and devices endpoints into separate routers.",
+    "useAntiCheat.js onClip: when selection is empty (e.g. CSS user-select:none applied by lockdown mode) the internal copy path silently does nothing. In real browsers Ctrl+C on a non-selectable region never fires anyway, but if the exam enters .lockdown mode internal copy becomes impossible — intended but worth documenting for teachers.",
+    "DevicesPanel's thead has `colSpan={7 + DESKTOP.length}` for the empty state but current table layout has 6 fixed cols + DESKTOP cols = 6 + N (Poste, Utilisateur, Version, [tools], Dernière vérif, Élève/examen, Apps fermées = 6 non-tool cols). colSpan is off-by-one (should be 6+DESKTOP.length). Cosmetic only.",
+    "DeviceIn.tools accepts arbitrary keys — server-side filters to {wordq, lexibar, antidote}. Fine, but path field is truncated to 300 chars silently; consider returning a validation error for very long paths.",
+    "Admin devices listing has no pagination/limit beyond .to_list(2000); fine for school scale but worth a note."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter23_clipboard_devices.py"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin). Students joined ad-hoc via /api/student/join.",
+  "seed_data_creation": "Backend tests create TEST_clip_* and TEST_dev_* exams, hostnames TEST-LAB-* in devices collection, and one TEST_dev_t_* teacher user (deleted at end). Frontend tests create TEST_clip_ui_*/TEST_clip_int_* exams and one device TEST-UI-LAB01. Devices panel on preview now shows 4 rows including these. Leftover TEST exams on dashboard are non-blocking.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified testids this iteration: setting-block-clipboard, setting-clipboard-internal (visible only when block_clipboard on), devices-panel, devices-count, devices-search, devices-filter-all, devices-filter-lexibar, devices-filter-wordq, devices-refresh-btn, device-row-i, session-device, tab-postes, builder-tab-security. Student exam page uses testids student-join-code-input, student-name-input, student-number-input, teacher-name-input, student-join-submit-btn, start-exam-btn, exam-question-N-input. Teacher results route is /enseignant/examens/{id}/resultats and monitoring-student-card-N buttons expose SessionDetail (which contains session-device when session.device present). The exam page sets user-select:none via .lockdown — real browser copy with ClipboardEvent needs a selection; tests inject a CSS override to simulate the real user action. The 1500 ms per-type dedup in useAntiCheat.emit means consecutive same-type attempts within 1.5 s are coalesced.",
+  "rca of the issue": "N/A — all required functionality works as specified."
+}

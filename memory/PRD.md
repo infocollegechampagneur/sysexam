@@ -147,3 +147,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - `settings.help_button` (défaut true) : interrupteur onglet 3 ; 403 côté API et bouton masqué si désactivé.
 - Chemins outils : `app_settings.tool_paths` (`GET /api/tool-paths` public, `PUT /admin/tool-paths`) → envoyés à Electron via `setToolPaths` et essayés en premier. main.js : découverte via registre Uninstall (DisplayIcon/InstallLocation) + raccourcis menu Démarrer/Bureau (`discoverViaWindows`), patterns `LexibarLP5X\*.exe` ajoutés.
 - Testé iteration_22 : backend 8/8, e2e OK.
+
+## 2026-06 — Copier-coller interne + diagnostic des postes (desktop 1.2.8)
+- `settings.clipboard_internal` (défaut true, sous « Bloquer copier/coller ») : copier/couper dans l'examen permis (event `clipboard_internal`), collage permis seulement si le texte correspond au dernier texte copié dans l'examen ; collage externe bloqué + `paste_attempt` compté. Règle adaptée dans ExamIntro.
+- Diagnostic postes : Electron `machine-info` (hostname, user, version, OS) ; PreCheck envoie `POST /api/student/device` (outils détectés + chemins, apps fermées/restantes) → `session.device`, event `device_check`, collection `devices` (upsert par hostname). Admin : Comptes → « Postes » (DevicesPanel : recherche, filtres « X manquant »). SessionDetail : bloc `session-device`. PreCheck affiche ✓/✗ des logiciels permis.
+- Testé iteration_23 : backend 8/8, e2e OK.
