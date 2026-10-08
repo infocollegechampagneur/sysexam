@@ -15,10 +15,10 @@ const ANTIDOTE_STEPS = [
 const RULES = [
   { icon: Maximize, text: "L'examen se déroule en plein écran. En sortir est une infraction." },
   { icon: Eye, text: "Changer d'onglet ou de fenêtre est détecté et enregistré." },
-  { icon: ClipboardX, text: "Copier, coller et le clic droit sont désactivés." },
+  { icon: ClipboardX, text: "Copier, coller et le clic droit sont désactivés.", internal: "Le copier-coller n'est permis qu'avec du texte provenant de l'examen ; coller un texte externe est bloqué et signalé." },
 ];
 
-export const ExamIntro = ({ exam, session, onStart }) => {
+export const ExamIntro = ({ exam, session, onStart, sapi }) => {
   const st = exam.settings;
   const desktop = !!window.monExam?.forbiddenApps;
   const [clean, setClean] = useState(!desktop);
@@ -34,7 +34,7 @@ export const ExamIntro = ({ exam, session, onStart }) => {
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
           <p className="flex items-center gap-2 font-semibold text-white"><ShieldCheck className="h-4 w-4 text-blue-400" />Règles de l'examen</p>
           <ul className="mt-4 space-y-3 text-sm text-slate-300">
-            {rules.map((r) => <li key={r.text} className="flex gap-2"><r.icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />{r.text}</li>)}
+            {rules.map((r) => <li key={r.text} className="flex gap-2"><r.icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />{r.internal && st.clipboard_internal !== false ? r.internal : r.text}</li>)}
             <li className="flex gap-2"><Ban className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />Après {st.max_violations} infraction(s), {st.lock_on_max ? "la copie est verrouillée." : "l'enseignant est alerté."}</li>
           </ul>
         </div>
@@ -61,7 +61,7 @@ export const ExamIntro = ({ exam, session, onStart }) => {
           <p className="mt-2 rounded-md bg-emerald-900/40 px-3 py-2 text-xs text-emerald-100" data-testid="antidote-agent-hint"><strong>Si Ctrl+C+C ne réagit pas :</strong> l'Agent Antidote n'est pas activé sur ce poste. Ouvrez Antidote → menu <em>Outils</em> (ou <em>Antidote</em>) → <em>Réglages</em> → <em>Connectix</em> → cochez <em>Activer l'Agent Antidote</em>. Une fois fait, le raccourci fonctionne dans toutes les applications.</p>
         </div>
       )}
-      {desktop && <PreCheck onClean={setClean} />}
+      {desktop && <PreCheck onClean={setClean} sapi={sapi} allowedTools={(st.allowed_tools || []).filter((id) => TOOLS.find((t) => t.id === id)?.kind === "desktop")} />}
       <Button onClick={onStart} disabled={!clean} className="mt-10 h-12 w-full bg-blue-600 text-base hover:bg-blue-500" data-testid="start-exam-btn">
         {st.require_fullscreen ? "Passer en plein écran et commencer" : "Commencer l'examen"}
       </Button>

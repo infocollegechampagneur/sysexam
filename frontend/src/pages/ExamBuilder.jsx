@@ -20,7 +20,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
   title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [],
-  settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false, partial_credit: false, shuffle_options: false, help_button: true },
+  settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false,     partial_credit: false, shuffle_options: false, help_button: true, clipboard_internal: true },
 };
 const FIELDS = Object.keys(EMPTY);
 

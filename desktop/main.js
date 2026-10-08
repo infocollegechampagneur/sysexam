@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, session } = require("electron");
 const path = require("path");
+const os = require("os");
 const fs = require("fs");
 const { execFile } = require("child_process");
 const packaged = require("./config.json");
@@ -301,6 +302,8 @@ ipcMain.handle("focus-tool", async (_e, id) => {
   if (win.isAlwaysOnTop()) win.setAlwaysOnTop(false);
   return bringToFront(exe);
 });
+
+ipcMain.handle("machine-info", () => ({ hostname: os.hostname(), user: (os.userInfo().username || ""), app_version: app.getVersion(), os: `${os.type()} ${os.release()}` }));
 
 ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; setTimeout(() => app.quit(), 200); return true; });
 

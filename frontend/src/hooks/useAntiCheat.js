@@ -8,6 +8,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   const graceRef = useRef(0);
   const lastCountedRef = useRef({});
   const awayRef = useRef(null);
+  const internalClipRef = useRef("");
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
@@ -17,7 +18,7 @@ export function useAntiCheat({ active, settings, onEvent }) {
   const toolActive = () => (popupRef.current && !popupRef.current.closed) || Date.now() < graceRef.current;
 
   const emit = useCallback((type, detail, seconds = 0, text = "", before = "") => {
-    if (COUNTED.has(type) || type === "clipboard_tool") {
+    if (COUNTED.has(type) || type === "clipboard_tool" || type === "clipboard_internal") {
       const last = lastCountedRef.current[type] || 0;
       if (Date.now() - last < 1500) return;
       lastCountedRef.current[type] = Date.now();
@@ -28,15 +29,33 @@ export function useAntiCheat({ active, settings, onEvent }) {
   useEffect(() => {
     if (!active || !settings) return;
     const block = settings.block_clipboard;
+    const internal = settings.clipboard_internal !== false;
+    const norm = (t) => (t || "").replace(/\s+/g, " ").trim();
     const onClip = (e) => {
       if (!block) return;
       const zone = desktopAllowed.length && e.target?.closest?.("[data-answer-zone]");
       if (zone) {
         const verb = { copy: "copié", cut: "coupé", paste: "collé" }[e.type];
         const text = (e.type === "paste" ? e.clipboardData?.getData("text") : String(window.getSelection() || "")) || "";
+        if (e.type !== "paste") internalClipRef.current = norm(text);
         const words = (text.trim().match(/\S+/g) || []).length;
         const before = e.type === "paste" ? (zone.tagName === "INPUT" ? zone.value : zone.innerText || "").slice(0, 6000) : "";
         return emit("clipboard_tool", `A ${verb} ${words} mot(s) dans sa zone de réponse (permis pour ${desktopAllowed.join(", ")})`, 0, e.type === "paste" ? text.slice(0, 3000) : "", before);
+      }
+      if (internal && e.type !== "paste") {
+        const sel = window.getSelection();
+        if (sel?.anchorNode?.parentElement?.closest?.("[data-sonner-toaster]")) { e.preventDefault(); return; }
+        const text = norm(String(sel || ""));
+        if (text) { internalClipRef.current = text; emit("clipboard_internal", `A ${e.type === "cut" ? "coupé" : "copié"} ${(text.match(/\S+/g) || []).length} mot(s) dans l'examen (permis)`); }
+        return;
+      }
+      if (internal && e.type === "paste") {
+        const text = norm(e.clipboardData?.getData("text"));
+        const own = internalClipRef.current;
+        if (text && own && (own.includes(text) || text.includes(own))) return emit("clipboard_internal", `A collé ${(text.match(/\S+/g) || []).length} mot(s) provenant de l'examen (permis)`);
+        e.preventDefault();
+        const snippet = text.slice(0, 160);
+        return emit("paste_attempt", snippet ? `A tenté de coller un texte externe à l'examen : « ${snippet}${text.length > 160 ? "…" : ""} »` : "A tenté de coller (aucun texte)");
       }
       e.preventDefault();
       const sel = window.getSelection();

@@ -177,7 +177,7 @@ export default function StudentExam() {
 
   const { exam, session } = data;
   if (phase === "intro")
-    return <div className="min-h-screen bg-slate-950 grid-paper"><ExamIntro exam={exam} session={session} onStart={() => { if (settings.require_fullscreen || window.monExam?.isDesktop) enterFullscreen(); setPhase("exam"); }} /></div>;
+    return <div className="min-h-screen bg-slate-950 grid-paper"><ExamIntro exam={exam} session={session} sapi={sapi} onStart={() => { if (settings.require_fullscreen || window.monExam?.isDesktop) enterFullscreen(); setPhase("exam"); }} /></div>;
 
   const needFs = settings.require_fullscreen && !isFullscreen && status === "in_progress";
   return (

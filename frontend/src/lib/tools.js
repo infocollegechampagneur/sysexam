@@ -18,7 +18,7 @@ export const SESSION_LABELS = { in_progress: "En cours", locked: "Bloqué", subm
 export const EVENT_LABELS = {
   joined: "Début", rejoined: "Reconnexion", submitted: "Remise", unlocked: "Déverrouillage",
   tab_hidden: "Autre onglet / site web", window_blur: "Autre fenêtre / application", fullscreen_exit: "Sortie plein écran",
-  paste_attempt: "Coller bloqué", copy_attempt: "Copier bloqué", cut_attempt: "Couper bloqué",
+  paste_attempt: "Coller bloqué", copy_attempt: "Copier bloqué", cut_attempt: "Couper bloqué", clipboard_internal: "Copier/coller interne à l'examen (permis)", device_check: "Vérification du poste (PreCheck)",
   shortcut: "Raccourci bloqué", devtools: "Outils dév.", print_attempt: "Impression/capture",
   contextmenu: "Clic droit", tool_focus: "Outil web permis", external_focus: "Logiciel externe (permis)",
   fullscreen_exit_tool: "Plein écran (outil)", returned: "Retour dans l'examen", time_up: "Temps écoulé",

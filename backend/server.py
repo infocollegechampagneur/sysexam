@@ -143,6 +143,7 @@ class ExamSettings(BaseModel):
     partial_credit: bool = False
     shuffle_options: bool = False
     help_button: bool = True
+    clipboard_internal: bool = True
 
 
 class ExamIn(BaseModel):
@@ -1306,6 +1307,37 @@ async def student_help(body: HelpIn, s: dict = Depends(current_session)):
 async def student_cancel_help(s: dict = Depends(current_session)):
     await db.help_requests.update_many({"session_id": s["id"], "status": "open"}, {"$set": {"status": "cancelled", "handled_at": now_iso()}})
     return {"ok": True}
+
+
+class DeviceIn(BaseModel):
+    hostname: str = ""
+    user: str = ""
+    app_version: str = ""
+    os: str = ""
+    tools: Dict[str, Any] = {}
+    forbidden_closed: List[str] = []
+    forbidden_remaining: List[str] = []
+
+
+@api.post("/student/device")
+async def student_device(body: DeviceIn, s: dict = Depends(current_session)):
+    exam = await db.exams.find_one({"id": s["exam_id"]}, {"_id": 0, "title": 1, "teacher_id": 1, "settings": 1})
+    ts = now_iso()
+    allowed = [t for t in (exam.get("settings") or {}).get("allowed_tools", []) if t in ("wordq", "lexibar", "antidote")]
+    tools = {k: {"installed": bool((v or {}).get("installed")), "path": ((v or {}).get("path") or "")[:300]} for k, v in body.tools.items() if k in ("wordq", "lexibar", "antidote")}
+    missing = [t for t in allowed if t in tools and not tools[t]["installed"]]
+    device = {"hostname": body.hostname[:120], "user": body.user[:120], "app_version": body.app_version[:40], "os": body.os[:80], "tools": tools,
+              "allowed_tools": allowed, "missing_tools": missing, "forbidden_closed": body.forbidden_closed[:30], "forbidden_remaining": body.forbidden_remaining[:30], "checked_at": ts}
+    detail = f"Poste {device['hostname'] or '?'} · v{device['app_version'] or '?'} · " + (", ".join(f"{k}: {'OK' if v['installed'] else 'absent'}" for k, v in tools.items()) or "aucun logiciel vérifié")
+    await db.sessions.update_one({"id": s["id"]}, {"$set": {"device": device}, "$push": {"events": {"type": "device_check", "at": ts, "counted": False, "detail": detail[:300]}}})
+    await db.devices.update_one({"hostname": device["hostname"] or f"session:{s['id']}"},
+                                {"$set": {**device, "session_id": s["id"], "student_name": s["student_name"], "exam_id": s["exam_id"], "exam_title": exam.get("title") or "", "teacher_id": exam["teacher_id"]}, "$inc": {"checks": 1}}, upsert=True)
+    return {"ok": True, "missing_tools": missing}
+
+
+@api.get("/admin/devices")
+async def admin_devices(_: dict = Depends(current_admin)):
+    return await db.devices.find({}, {"_id": 0}).sort("checked_at", -1).to_list(2000)
 
 
 @api.put("/student/answers")

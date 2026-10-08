@@ -196,6 +196,13 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="mb-3 text-sm font-semibold text-slate-700">Historique de l'élève · <span className={session.violations ? "text-rose-700" : "text-emerald-700"} data-testid="session-violations-count">{session.violations} / {exam.settings.max_violations + (session.allowance || 0)} signalement(s)</span></p>
         <ActivitySummary events={session.events || []} />
+        {session.device && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700" data-testid="session-device">
+            <span className="font-semibold">Poste :</span> {session.device.hostname || "?"}{session.device.user ? ` (${session.device.user})` : ""} · app v{session.device.app_version || "?"}
+            {Object.keys(session.device.tools || {}).length > 0 && <> · {Object.entries(session.device.tools).map(([k, v]) => <span key={k} className={`ml-1 ${v.installed ? "text-emerald-700" : "text-rose-700"}`}>{v.installed ? "✓" : "✗"} {TOOLS.find((t) => t.id === k)?.label || k}</span>)}</>}
+            {session.device.forbidden_closed?.length > 0 && <> · fermées au PreCheck : {session.device.forbidden_closed.join(", ")}</>}
+          </div>
+        )}
         <ToolUsageCard session={session} />
         <div className="mb-2"><MessageStatus msg={session.teacher_message} /></div>
         <Timeline events={session.events || []} />

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("monExam", {
   antidotePort: () => ipcRenderer.invoke("antidote-port"),
   quitApp: () => ipcRenderer.invoke("quit-app"),
   setToolPaths: (paths) => ipcRenderer.invoke("set-tool-paths", paths),
+  machineInfo: () => ipcRenderer.invoke("machine-info"),
   checkLocalExit: (code) => ipcRenderer.invoke("check-local-exit", code),
   onEmergency: (cb) => {
     const h = () => cb();

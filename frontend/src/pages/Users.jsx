@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { UserPlus, ShieldCheck, KeyRound, Ban, CheckCircle2, Users as UsersIcon, Mail, MailX, History, HandHelping } from "lucide-react";
+import { UserPlus, ShieldCheck, KeyRound, Ban, CheckCircle2, Users as UsersIcon, Mail, MailX, History, HandHelping, Monitor } from "lucide-react";
 import { HelpSettings } from "@/components/HelpSettings";
+import { DevicesPanel } from "@/components/DevicesPanel";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,9 +143,10 @@ export default function Users() {
           <TabsTrigger value="comptes" data-testid="tab-comptes"><UsersIcon className="mr-1.5 h-4 w-4" />Comptes</TabsTrigger>
           <TabsTrigger value="journal" data-testid="tab-journal"><History className="mr-1.5 h-4 w-4" />Journal d'activité</TabsTrigger>
           <TabsTrigger value="aide" data-testid="tab-aide"><HandHelping className="mr-1.5 h-4 w-4" />Alertes d'aide</TabsTrigger>
+          <TabsTrigger value="postes" data-testid="tab-postes"><Monitor className="mr-1.5 h-4 w-4" />Postes</TabsTrigger>
         </TabsList>
       </Tabs>
-      {tab === "aide" ? <div className="mt-4"><HelpSettings /></div> : tab === "comptes" ? (
+      {tab === "postes" ? <div className="mt-4"><DevicesPanel /></div> : tab === "aide" ? <div className="mt-4"><HelpSettings /></div> : tab === "comptes" ? (
         <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-4">
           <table className="w-full text-sm" data-testid="users-table">
             <thead><tr className="text-left text-xs uppercase tracking-wider text-slate-500"><th className="pb-2 pr-3">Personne</th><th className="pb-2 pr-3">Rôle</th><th className="pb-2 pr-3">État</th><th className="pb-2 text-right">Actions</th></tr></thead>
