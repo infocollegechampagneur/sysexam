@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 22 testing: alert sound endpoints, teams_email profile field + teams-test, exam setting help_button, and admin tool-paths. Backend: 8/8 pytest tests PASS in /app/backend/tests/test_iter22_sound_teams_tools.py covering (a) GET /api/alert-sound 204→after admin WAV upload 200 audio/wav→after teacher WAV upload /auth/me reports alert_sound 'custom'→.txt rejected 400→2.5MB rejected 413→DELETE me + admin returns to 204; (b) PUT /api/auth/me teams_email 'pas-un-courriel' → 400, 'test-canal@example.invalid' → 200 persisted via GET, cleared at end; teams-test with nothing configured → 400 (never called with real recipients); (c) exam settings.help_button false → POST /api/student/help 403 and session.exam.settings.help_button present; help_button true → 201; (d) PUT /api/admin/tool-paths filters unknown keys (foo dropped) and strips/removes empty lines, GET /api/tool-paths public returns same; non-admin teacher gets 403. Frontend: profile dialog opens TeamsSettings (teams-email-input + save transitions status to '✓ Canal Teams configuré'; notify-email-checkbox + teams-help-toggle → teams-help-steps all work; cleared at end). SoundSettings scope me renders sound-play-me (clicked, no error toast / console audio error), sound-upload-me, sound-status-me. Admin Comptes → tab-aide shows sound-settings-admin AND tool-paths-settings; writing a Lexibar path and saving + reloading preserves the value. ExamBuilder builder-tab-security contains setting-help-button with data-state=checked by default. Student page: on an exam with help_button=true, help-request-btn is rendered (count=1); on an exam with help_button=false, help-request-btn is absent (count=0). HelpBell renders with help-bell-count badge on dashboard. No audio-related console errors observed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter22_sound_teams_tools.py",
+    "/app/test_reports/pytest/iter22.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is now 1455 lines — approaching the 700-line threshold multiple times; splitting into routers (auth, student, admin_help, sound, tool_paths) is overdue and would ease maintenance.",
+    "update_me (PUT /auth/me) response spreads the pre-computed user dict then overrides teams_configured/teams_email/notify_email but does NOT re-emit alert_sound; the client currently relies on initial /auth/me for that field, which is fine but inconsistent. Consider returning the full public_user shape.",
+    "store_sound reads the entire upload into memory before validating size — client caps at 2 MB so impact is low, but Content-Length based rejection would be safer against abuse.",
+    "ToolPathsIn allows arbitrary keys at the Pydantic layer; validation to only {wordq, lexibar, antidote} is done only in the handler. Minor — acceptable."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter22_sound_teams_tools.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "test_credentials": "lynchs2757@gmail.com / Enseignant2026! (admin). Students joined ad-hoc via join form.",
+  "seed_data_creation": "Backend tests create TEST_hb_* exams and one TEST TP teacher account (TempPass2026! → NewPass2026!). Admin alert-sound and me alert-sound uploads are deleted at end of TestAlertSound. teams_email left blank for admin. tool_paths left with {} after admin UI test (clear-and-save at end). Several leftover TEST_UI_HB*/TEST_UIed_* exams were deleted. Dashboard still shows older TEST_* leftovers from prior iterations — non-blocking.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Known data-testids verified this iteration: sound-settings-me, sound-settings-admin, sound-play-me, sound-upload-me, sound-status-me, sound-file-input-me/admin, sound-remove-me/admin, teams-settings, teams-email-input, teams-email-save-btn, teams-status, notify-email-checkbox, teams-test-btn, teams-help-toggle, teams-help-steps, tool-paths-settings, tool-path-lexibar, tool-path-wordq, tool-paths-save-btn, setting-help-button (inside builder-tab-security), help-request-btn (student), help-bell-btn, help-bell-count. Teacher login route is /enseignant with login UI reached via homepage teacher-login-link; exam builder route is /enseignant/examens/:id (plural 'examens'). HelpBell polls ~every 10 s; title flashing uses '🙋' prefix (not re-tested here as iter21 already covered the end-to-end help-request flow). teams-test MUST NOT be called with real addresses — covered only via the 400-no-config path.",
+  "rca of the issue": "N/A — no issues found."
+}

@@ -140,3 +140,10 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Marque : titre/description « Collège Champagneur », scripts Emergent/PostHog retirés de index.html, author desktop mis à jour.
 - Testé iteration_21 : backend 6/6, e2e OK.
 - Correctif déploiement Render : `httpx==0.28.1` ajouté à `backend/requirements-prod.txt` (ModuleNotFoundError au démarrage). Import de `server.py` vérifié dans un venv propre avec requirements-prod.
+
+## 2026-06 — Sonnerie, Teams par courriel, bouton d'aide optionnel, chemins Lexibar (desktop 1.2.7)
+- Sonnerie : `GET /api/alert-sound` (perso > défaut admin > 204 → bip WebAudio), `POST/DELETE /auth/me/alert-sound`, `GET/POST/DELETE /admin/alert-sound` (GridFS, 2 Mo). HelpBell joue le son + clignote le titre (`lib/alertSound.js`).
+- Teams : remplacement du webhook par l'envoi courriel vers l'adresse du canal (`users.teams_email`) + option courriel perso (`notify_email`), via SMTP (`send_help_alert`). Test `POST /auth/me/teams-test`.
+- `settings.help_button` (défaut true) : interrupteur onglet 3 ; 403 côté API et bouton masqué si désactivé.
+- Chemins outils : `app_settings.tool_paths` (`GET /api/tool-paths` public, `PUT /admin/tool-paths`) → envoyés à Electron via `setToolPaths` et essayés en premier. main.js : découverte via registre Uninstall (DisplayIcon/InstallLocation) + raccourcis menu Démarrer/Bureau (`discoverViaWindows`), patterns `LexibarLP5X\*.exe` ajoutés.
+- Testé iteration_22 : backend 8/8, e2e OK.
