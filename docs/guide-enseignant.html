@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MonExamEnLigne — Guide de l'enseignant</title>
+<style>
+  @page { size: letter; margin: 20mm 18mm 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Public Sans", Arial, sans-serif; color: #0f172a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; color: #1e3a8a; margin: 0 0 4px; letter-spacing: -0.5px; }
+  h2 { font-size: 17pt; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; margin: 28px 0 12px; page-break-after: avoid; }
+  h3 { font-size: 12.5pt; color: #0f172a; margin: 18px 0 6px; page-break-after: avoid; }
+  p, li { page-break-inside: avoid; }
+  .cover { height: 230mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .cover .kicker { color: #b45309; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 10pt; }
+  .cover .sub { font-size: 14pt; color: #475569; margin-top: 6px; }
+  .cover .box { margin-top: 36px; border-left: 6px solid #1e3a8a; background: #eff6ff; padding: 14px 18px; border-radius: 0 8px 8px 0; }
+  .cover .meta { margin-top: auto; color: #64748b; font-size: 9.5pt; }
+  .toc { page-break-after: always; }
+  .toc ol { columns: 1; padding-left: 22px; }
+  .toc li { margin: 4px 0; }
+  .tip { border-left: 4px solid #0ea5e9; background: #f0f9ff; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .warn { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .danger { border-left: 4px solid #e11d48; background: #fff1f2; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .tip b, .warn b, .danger b { display: block; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; page-break-inside: auto; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; }
+  tr { page-break-inside: avoid; }
+  code, .key { font-family: Consolas, "Courier New", monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 9.5pt; }
+  .btn { display: inline-block; border: 1px solid #1e3a8a; color: #1e3a8a; border-radius: 6px; padding: 0 7px; font-size: 9.5pt; font-weight: 600; background: #fff; white-space: nowrap; }
+  .btn.red { border-color: #be123c; color: #be123c; }
+  .btn.green { border-color: #047857; color: #047857; }
+  .btn.amber { border-color: #b45309; color: #b45309; background: #fffbeb; }
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 36px; margin: 8px 0; }
+  .steps > li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%; background: #1e3a8a; color: #fff; font-weight: 700; font-size: 10pt; text-align: center; line-height: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; page-break-inside: avoid; }
+  .card h4 { margin: 0 0 4px; font-size: 11pt; color: #1e3a8a; }
+  .card p { margin: 0; font-size: 10pt; color: #334155; }
+  .small { color: #64748b; font-size: 9.5pt; }
+  .pb { page-break-before: always; }
+  ul { padding-left: 20px; }
+  .faq dt { font-weight: 700; margin-top: 10px; page-break-after: avoid; }
+  .faq dd { margin: 2px 0 0 0; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">Collège Champagneur</div>
+  <h1>MonExamEnLigne</h1>
+  <div class="sub">Guide de l'enseignant·e et du personnel — créer, faire passer et corriger un examen sécurisé</div>
+  <div class="box">
+    <p style="margin:0"><strong>Ce guide explique, étape par étape :</strong></p>
+    <ul style="margin:6px 0 0">
+      <li>à quoi sert le logiciel et comment il protège l'examen ;</li>
+      <li>le panneau enseignant et toutes ses fonctions ;</li>
+      <li>comment créer un examen (formulaire, rédaction ou document PDF/Word) ;</li>
+      <li>comment le tester en se mettant à la place d'un élève ;</li>
+      <li>comment surveiller en direct, répondre aux demandes d'aide, corriger et exporter.</li>
+    </ul>
+  </div>
+  <div class="meta">Version du guide : juin 2026 · Application Windows 1.2.8 · Conçu par le Collège Champagneur</div>
+</section>
+
+<section class="toc">
+  <h2>Table des matières</h2>
+  <ol>
+    <li>Comprendre MonExamEnLigne en 2 minutes</li>
+    <li>Se connecter et gérer son profil</li>
+    <li>Le tableau de bord enseignant</li>
+    <li>Créer un examen — étape 1 : informations</li>
+    <li>Créer un examen — étape 2 : type et contenu</li>
+    <li>Créer un examen — étape 3 : outils et sécurité</li>
+    <li>Tester l'examen comme un élève (aperçu)</li>
+    <li>Le jour de l'examen : ce que vit l'élève</li>
+    <li>Surveiller en direct (page Suivi)</li>
+    <li>Demandes d'aide, sonnerie et Teams</li>
+    <li>Corriger, noter et exporter</li>
+    <li>Réutiliser un examen, statistiques et banque de questions</li>
+    <li>Listes de classe et temps supplémentaire</li>
+    <li>Pour l'administrateur : comptes, alertes, postes</li>
+    <li>Questions fréquentes et dépannage</li>
+  </ol>
+</section>
+
+<h2>1. Comprendre MonExamEnLigne en 2 minutes</h2>
+<p>MonExamEnLigne est la plateforme d'examens du Collège Champagneur. L'enseignant·e prépare l'examen sur le site web ; l'élève le passe soit dans un <strong>navigateur</strong>, soit — recommandé — dans l'<strong>application Windows MonExamEnLigne</strong> installée sur les postes de l'école, qui verrouille l'ordinateur pendant l'examen.</p>
+<div class="grid">
+  <div class="card"><h4>Un code, pas de compte élève</h4><p>Chaque examen reçoit un code à 6 caractères (ex. <span class="key">BC2PXU</span>). L'élève entre le code, son nom et, si demandé, son matricule. Aucun compte à créer.</p></div>
+  <div class="card"><h4>Environnement contrôlé</h4><p>Plein écran obligatoire, sorties de l'examen détectées et comptées, copier-coller externe bloqué, applications interdites (Teams, Edge, Chrome…) fermées avant de commencer.</p></div>
+  <div class="card"><h4>Outils d'aide choisis par vous</h4><p>Antidote, WordQ, Lexibar (logiciels installés) et Usito, WordReference (en ligne) : vous cochez ceux qui sont permis ; l'élève n'a accès qu'à ceux-là.</p></div>
+  <div class="card"><h4>Sauvegarde continue</h4><p>Les réponses sont enregistrées automatiquement toutes les quelques secondes. En cas de panne ou de fermeture, l'élève se reconnecte avec le même code et le même nom et reprend où il était.</p></div>
+  <div class="card"><h4>Surveillance en direct</h4><p>Vous voyez chaque copie progresser, les signalements, les collages suspects ; vous pouvez envoyer un message, mettre en pause, bloquer, débloquer, ajouter du temps.</p></div>
+  <div class="card"><h4>Correction intégrée</h4><p>Choix multiples corrigés automatiquement, grille de points par question, commentaires, exports PDF et Word (par copie ou toutes les copies), statistiques par question.</p></div>
+</div>
+<div class="tip"><b>Trois types d'examen</b> <strong>Formulaire</strong> (questions comme Microsoft Forms), <strong>Rédaction</strong> (un sujet + un éditeur de texte de type Word) et <strong>Document téléversé</strong> (votre PDF ou Word affiché à l'élève avec une zone de réponse ou des questions).</div>
+
+<h2>2. Se connecter et gérer son profil</h2>
+<ol class="steps">
+  <li>Ouvrez le site <strong>examen.votredomaine</strong> et cliquez sur <span class="btn">Espace enseignant</span> (en bas de la page d'accueil).</li>
+  <li>Entrez le courriel et le mot de passe reçus de l'administrateur. À la <strong>première connexion</strong>, le logiciel vous oblige à choisir un nouveau mot de passe.</li>
+  <li>Mot de passe oublié ? Demandez à l'administrateur une réinitialisation : vous recevrez un courriel avec un mot de passe temporaire.</li>
+</ol>
+<h3>Mon profil (icône en haut à droite)</h3>
+<ul>
+  <li><strong>Nom affiché</strong> : c'est le nom que voient les élèves (« Enseignant : … ») quand l'examen est lié à une liste de classe.</li>
+  <li><strong>Alertes d'aide dans Teams / par courriel</strong> : collez l'adresse courriel de votre canal Teams (voir section 10) et cochez si vous voulez aussi recevoir l'alerte à votre courriel. Le bouton <span class="btn">Envoyer un test</span> vérifie que tout fonctionne.</li>
+  <li><strong>Sonnerie des alertes d'aide</strong> : téléversez votre propre son (MP3, WAV ou OGG, 2 Mo max) ou gardez celle de l'école. <span class="btn">Écouter</span> la fait jouer.</li>
+</ul>
+
+<h2>3. Le tableau de bord enseignant</h2>
+<p>C'est la page d'accueil après la connexion. En haut : le menu <strong>Tableau de bord</strong>, <strong>Classes</strong> et, pour l'administrateur, <strong>Comptes</strong>. À droite : la <strong>cloche</strong> des demandes d'aide et votre profil.</p>
+<table>
+  <tr><th style="width:30%">Élément</th><th>À quoi ça sert</th></tr>
+  <tr><td>Compteurs</td><td>Nombre d'examens, d'examens ouverts et d'élèves en cours.</td></tr>
+  <tr><td>Bandeau « En pause »</td><td>Apparaît si un de vos examens est en pause, avec un bouton pour reprendre.</td></tr>
+  <tr><td>Liste « Mes examens »</td><td>Une carte par examen : titre, matière, code, statut (<em>Brouillon</em>, <em>Ouvert</em>, <em>Fermé</em>), durée, outils permis.</td></tr>
+  <tr><td><span class="btn">Suivi</span></td><td>Ouvre la surveillance en direct et la correction (section 9 et 11).</td></tr>
+  <tr><td><span class="btn">Modifier</span></td><td>Rouvre l'éditeur de l'examen.</td></tr>
+  <tr><td><span class="btn red">Supprimer</span></td><td>Supprime l'examen <strong>et toutes les copies</strong>. Pour vider seulement les copies, voir section 12.</td></tr>
+  <tr><td><span class="btn">Créer un examen</span></td><td>Lance l'éditeur en trois étapes (sections 4 à 6).</td></tr>
+</table>
+<div class="tip"><b>Statuts</b> <strong>Brouillon</strong> : invisible pour les élèves. <strong>Ouvert</strong> : les élèves peuvent entrer le code. <strong>Fermé</strong> : plus personne ne peut rejoindre ; les copies restent consultables. Le statut se change dans l'éditeur (liste déroulante en haut) puis <span class="btn">Enregistrer</span>.</div>
+
+<h2 class="pb">4. Créer un examen — étape 1 : informations</h2>
+<ol class="steps">
+  <li>Cliquez sur <span class="btn">Créer un examen</span>.</li>
+  <li><strong>Titre</strong> (ex. « Examen de lecture — Chapitre 3 ») et <strong>Matière / groupe</strong> (ex. « Français 2e sec. »). La matière sert aussi à classer la banque de questions.</li>
+  <li><strong>Durée</strong> en minutes. <span class="key">0</span> = sans limite. Le chronomètre démarre quand l'élève clique « Commencer ».</li>
+  <li><strong>Consignes pour les élèves</strong> : affichées sur l'écran d'accueil de l'examen, avant le départ.</li>
+  <li><strong>Liste de classe</strong> (facultatif) : si vous en choisissez une, seuls les élèves inscrits (nom + matricule) peuvent rejoindre et leur temps supplémentaire est appliqué automatiquement (voir section 13).</li>
+  <li><strong>Collègues avertis quand un élève demande de l'aide</strong> : cochez les surveillant·e·s ou technicien·ne·s qui doivent recevoir les alertes « J'ai besoin d'aide » en plus de vous.</li>
+</ol>
+
+<h2>5. Créer un examen — étape 2 : type et contenu</h2>
+<h3>Formulaire</h3>
+<p>Ajoutez des questions avec les boutons <span class="btn">Choix multiple</span>, <span class="btn">Réponse courte</span>, <span class="btn">Développement</span>. Pour chaque question : l'énoncé, les points, et les flèches pour réordonner.</p>
+<ul>
+  <li><strong>Choix multiple</strong> : écrivez les choix, puis <strong>cliquez sur le cercle</strong> à gauche d'un choix pour le marquer comme bonne réponse (il devient vert avec un ✓). Vous pouvez en marquer plusieurs : l'élève verra alors des cases à cocher. La bonne réponse n'est jamais montrée à l'élève et sert à la correction automatique.</li>
+  <li><strong>Réponse courte / Développement</strong> : deux champs supplémentaires — <em>Consignes / précisions</em> (affichées à l'élève sous la question) et <em>Réponse attendue / corrigé</em> (visible seulement par vous au moment de corriger).</li>
+  <li><span class="btn">Importer depuis la banque</span> : réutilisez des questions de vos examens précédents (recherche par texte, type, matière). L'icône signet sur une question l'enregistre explicitement dans la banque.</li>
+</ul>
+<h3>Rédaction</h3>
+<p>Écrivez le <strong>sujet de la rédaction</strong>. L'élève dispose d'un éditeur de texte enrichi (gras, italique, listes, titres) et d'un compteur de mots en direct.</p>
+<h3>Document téléversé</h3>
+<p>Téléversez votre <strong>PDF ou Word (.docx)</strong>, 20 Mo max. Choisissez ensuite le mode de réponse :</p>
+<ul>
+  <li><strong>Zone de réponse séparée</strong> : le document à gauche, une zone de texte (et des questions facultatives) à droite.</li>
+  <li><strong>Réponse dans le document</strong> (PDF seulement) : l'élève écrit directement sur les pages du PDF ; vous récupérez ensuite un « PDF annoté ».</li>
+</ul>
+<div class="warn"><b>Enregistrez souvent</b> Le bouton <span class="btn">Enregistrer</span> en haut à droite sauvegarde l'examen. Le code de l'examen est attribué à la première sauvegarde.</div>
+
+<h2>6. Créer un examen — étape 3 : outils et sécurité</h2>
+<table>
+  <tr><th style="width:34%">Réglage</th><th>Explication et conseil</th></tr>
+  <tr><td>Outils d'aide autorisés</td><td>Cochez Antidote, WordQ, Lexibar (logiciels du poste) et/ou Usito, WordReference (en ligne). L'élève ne voit que ceux-là dans sa barre d'outils. Les élèves qui n'y ont pas droit n'y auront pas accès.</td></tr>
+  <tr><td>Plein écran obligatoire</td><td>Dans un navigateur, l'élève doit rester en plein écran ; chaque sortie est consignée. Dans l'application Windows, le plein écran est permanent.</td></tr>
+  <tr><td>Bloquer copier / coller</td><td>Interdit copier, couper, coller, glisser-déposer et clic droit. Sous-option <em>Autoriser le copier-coller à l'intérieur de l'examen</em> : l'élève peut déplacer son propre texte, mais coller un texte venu d'ailleurs est bloqué et signalé.</td></tr>
+  <tr><td>Correcteur du navigateur</td><td>Active ou non le soulignement orthographique du navigateur (désactivé par défaut pour les évaluations de français).</td></tr>
+  <tr><td>Application Windows obligatoire</td><td>Refuse l'accès depuis un simple navigateur : l'élève doit utiliser l'application MonExamEnLigne du poste (mode verrouillé).</td></tr>
+  <tr><td>Code de sortie d'urgence</td><td>Dans l'application Windows, <span class="key">Ctrl+Alt+Maj+U</span> + ce code permet au personnel de sortir du mode verrouillé. Ne le donnez pas aux élèves ; chaque utilisation est notée.</td></tr>
+  <tr><td>Signalements et blocage</td><td>Nombre de sorties/infractions permises avant le blocage automatique de la copie. Une fois bloquée, la copie attend votre décision (section 9).</td></tr>
+  <tr><td>Barème partiel</td><td>Pour les choix multiples à plusieurs bonnes réponses : points proportionnels (bonnes cochées moins mauvaises cochées). Désactivé = tout ou rien.</td></tr>
+  <tr><td>Mélanger les choix de réponse</td><td>Chaque élève voit les choix dans un ordre différent.</td></tr>
+  <tr><td>Bouton « J'ai besoin d'aide »</td><td>Permet à l'élève de vous appeler discrètement (section 10). Activé par défaut.</td></tr>
+</table>
+
+<h2 class="pb">7. Tester l'examen comme un élève (aperçu)</h2>
+<p>Il n'y a pas de mode « aperçu » séparé : vous testez exactement ce que vivra l'élève, en rejoignant l'examen vous-même. Cela prend deux minutes.</p>
+<ol class="steps">
+  <li>Dans l'éditeur, mettez le statut sur <strong>Ouvert</strong> puis <span class="btn">Enregistrer</span>. Notez le <strong>code</strong> affiché en haut.</li>
+  <li>Ouvrez une <strong>fenêtre de navigation privée</strong> (Ctrl+Maj+N dans Edge/Chrome) ou un autre navigateur, allez sur la page d'accueil du site, section <strong>Espace élève</strong>.</li>
+  <li>Entrez le code, un nom comme <span class="key">TEST Enseignant</span> (et un matricule si l'examen est lié à une classe : utilisez alors un élève de la liste ou retirez temporairement la classe).</li>
+  <li>Parcourez l'écran d'accueil (consignes, règles, outils), cliquez <span class="btn green">Commencer</span>, répondez à quelques questions, essayez un copier-coller externe, quittez le plein écran… et remettez la copie.</li>
+  <li>Revenez dans votre fenêtre enseignant → <span class="btn">Suivi</span> : votre copie de test y apparaît avec son historique de surveillance. Ouvrez-la, vérifiez la correction automatique, l'export PDF.</li>
+  <li>Supprimez la copie de test avec <span class="btn red">Supprimer</span> dans le détail de la copie (ou <span class="btn red">Vider les copies</span> pour tout effacer). L'examen reste intact.</li>
+</ol>
+<div class="tip"><b>Tester l'application Windows</b> Faites le même test depuis un poste élève avec l'application MonExamEnLigne pour vérifier la détection des logiciels (Antidote, WordQ, Lexibar) et la fermeture des applications interdites. Le PreCheck affiche ✓ ou ✗ pour chaque logiciel permis ; l'administrateur retrouve ces informations dans <em>Comptes → Postes</em>.</div>
+<div class="warn"><b>Si « Application Windows obligatoire » est coché</b> le test depuis un navigateur sera refusé — c'est normal. Décochez-le le temps du test ou testez depuis un poste équipé.</div>
+
+<h2>8. Le jour de l'examen : ce que vit l'élève</h2>
+<ol class="steps">
+  <li>L'élève ouvre l'application MonExamEnLigne (icône sur le bureau) ou le site web, entre le <strong>code</strong>, son <strong>nom</strong> et au besoin son <strong>matricule</strong>.</li>
+  <li><strong>Écran d'accueil</strong> : titre, consignes, durée, règles de l'examen et outils permis. Dans l'application Windows, le <strong>PreCheck</strong> liste les applications interdites ouvertes ; un bouton les ferme toutes. Impossible de commencer tant qu'il en reste.</li>
+  <li>Il clique <span class="btn green">Commencer</span> : le chronomètre démarre, l'écran passe en plein écran verrouillé.</li>
+  <li>Barre du haut : temps restant, état « Enregistré », nombre de signalements, boutons des outils permis, bouton <span class="btn amber">J'ai besoin d'aide</span> et <span class="btn green">Remettre</span>.</li>
+  <li>Chaque sortie (changement de fenêtre, sortie du plein écran, collage externe…) affiche un avertissement et compte un signalement. Au seuil, la copie se <strong>bloque</strong> : l'élève ne peut plus écrire jusqu'à ce que vous le débloquiez.</li>
+  <li>À la remise, une confirmation demande s'il reste des questions sans réponse, puis l'écran de <strong>confirmation de remise</strong> avec un numéro de confirmation s'affiche. Le bouton vert ferme l'application (ou ramène à l'accueil sur le web).</li>
+</ol>
+<div class="tip"><b>Panne, fermeture accidentelle, redémarrage</b> Rien n'est perdu : l'élève se reconnecte avec le même code, le même nom et le même matricule et reprend là où il était ; le temps continue de courir. Si la copie a été remise par erreur, vous pouvez la <strong>rouvrir</strong> (section 9).</div>
+
+<h2 class="pb">9. Surveiller en direct (page Suivi)</h2>
+<p>Depuis le tableau de bord, cliquez <span class="btn">Suivi</span>. La page se rafraîchit toute seule toutes les 5 secondes.</p>
+<h3>Vue d'ensemble</h3>
+<ul>
+  <li>Compteurs <strong>En cours / Bloqué / Remis</strong>, code de l'examen, bouton <span class="btn">Actualiser</span>.</li>
+  <li>Liste des copies à gauche : nom, matricule, progression (questions répondues ou nombre de mots), signalements, collages suspects, dernière activité. Cliquez sur une copie pour ouvrir son détail à droite.</li>
+  <li>Bandeaux d'alerte : <strong>Élèves qui demandent de l'aide</strong> (jaune) et <strong>Examens bloqués</strong> (rouge).</li>
+  <li>Alertes automatiques (notifications en bas à droite) : copie bloquée, collage important (plus de 40 mots d'un coup), nouvelle demande d'aide.</li>
+</ul>
+<h3>Contrôles pour toute la classe</h3>
+<table>
+  <tr><th style="width:34%">Bouton</th><th>Effet</th></tr>
+  <tr><td><span class="btn">Message à tous</span></td><td>Affiche un message sur tous les écrans ; chaque élève doit confirmer sa lecture.</td></tr>
+  <tr><td><span class="btn">Mettre en pause</span> / <span class="btn green">Reprendre</span></td><td>Voile les écrans, bloque la saisie et arrête le chronomètre (alarme incendie, consigne à donner). Le temps de pause est rendu à la reprise ; aucun signalement n'est compté pendant la pause.</td></tr>
+  <tr><td><span class="btn">Débloquer tous</span></td><td>Débloque d'un coup toutes les copies bloquées.</td></tr>
+  <tr><td>Outils permis en direct</td><td>Changez les outils d'aide permis pendant l'examen ; les élèves voient la barre se mettre à jour.</td></tr>
+</table>
+<h3>Contrôles pour une copie</h3>
+<table>
+  <tr><th style="width:34%">Bouton</th><th>Effet</th></tr>
+  <tr><td><span class="btn">Message</span></td><td>Message privé affiché sur l'écran de cet élève, avec confirmation de lecture.</td></tr>
+  <tr><td><span class="btn red">Bloquer</span></td><td>L'élève ne peut plus écrire ; ses réponses sont conservées.</td></tr>
+  <tr><td><span class="btn">Débloquer</span></td><td>Pour une copie bloquée (par vous ou par le seuil). Vous pouvez joindre un message que l'élève devra lire. Les signalements peuvent être remis à zéro.</td></tr>
+  <tr><td><span class="btn">Pause</span> (individuelle)</td><td>Met un seul élève en pause (sortie aux toilettes, intervention).</td></tr>
+  <tr><td><span class="btn">Temps supplémentaire</span></td><td>Ajoute des minutes à cet élève ; permet aussi d'autoriser des outils pour lui seul (ex. WordQ pour un élève avec plan d'intervention).</td></tr>
+  <tr><td><span class="btn">Rouvrir la copie</span></td><td>Pour une copie remise : l'élève peut se reconnecter et continuer.</td></tr>
+  <tr><td><span class="btn red">Supprimer</span></td><td>Supprime cette copie (par exemple une copie de test).</td></tr>
+</table>
+<h3>Lire l'historique d'une copie</h3>
+<p>Le détail montre les <strong>événements</strong> horodatés : début, sorties de l'examen, collages (avec le texte collé et le pourcentage déjà présent dans la réponse), outils ouverts, messages lus, pauses, demandes d'aide, vérification du poste (nom de l'ordinateur, logiciels trouvés). Le bouton <span class="btn red">Rapport de surveillance (PDF)</span> en haut de la page exporte tout cela pour l'ensemble de la classe.</p>
+
+<h2 class="pb">10. Demandes d'aide, sonnerie et Teams</h2>
+<p>Quand un élève clique <span class="btn amber">J'ai besoin d'aide</span> (avec un motif facultatif : problème technique, question sur une consigne…), vous êtes averti·e de trois façons :</p>
+<ul>
+  <li><strong>Dans le logiciel</strong> : la <strong>cloche</strong> en haut à droite affiche un compteur rouge, une notification apparaît, la <strong>sonnerie</strong> joue et l'onglet du navigateur clignote « 🙋 (1) … ». Dans la page Suivi, un bandeau jaune liste les demandes.</li>
+  <li><strong>Dans Teams</strong> : si vous avez enregistré l'adresse courriel de votre canal Teams dans votre profil, un message arrive dans le canal.</li>
+  <li><strong>Par courriel</strong> : si vous avez coché l'option dans votre profil.</li>
+</ul>
+<p>Cliquez <span class="btn green">Pris en charge</span> quand vous allez voir l'élève : la demande disparaît pour tous les destinataires et l'élève voit « Votre enseignant·e a pris votre demande en charge ». L'élève peut aussi annuler sa demande.</p>
+<h3>Obtenir l'adresse courriel d'un canal Teams</h3>
+<ol class="steps">
+  <li>Dans Teams, ouvrez le canal voulu (ex. « Surveillance examens »).</li>
+  <li>Cliquez sur <strong>⋯</strong> à côté du nom du canal → <strong>Obtenir l'adresse de courrier électronique</strong>.</li>
+  <li>Cliquez <strong>Copier</strong> : l'adresse ressemble à <span class="key">nomducanal.xxxxx@amer.teams.ms</span>.</li>
+  <li>Collez-la dans votre profil → <span class="btn">Enregistrer</span> → <span class="btn">Envoyer un test</span>.</li>
+</ol>
+<div class="warn"><b>Option absente dans Teams ?</b> L'administrateur Microsoft 365 doit activer « Les utilisateurs peuvent envoyer des courriels à une adresse de canal » dans le centre d'administration Teams.</div>
+
+<h2>11. Corriger, noter et exporter</h2>
+<ol class="steps">
+  <li>Page <span class="btn">Suivi</span> → cliquez sur une copie <strong>Remise</strong>.</li>
+  <li>Chaque question affiche la réponse de l'élève. Pour les choix multiples avec bonne réponse définie, un badge indique <strong>✓ Bonne réponse</strong>, <strong>◐ Partiellement correct</strong> ou <strong>✗ Mauvaise réponse</strong> et les points sont préremplis. Pour les autres, votre <em>réponse attendue</em> s'affiche en vert pour vous aider.</li>
+  <li>Saisissez les <strong>points</strong> et un <strong>commentaire</strong> par question, puis la <strong>note globale</strong> et un commentaire général. Cliquez <span class="btn">Enregistrer la note</span>.</li>
+  <li>Exports : <span class="btn">PDF</span> et <span class="btn">Word</span> (la copie corrigée, avec points et commentaires), <span class="btn">PDF annoté</span> pour les documents remplis directement dans le PDF. En haut de la page : <span class="btn">Toutes (PDF)</span> / <span class="btn">Toutes (Word)</span> pour l'ensemble des copies en un seul fichier (une copie par page).</li>
+</ol>
+<div class="tip"><b>Mise en page des exports</b> Les questions courtes et leurs réponses ne sont jamais coupées entre deux pages ; les longues réponses sont coupées uniquement entre deux paragraphes.</div>
+
+<h2 class="pb">12. Réutiliser un examen, statistiques et banque de questions</h2>
+<h3>Vider les copies pour une autre passation</h3>
+<p>Dans la page Suivi, <span class="btn red">Vider les copies</span> supprime toutes les copies (réponses, notes, historiques) en conservant l'examen, son code et ses réglages. Il faut taper <span class="key">SUPPRIMER</span> pour confirmer ; un avertissement s'affiche si des élèves sont encore en cours.</p>
+<div class="danger"><b>Exportez d'abord</b> Cette action est définitive. Téléchargez <span class="btn">Toutes (PDF)</span> et le <span class="btn red">Rapport de surveillance</span> avant de vider.</div>
+<h3>Statistiques par question</h3>
+<p>Onglet <strong>Statistiques par question</strong> dans la page Suivi : taux de réussite de chaque question, question la plus difficile et la plus facile, répartition des choix cochés pour les choix multiples (la bonne réponse est marquée ✓). Pour les réponses courtes et développements, le taux suit les points que vous avez attribués.</p>
+<h3>Banque de questions</h3>
+<p>Toutes les questions de vos examens enregistrés sont ajoutées automatiquement à votre banque personnelle. Dans l'éditeur, <span class="btn">Importer depuis la banque</span> permet de les rechercher et d'en insérer une copie dans le nouvel examen. Vous pouvez retirer une question de la banque (icône poubelle dans la fenêtre) sans toucher aux examens existants.</p>
+
+<h2>13. Listes de classe et temps supplémentaire</h2>
+<ol class="steps">
+  <li>Menu <strong>Classes</strong> → <span class="btn">Nouvelle classe</span> (ex. « 2e sec. groupe 201 »).</li>
+  <li>Ajoutez les élèves un à un (nom, matricule, temps supplémentaire en minutes ou en %) ou importez-les en collant une liste.</li>
+  <li>Dans l'examen, étape 1, choisissez cette <strong>liste de classe</strong>. Seuls les élèves inscrits pourront rejoindre (nom + matricule), le nom de l'enseignant·e se remplit tout seul et le temps supplémentaire est appliqué automatiquement.</li>
+</ol>
+<div class="tip"><b>Sans liste de classe</b> l'examen est ouvert à toute personne ayant le code : pratique pour un test rapide, moins pour une évaluation officielle.</div>
+
+<h2>14. Pour l'administrateur : comptes, alertes, postes</h2>
+<p>Le menu <strong>Comptes</strong> n'est visible que par les comptes administrateurs.</p>
+<table>
+  <tr><th style="width:26%">Onglet</th><th>Fonctions</th></tr>
+  <tr><td>Comptes</td><td>Créer un enseignant (courriel de bienvenue automatique avec mot de passe temporaire), importer plusieurs enseignants d'un coup, réinitialiser un mot de passe, désactiver ou réactiver un compte, nommer un autre administrateur.</td></tr>
+  <tr><td>Journal d'activité</td><td>Historique des actions administratives et des connexions.</td></tr>
+  <tr><td>Alertes d'aide</td><td><strong>Sonnerie par défaut</strong> de l'école ; <strong>chemins des logiciels d'aide</strong> (si l'application Windows ne trouve pas Lexibar ou WordQ, collez le chemin complet de l'exécutable) ; <strong>surveillants par défaut</strong> qui reçoivent toutes les demandes d'aide ; destinataires par examen.</td></tr>
+  <tr><td>Postes</td><td>Liste des ordinateurs vus par l'application Windows : nom du poste, utilisateur, version de l'application, logiciels d'aide trouvés ou absents (survolez pour voir le chemin), applications interdites fermées. Filtres « Lexibar manquant », « WordQ manquant ».</td></tr>
+</table>
+
+<h2 class="pb">15. Questions fréquentes et dépannage</h2>
+<dl class="faq">
+  <dt>Un élève dit que son code ne fonctionne pas.</dt>
+  <dd>Vérifiez que l'examen est <strong>Ouvert</strong> (pas Brouillon ni Fermé) et, s'il est lié à une classe, que le nom et le matricule correspondent exactement à la liste.</dd>
+  <dt>L'élève a fermé l'application ou l'ordinateur a redémarré.</dt>
+  <dd>Il se reconnecte avec le même code, le même nom et le même matricule : il reprend où il était. Si la copie a été remise, utilisez <span class="btn">Rouvrir la copie</span>.</dd>
+  <dt>La copie d'un élève est bloquée alors qu'il n'a rien fait de mal.</dt>
+  <dd>Ouvrez sa copie, lisez l'historique (une fenêtre de mise à jour Windows ou une notification peut provoquer une sortie), puis <span class="btn">Débloquer</span> en remettant les signalements à zéro.</dd>
+  <dt>Antidote, WordQ ou Lexibar n'apparaît pas pour l'élève.</dt>
+  <dd>1) L'outil est-il coché dans l'étape 3 de l'examen ? 2) L'élève est-il dans l'application Windows (les logiciels du poste ne fonctionnent pas depuis un navigateur) ? 3) Le PreCheck affiche-t-il ✗ pour cet outil ? Si oui, l'administrateur peut ajouter le chemin dans <em>Comptes → Alertes d'aide</em>. Pour Antidote, l'option « Agent Connectix » doit être activée dans les réglages d'Antidote sur le poste.</dd>
+  <dt>Il faut évacuer la classe ou donner une consigne à tout le monde.</dt>
+  <dd><span class="btn">Mettre en pause</span> toute la classe : les écrans se voilent et le chronomètre s'arrête. <span class="btn green">Reprendre</span> ensuite ; le temps perdu est rendu.</dd>
+  <dt>Un élève a droit à du temps supplémentaire ou à un outil particulier.</dt>
+  <dd>Inscrivez-le dans la liste de classe avec son temps supplémentaire, ou pendant l'examen, ouvrez sa copie → <span class="btn">Temps supplémentaire</span> (vous pouvez aussi y autoriser un outil pour lui seul).</dd>
+  <dt>Je dois sortir d'un poste verrouillé par l'application Windows.</dt>
+  <dd>Appuyez sur <span class="key">Ctrl+Alt+Maj+U</span> et entrez le code de sortie d'urgence défini à l'étape 3 de l'examen. L'utilisation est consignée dans l'historique.</dd>
+  <dt>Je ne reçois pas la sonnerie des demandes d'aide.</dt>
+  <dd>Le navigateur ne joue un son qu'après une interaction sur la page : cliquez une fois n'importe où dans la page Suivi après l'avoir ouverte. Vérifiez aussi le volume et, dans votre profil, le bouton <span class="btn">Écouter</span>.</dd>
+  <dt>Combien d'élèves en même temps ?</dt>
+  <dd>Le serveur actuel est prévu pour environ 250 élèves simultanés. Pour un examen de niveau (plusieurs centaines d'élèves), prévenez l'administrateur à l'avance.</dd>
+</dl>
+<p class="small" style="margin-top:28px">MonExamEnLigne — Collège Champagneur. Ce guide décrit la version de juin 2026 (application Windows 1.2.8). Pour toute question technique, contactez le service informatique du Collège.</p>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ShieldCheck, LogOut, UserPen, KeyRound, GraduationCap } from "lucide-react";
+import { ShieldCheck, LogOut, UserPen, KeyRound, GraduationCap, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,7 @@ export const TeacherLayout = ({ children }) => {
             <NavLink to="/enseignant/classes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-classes-link">Classes</NavLink>
             {user?.role === "admin" && <NavLink to="/enseignant/comptes" className={({ isActive }) => `text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} data-testid="nav-users-link">Comptes</NavLink>}
             <NavLink to="/enseignant/mot-de-passe" className={({ isActive }) => `mr-2 text-sm font-medium ${isActive ? "text-blue-900" : "text-slate-500 hover:text-slate-900"}`} title="Changer mon mot de passe" data-testid="nav-password-link"><KeyRound className="h-4 w-4" /></NavLink>
+            <a href="/guide-enseignant.pdf" target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-blue-900 sm:flex" title="Guide de l'enseignant (PDF)" data-testid="teacher-guide-link"><BookOpen className="h-4 w-4" />Guide</a>
             <HelpBell />
             <ProfileButton />
             <span className="hidden text-sm text-slate-500 lg:inline" data-testid="nav-user-email">{user?.email}</span>

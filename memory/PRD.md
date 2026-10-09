@@ -156,3 +156,6 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 ## 2026-06 — Vider les copies + pagination des exports
 - `DELETE /api/exams/{id}/sessions` (toutes les copies, help_requests, pause) et `DELETE /api/sessions/{id}`. UI : « Vider les copies » (confirmation en tapant SUPPRIMER) dans Résultats ; « Supprimer » dans le détail d'une copie.
 - Exports : `exportUtils.js` — html2pdf en mode css+legacy avec `avoid` sur p/li/h/tr/[data-avoid-break] et styles `.export-root` injectés ; Word avec `@page`, `page-break-inside: avoid`, `keep-with-next`. CopyContent : blocs courts insécables, en-têtes collés au contenu, réponses longues coupées entre paragraphes seulement.
+
+## 2026-06 — Guide de l'enseignant (PDF)
+- Source HTML `/app/docs/guide-enseignant.html` → PDF via Chrome headless : `/app/docs/Guide-enseignant-MonExamEnLigne.pdf` (16 pages, 15 sections : fonctionnement, panneau, création en 3 étapes, test comme élève, surveillance, aide/Teams, correction, réutilisation, classes, admin, FAQ). Servi à `/guide-enseignant.pdf` (frontend/public) + lien « Guide » dans l'en-tête enseignant. Régénérer : `google-chrome --headless=new --no-sandbox --no-pdf-header-footer --print-to-pdf=... file:///app/docs/guide-enseignant.html`.
