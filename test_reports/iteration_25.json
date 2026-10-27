@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 25: tested 4 new features — (1) exam managers/co-gestionnaires, (2) availability windows (plages horaires), (3) bulk export of annotated PDFs (merged PDF + ZIP) for document/inline/PDF exams, (4) sticky annotator toolbar. Backend pytest 11/11 PASSED. Frontend e2e all PASSED: builder managers picker + windows editor (validation error shown, save persists, dashboard shows 'Hors plage · 15 mars 2030 · 9 h 30 → 11 h 00'); manager login sees 'Géré · Lynch S.' badge, no delete button, can open Suivi and Modifier; merged PDF = 6 pages (separator + 2 pages per student, annotations rendered), ZIP = 2 per-student PDFs with names+matricule; buttons hidden on non-inline exams (FRA401); student toolbar stays stuck at y=64 under 65px header after scroll; landing shows 403 toast 'Prochaine ouverture : 15 mars 2030 à 9 h 30.'",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/exams/{id} (windows)", "issue": "No server-side validation of windows: invalid entries (end<=start, unparsable) are silently dropped by window_state; an exam with only invalid windows becomes always open. Frontend still allows saving the invalid row (shows red error but save is not blocked)."},
+      {"endpoint": "POST /api/student/join (class exam outside window)", "issue": "Resumable-session lookup uses the raw typed name/number BEFORE roster normalization (match_roster). For class exams, a student who typed a name variant (accents/case-insensitive match) or omitted matricule would be refused reconnection once the window closes, even though they have an in_progress session. Move the window check after roster resolution."},
+      {"endpoint": "PUT /api/exams/{id} by manager", "issue": "Managers can edit the managers list (add/remove other managers, add the owner). Acceptable per spec 'mêmes droits', but consider restricting managers/ownership-related fields to owner. sync_bank also files the manager's edits into the manager's own question bank (user['id']) rather than the owner's — probably fine, just note."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ExamBuilder managers picker", "issue": "excludeId={form.teacher_id || user?.id} but form is built only from FIELDS (EMPTY keys) so form.teacher_id is always undefined. When a manager edits, the owner (Lynch S.) appears as a checkable manager and the manager themself is hidden. Add teacher_id to loaded form (not to payload) or keep exam.teacher_id in a separate state.", "selector": "[data-testid='manager-picker']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ExamBuilder – Plages de disponibilité", "issues": ["Uses native browser <input type='datetime-local'> (shown in US mm/dd/yyyy AM/PM format in English locale browsers) rather than a shadcn Calendar + time picker; inconsistent with French UI.", "Save not blocked when a window row is invalid."]},
+      {"screen": "ExamBuilder", "issues": ["Managers picker and help-recipients picker list every teacher (~20 rows each) — very long page; consider a searchable combobox."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter25_managers_windows.py", "/app/test_reports/pytest/iter25.xml"],
+  "action_items": [
+    "Fix ExamBuilder managers picker excludeId (form.teacher_id is undefined) so the owner is excluded when a manager edits",
+    "Do the window/resumable check in /student/join after roster normalization for class exams",
+    "Validate windows server-side (reject end<=start / unparsable) and block save in UI when a row is invalid",
+    "Optional: replace datetime-local with shadcn date/time picker in French format"
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1555 lines — should be split into routers (auth, admin, exams, sessions, student, bank).",
+    "list_exams does 3 count_documents per exam (N+1) — use an aggregation as done in admin overview.",
+    "ExamIn.windows is List[Dict[str,str]] — use a Pydantic model with datetime fields for validation."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter25_managers_windows.py"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% of tested flows"},
+  "test_credentials": "Admin lynchs2757@gmail.com / Enseignant2026! (from /app/memory/test_credentials.md). Created teacher test_manager_iter25@example.com (name 'TEST Gestionnaire'); current password Gestion2026!b — the pytest fixture resets it to Gestion2026! via admin reset-password (must_change_password then true; API still usable).",
+  "seed_data_creation": "Created TEST_iter25_* exams (deleted afterwards) and teacher account test_manager_iter25@example.com (kept).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with -n0 (pytest.ini adds xdist). For annotated exports: create document exam with doc_answer_mode=inline, upload PDF via POST /api/exams/{id}/file, student annotations use {page,x,y,w,fs,text} for text and kind='highlight'|'underline' for marks. Backend timezone APP_TIMEZONE default America/Toronto; naive datetimes interpreted in that tz. Teacher login page is /connexion (testids auth-email-input, auth-password-input, teacher-login-btn)."
+}

@@ -159,3 +159,10 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 
 ## 2026-06 — Guide de l'enseignant (PDF)
 - Source HTML `/app/docs/guide-enseignant.html` → PDF via Chrome headless : `/app/docs/Guide-enseignant-MonExamEnLigne.pdf` (16 pages, 15 sections : fonctionnement, panneau, création en 3 étapes, test comme élève, surveillance, aide/Teams, correction, réutilisation, classes, admin, FAQ). Servi à `/guide-enseignant.pdf` (frontend/public) + lien « Guide » dans l'en-tête enseignant. Régénérer : `google-chrome --headless=new --no-sandbox --no-pdf-header-footer --print-to-pdf=... file:///app/docs/guide-enseignant.html`.
+
+## 2026-06 — Gestionnaires, plages horaires, export annoté groupé, barre d'annotation fixe
+- `exams.managers` : accès via `exam_access()` ($or teacher_id/managers) dans `own_exam`, `/exams`, pause/resume-many ; `is_manager`/`owner_name` dans la liste ; suppression réservée au propriétaire (403). Picker dans l'éditeur (étape 1), badge « Géré · nom » au tableau de bord.
+- `exams.windows` [{start,end} ISO] : `window_state()` (ouvert si aucune plage ou si now dans une plage) ; `/student/join` → 403 « Prochaine ouverture : … » (fuseau APP_TIMEZONE, défaut America/Toronto) sauf reprise d'une copie en cours. `WindowsEditor` (datetime-local, bouton +) ; résumé au tableau de bord.
+- Export : `annotatedPdfBytes` + `downloadAllAnnotatedMerged` (page séparatrice par élève) + `downloadAllAnnotatedZip` (jszip) ; boutons « Toutes annotées (PDF) » et « Annotées (ZIP) » dans Suivi (examens document/inline/PDF).
+- PdfAnnotator : conteneur `overflow-clip` + barre `sticky top-16` → suit le défilement.
+- Testé iteration_25 : backend 11/11, e2e OK.
