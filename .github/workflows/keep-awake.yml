@@ -1,11 +1,20 @@
 name: Garder le serveur eveille (heures de classe)
 
-# Lundi au vendredi, 7 h a 17 h heure de l'Est (UTC-4 ete / UTC-5 hiver -> 11h-22h UTC couvre les deux).
-# ~11 h/jour x 22 jours = ~240 h/mois, bien sous la limite gratuite de 750 h de Render.
+# Le serveur Render gratuit se met en veille apres 15 min sans visite et ne consomme
+# aucune heure quand il dort. Ces visites le gardent eveille UNIQUEMENT pendant les plages ci-dessous.
+# Les heures sont en UTC. Heure de l'Est = UTC-4 (ete) / UTC-5 (hiver) : les plages UTC sont
+# elargies d'une heure pour couvrir les deux saisons.
+#
+#   Lundi-vendredi  9 h 00 - 17 h 30 (Est)  ->  13h-22h UTC
+#   Samedi          8 h 00 - 17 h 00 (Est)  ->  12h-22h UTC
+#
+# Consommation : ~ (9,5 h x 22 j) + (10 h x 4 sam.) = ~250 h / mois sur 750 h gratuites.
+# Pour modifier : changer les heures UTC ci-dessous (format cron : minute heure jour mois jour-semaine ; 1 = lundi, 6 = samedi, 0 = dimanche).
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 11-21 * * 1-5"
+    - cron: "*/5 13-22 * * 1-5"
+    - cron: "*/5 12-22 * * 6"
 
 jobs:
   ping:

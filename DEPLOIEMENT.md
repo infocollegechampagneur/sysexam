@@ -6,7 +6,7 @@
 - [ ] **GitHub** (https://github.com) : il reçoit le code et construit le `.msi`.
 - [ ] **MongoDB Atlas** (https://mongodb.com/atlas) : base de données et fichiers PDF/Word.
 - [ ] **Render** (https://render.com) : le serveur Python. Gratuit, ou environ 7 $ US/mois recommandé.
-- [ ] **UptimeRobot** (https://uptimerobot.com) : garde le serveur gratuit éveillé **pendant les heures de classe seulement** (voir 4.1 : la limite est de 750 h/mois).
+- [ ] ~~UptimeRobot~~ : **ne plus utiliser** (gratuit = 24 h/24 = dépassement des 750 h/mois). L'éveil est assuré par GitHub Actions selon un horaire (section 4.1).
 - [ ] **SiteGround** (déjà en place) : le site web et la zone DNS de votre domaine.
 
 **Sur votre ordinateur (une fois)**
@@ -22,7 +22,7 @@
 - `examen.votredomaine.com` → site web (SiteGround)
 - `api-examen.votredomaine.com` → serveur (Render)
 
-**Ordre des étapes :** 2. Atlas → 3. GitHub → 4. Render (et UptimeRobot) → 5. SiteGround → 6. `.msi` et GPO. Comptez environ 1 h 30 la première fois.
+**Ordre des étapes :** 2. Atlas → 3. GitHub → 4. Render (et horaire GitHub, section 4.1) → 5. SiteGround → 6. `.msi` et GPO. Comptez environ 1 h 30 la première fois.
 
 ## 1. Vue d'ensemble
 
@@ -109,14 +109,21 @@ Cliquez **Deploy Web Service**. Testez ensuite `https://VOTRE-SERVICE.onrender.c
 | Réglage | Heures consommées / mois | Verdict |
 |---|---|---|
 | Visite toutes les 5 min, 24 h/24 (ancien réglage) | ~744 h | **Dépasse** la limite → suspension |
-| Lun-ven, 7 h-17 h (réglage recommandé) | ~240 h | OK |
+| Lun-ven 9 h-17 h 30 + sam 8 h-17 h (réglage appliqué) | ~250 h | OK |
+| Lun-ven, 7 h-17 h | ~240 h | OK |
 | Lun-ven, 7 h-22 h | ~330 h | OK |
 | 7 j/7, 7 h-22 h | ~450 h | OK |
 
 **À faire maintenant (5 minutes) :**
-1. **UptimeRobot** : ouvrez votre moniteur → **Edit** → passez l'intervalle à **10 minutes** (au lieu de 5), puis créez une **fenêtre de maintenance récurrente** (menu *Maintenance windows*, disponible dans le forfait gratuit) : *Weekly*, tous les jours, de **17 h 00 à 7 h 00** et toute la journée samedi-dimanche. Pendant une maintenance, UptimeRobot ne visite pas le serveur, qui se met en veille. — *Si vous préférez une solution plus simple : supprimez le moniteur UptimeRobot et gardez uniquement l'option B ci-dessous.*
-2. **GitHub Actions (option B, déjà dans le code)** : le fichier `.github/workflows/keep-awake.yml` est réglé pour **lundi-vendredi, 7 h-17 h (heure de l'Est)**. Vérifiez que le secret `API_URL` existe dans **Settings → Secrets and variables → Actions** du dépôt. GitHub désactive la tâche après 60 jours sans activité dans le dépôt : un simple « Save to GitHub » la réactive.
-3. **Jour d'examen hors de ces heures** (soirée, fin de semaine) : ouvrez simplement la page d'accueil 2 minutes avant l'examen ; le serveur se réveille en 30 à 60 secondes et reste éveillé tant que des élèves travaillent (les copies se sauvegardent toutes les 5 s). Le site affiche automatiquement « Le serveur démarre… » pendant le réveil.
+1. **UptimeRobot** : **supprimez le moniteur** (ou mettez-le en pause). En forfait gratuit, UptimeRobot ne sait pas respecter un horaire (les fenêtres de maintenance sont payantes) : il garderait le serveur allumé 24 h/24, quel que soit l'intervalle (5 ou 10 minutes ne changent rien aux heures consommées).
+2. **GitHub Actions (déjà dans le code)** : le fichier `.github/workflows/keep-awake.yml` visite le serveur toutes les 5 minutes **lundi-vendredi 9 h-17 h 30** et **samedi 8 h-17 h** (heure de l'Est). Vérifiez que le secret `API_URL` = `https://api-examen.votredomaine.com` existe dans **Settings → Secrets and variables → Actions** du dépôt, et que l'onglet **Actions** du dépôt affiche le flux « Garder le serveur eveille » activé. GitHub désactive la tâche après 60 jours sans activité dans le dépôt : un simple « Save to GitHub » (ou le bouton *Enable workflow*) la réactive.
+   - **Changer l'horaire** : modifiez les lignes `cron` du fichier (heures en UTC : heure de l'Est + 4 en été, + 5 en hiver). Exemples prêts à copier :
+     - lun-ven 7 h-19 h : `"*/5 11-23 * * 1-5"`
+     - 7 j/7 8 h-18 h : `"*/5 12-22 * * *"`
+     - dimanche 13 h-17 h : `"*/5 17-21 * * 0"`
+3. **Jour d'examen hors de ces heures** (soirée, dimanche) : ouvrez simplement la page d'accueil 2 minutes avant l'examen ; le serveur se réveille en 30 à 60 secondes et reste éveillé tant que des élèves travaillent (les copies se sauvegardent toutes les 5 s). Le site affiche automatiquement « Le serveur démarre… » pendant le réveil.
+
+**Quand le compteur repart à zéro :** Render remet les 750 heures gratuites à zéro **le 1er de chaque mois civil** (minuit UTC, soit le 31 au soir à 19 h ou 20 h heure de l'Est). Si le quota est atteint, le serveur est suspendu jusqu'à cette date puis redémarre seul. Suivez la consommation en temps réel dans Render → **Billing → Usage**.
 
 **Ce qui consomme aussi des heures :** chaque déploiement (quelques minutes) et toute période où des élèves ou des enseignants utilisent le site (c'est normal et voulu). Suivez votre consommation dans Render → **Billing → Usage**.
 
