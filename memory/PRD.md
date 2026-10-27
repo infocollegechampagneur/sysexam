@@ -166,3 +166,7 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Export : `annotatedPdfBytes` + `downloadAllAnnotatedMerged` (page séparatrice par élève) + `downloadAllAnnotatedZip` (jszip) ; boutons « Toutes annotées (PDF) » et « Annotées (ZIP) » dans Suivi (examens document/inline/PDF).
 - PdfAnnotator : conteneur `overflow-clip` + barre `sticky top-16` → suit le défilement.
 - Testé iteration_25 : backend 11/11, e2e OK.
+
+## 2026-06 — Quota Render gratuit (750 h/mois)
+- Cause : ping 24/7 (UptimeRobot 5 min) = ~744 h/mois → suspension. Solution documentée (DEPLOIEMENT.md 4.1) : éveil uniquement lun-ven 7 h-17 h (≈240 h) via fenêtres de maintenance UptimeRobot et/ou `keep-awake.yml` (cron `*/10 11-21 * * 1-5`).
+- Frontend : `ServerWarmup` (App.js) affiche une bannière « Le serveur démarre… » si `/api/` met > 2,5 s à répondre (réveil Render), puis « Serveur prêt ».

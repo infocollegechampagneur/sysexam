@@ -6,7 +6,7 @@
 - [ ] **GitHub** (https://github.com) : il reçoit le code et construit le `.msi`.
 - [ ] **MongoDB Atlas** (https://mongodb.com/atlas) : base de données et fichiers PDF/Word.
 - [ ] **Render** (https://render.com) : le serveur Python. Gratuit, ou environ 7 $ US/mois recommandé.
-- [ ] **UptimeRobot** (https://uptimerobot.com) : garde le serveur gratuit éveillé.
+- [ ] **UptimeRobot** (https://uptimerobot.com) : garde le serveur gratuit éveillé **pendant les heures de classe seulement** (voir 4.1 : la limite est de 750 h/mois).
 - [ ] **SiteGround** (déjà en place) : le site web et la zone DNS de votre domaine.
 
 **Sur votre ordinateur (une fois)**
@@ -100,18 +100,27 @@ Cliquez **Deploy Web Service**. Testez ensuite `https://VOTRE-SERVICE.onrender.c
 
 > **Important pour les jours d'examen :** en forfait gratuit, Render met le serveur en veille après 15 minutes d'inactivité. Le premier accès prend alors environ 1 minute. Pour le garder éveillé gratuitement, voir la section 4.1 ; sinon, prenez le forfait **Starter (environ 7 $ US/mois)**.
 
-### 4.1 Garder le serveur éveillé gratuitement
-Le forfait gratuit de Render donne **750 heures par mois**, assez pour un service allumé en continu (environ 744 heures). Il suffit qu'un service gratuit « visite » le serveur toutes les 5 à 10 minutes.
+### 4.1 Rester sous la limite gratuite (750 h/mois) tout en évitant la veille pendant les examens
 
-**Option A, UptimeRobot (recommandée, la plus fiable) :**
-1. Créez un compte gratuit sur https://uptimerobot.com.
-2. Choisissez **Add New Monitor → HTTP(s)**, avec l'adresse `https://api-examen.votredomaine.com/api/` et un intervalle de **5 minutes**.
-3. Bonus : vous recevez un courriel si le serveur tombe.
+**Le piège :** le forfait gratuit de Render donne **750 heures d'instance par mois**. Un mois compte jusqu'à **744 heures**. Si un service (UptimeRobot, GitHub Actions…) « visite » le serveur 24 h/24, 7 j/7, il reste allumé en permanence et le quota est atteint vers la fin du mois : Render **suspend alors le serveur jusqu'au 1er du mois suivant** (courriel « You're approaching the monthly usage limit »).
 
-**Option B, GitHub Actions (déjà inclus dans le code) :** le fichier `.github/workflows/keep-awake.yml` envoie une visite toutes les 10 minutes, du lundi au vendredi, de 7 h à 19 h (heure de l'Est). Dans GitHub, allez dans **Settings → Secrets and variables → Actions** et ajoutez le secret `API_URL` = `https://api-examen.votredomaine.com`.
-> GitHub peut retarder ces tâches de quelques minutes, et il les désactive après 60 jours sans activité dans le dépôt. Gardez UptimeRobot comme solution principale.
+**La solution :** ne garder le serveur éveillé **que pendant les heures de classe**. Un serveur en veille ne consomme aucune heure. Lundi au vendredi, 7 h à 17 h ≈ **240 h/mois**, soit un tiers du quota, avec une grande marge pour les soirées d'examen ou la correction.
 
-À savoir : Render peut changer ses conditions du forfait gratuit. Pour des examens importants, les 7 $/mois restent l'option la plus sûre.
+| Réglage | Heures consommées / mois | Verdict |
+|---|---|---|
+| Visite toutes les 5 min, 24 h/24 (ancien réglage) | ~744 h | **Dépasse** la limite → suspension |
+| Lun-ven, 7 h-17 h (réglage recommandé) | ~240 h | OK |
+| Lun-ven, 7 h-22 h | ~330 h | OK |
+| 7 j/7, 7 h-22 h | ~450 h | OK |
+
+**À faire maintenant (5 minutes) :**
+1. **UptimeRobot** : ouvrez votre moniteur → **Edit** → passez l'intervalle à **10 minutes** (au lieu de 5), puis créez une **fenêtre de maintenance récurrente** (menu *Maintenance windows*, disponible dans le forfait gratuit) : *Weekly*, tous les jours, de **17 h 00 à 7 h 00** et toute la journée samedi-dimanche. Pendant une maintenance, UptimeRobot ne visite pas le serveur, qui se met en veille. — *Si vous préférez une solution plus simple : supprimez le moniteur UptimeRobot et gardez uniquement l'option B ci-dessous.*
+2. **GitHub Actions (option B, déjà dans le code)** : le fichier `.github/workflows/keep-awake.yml` est réglé pour **lundi-vendredi, 7 h-17 h (heure de l'Est)**. Vérifiez que le secret `API_URL` existe dans **Settings → Secrets and variables → Actions** du dépôt. GitHub désactive la tâche après 60 jours sans activité dans le dépôt : un simple « Save to GitHub » la réactive.
+3. **Jour d'examen hors de ces heures** (soirée, fin de semaine) : ouvrez simplement la page d'accueil 2 minutes avant l'examen ; le serveur se réveille en 30 à 60 secondes et reste éveillé tant que des élèves travaillent (les copies se sauvegardent toutes les 5 s). Le site affiche automatiquement « Le serveur démarre… » pendant le réveil.
+
+**Ce qui consomme aussi des heures :** chaque déploiement (quelques minutes) et toute période où des élèves ou des enseignants utilisent le site (c'est normal et voulu). Suivez votre consommation dans Render → **Billing → Usage**.
+
+À savoir : Render peut changer ses conditions du forfait gratuit. Pour des examens importants, le forfait **Starter (environ 7 $ US/mois)** supprime à la fois la veille et la limite d'heures.
 
 ---
 

@@ -11,10 +11,12 @@ import StudentExam from "@/pages/StudentExam";
 import Classes from "@/pages/Classes";
 import Users from "@/pages/Users";
 import ChangePassword from "@/pages/ChangePassword";
+import { ServerWarmup } from "@/components/ServerWarmup";
 
 function App() {
   return (
     <div className="App">
+      <ServerWarmup />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
