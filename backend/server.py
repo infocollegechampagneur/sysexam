@@ -14,6 +14,7 @@ import string
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from typing import List, Optional, Dict, Any
 
 import unicodedata
@@ -159,6 +160,8 @@ class ExamIn(BaseModel):
     class_id: Optional[str] = None
     doc_answer_mode: str = "separate"  # separate | inline
     help_recipients: List[str] = []
+    managers: List[str] = []
+    windows: List[Dict[str, str]] = []
 
 
 class RosterStudent(BaseModel):
@@ -246,11 +249,44 @@ def public_user(u: dict) -> dict:
     return out
 
 
+def exam_access(user: dict) -> dict:
+    return {"$or": [{"teacher_id": user["id"]}, {"managers": user["id"]}]}
+
+
 async def own_exam(exam_id: str, user: dict) -> dict:
-    exam = await db.exams.find_one({"id": exam_id, "teacher_id": user["id"]}, {"_id": 0})
+    exam = await db.exams.find_one({"id": exam_id, **exam_access(user)}, {"_id": 0})
     if not exam:
         raise HTTPException(status_code=404, detail="Examen introuvable")
     return exam
+
+
+LOCAL_TZ = ZoneInfo(os.environ.get("APP_TIMEZONE", "America/Toronto"))
+
+
+def parse_iso(s: str) -> Optional[datetime]:
+    try:
+        d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        return d if d.tzinfo else d.replace(tzinfo=LOCAL_TZ)
+    except (ValueError, AttributeError):
+        return None
+
+
+def window_state(exam: dict) -> dict:
+    wins = [(parse_iso(w.get("start", "")), parse_iso(w.get("end", ""))) for w in (exam.get("windows") or [])]
+    wins = [(a, b) for a, b in wins if a and b and b > a]
+    if not wins:
+        return {"open": True, "next_start": None}
+    now = datetime.now(timezone.utc)
+    if any(a <= now <= b for a, b in wins):
+        return {"open": True, "next_start": None}
+    future = sorted(a for a, _ in wins if a > now)
+    return {"open": False, "next_start": future[0].isoformat() if future else None}
+
+
+def fmt_local(iso: str) -> str:
+    d = datetime.fromisoformat(iso).astimezone(LOCAL_TZ)
+    months = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
+    return f"{d.day} {months[d.month - 1]} {d.year} à {d.hour} h {d.minute:02d}" if d.minute else f"{d.day} {months[d.month - 1]} {d.year} à {d.hour} h"
 
 
 BANK_KEYS = ("type", "text", "options", "correct", "expected", "hint", "points")
@@ -274,7 +310,7 @@ async def send_teams(url: str, title: str, facts: list) -> tuple:
 
 async def help_recipient_ids(exam: dict) -> list:
     defaults = await db.app_settings.find_one({"key": "default_help_recipients"}, {"_id": 0}) or {}
-    ids = [exam["teacher_id"], *(exam.get("help_recipients") or []), *(defaults.get("value") or [])]
+    ids = [exam["teacher_id"], *(exam.get("managers") or []), *(exam.get("help_recipients") or []), *(defaults.get("value") or [])]
     return list(dict.fromkeys(ids))
 
 
@@ -783,11 +819,16 @@ async def refresh(request: Request, response: Response):
 # ---------- Teacher: exams ----------
 @api.get("/exams")
 async def list_exams(user: dict = Depends(current_teacher)):
-    exams = await db.exams.find({"teacher_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    exams = await db.exams.find(exam_access(user), {"_id": 0}).sort("created_at", -1).to_list(500)
+    owner_ids = {e["teacher_id"] for e in exams if e["teacher_id"] != user["id"]}
+    names = {u["id"]: u["name"] for u in await db.users.find({"id": {"$in": list(owner_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(500)} if owner_ids else {}
     for e in exams:
         e["session_count"] = await db.sessions.count_documents({"exam_id": e["id"]})
         e["flagged_count"] = await db.sessions.count_documents({"exam_id": e["id"], "violations": {"$gt": 0}})
         e["locked_count"] = await db.sessions.count_documents({"exam_id": e["id"], "status": "locked"})
+        e["is_manager"] = e["teacher_id"] != user["id"]
+        e["owner_name"] = names.get(e["teacher_id"], "") if e["is_manager"] else ""
+        e["window"] = window_state(e)
     return exams
 
 
@@ -824,6 +865,8 @@ async def update_exam(exam_id: str, body: ExamIn, user: dict = Depends(current_t
 @api.delete("/exams/{exam_id}")
 async def delete_exam(exam_id: str, user: dict = Depends(current_teacher)):
     exam = await own_exam(exam_id, user)
+    if exam["teacher_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Seul le propriétaire de l'examen peut le supprimer")
     await drop_file(exam.get("file"))
     await db.exams.delete_one({"id": exam_id})
     await db.sessions.delete_many({"exam_id": exam_id})
@@ -1100,7 +1143,7 @@ async def exam_resume(exam_id: str, user: dict = Depends(current_teacher)):
 
 @api.post("/exams/pause-many")
 async def exams_pause_many(body: PauseIn, user: dict = Depends(current_teacher)):
-    q = {"teacher_id": user["id"], "status": "open"}
+    q = {**exam_access(user), "status": "open"}
     if body.exam_ids:
         q["id"] = {"$in": body.exam_ids}
     total, exams = 0, 0
@@ -1112,7 +1155,7 @@ async def exams_pause_many(body: PauseIn, user: dict = Depends(current_teacher))
 
 @api.post("/exams/resume-many")
 async def exams_resume_many(body: PauseIn, user: dict = Depends(current_teacher)):
-    q = {"teacher_id": user["id"], "paused_at": {"$ne": None}}
+    q = {**exam_access(user), "paused_at": {"$ne": None}}
     if body.exam_ids:
         q["id"] = {"$in": body.exam_ids}
     total, exams = 0, 0
@@ -1255,6 +1298,11 @@ async def student_join(body: JoinIn):
     client_kind = "desktop" if body.client == "desktop" else "web"
     if exam["settings"].get("require_desktop") and client_kind != "desktop":
         raise HTTPException(status_code=403, detail="Cet examen doit être fait dans l'application MonExamEnLigne pour Windows.")
+    ws = window_state(exam)
+    if not ws["open"]:
+        resumable = await db.sessions.find_one({"exam_id": exam["id"], "student_name_lc": name.lower(), "student_number": body.student_number.strip(), "status": {"$in": ["in_progress", "locked"]}}, {"_id": 0, "id": 1})
+        if not resumable:
+            raise HTTPException(status_code=403, detail="Cet examen n'est pas disponible maintenant." + (f" Prochaine ouverture : {fmt_local(ws['next_start'])}." if ws["next_start"] else " Aucune autre plage horaire n'est prévue."))
     extra_pct = 0
     number = body.student_number.strip()
     teacher_name = body.teacher_name.strip()[:120]

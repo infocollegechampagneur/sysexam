@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check, HandHelping } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check, HandHelping, Users } from "lucide-react";
 import { RecipientsPicker } from "@/components/RecipientsPicker";
+import { WindowsEditor } from "@/components/WindowsEditor";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
-  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [],
+  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [], managers: [], windows: [],
   settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false,     partial_credit: false, shuffle_options: false, help_button: true, clipboard_internal: true },
 };
 const FIELDS = Object.keys(EMPTY);
@@ -125,6 +126,12 @@ export default function ExamBuilder() {
               </Select>
               <p className="mt-1.5 text-xs text-slate-500">Avec une classe, seuls les élèves inscrits peuvent rejoindre, et leur temps supplémentaire est appliqué. Gérez vos listes dans l'onglet « Classes ».</p>
             </div>
+            <div className="md:col-span-2" data-testid="managers-section">
+              <Label className="flex items-center gap-1.5"><Users className="h-4 w-4 text-blue-900" />Gestionnaires de l'examen</Label>
+              <p className="mb-2 mt-1 text-xs text-slate-500">Les gestionnaires voient cet examen dans leur tableau de bord et ont les mêmes droits que vous (modifier, surveiller, corriger, exporter, vider les copies). Seul le propriétaire peut supprimer l'examen.</p>
+              <RecipientsPicker value={form.managers || []} onChange={(v) => set("managers", v)} excludeId={form.teacher_id || user?.id} testId="manager" />
+            </div>
+            <div className="md:col-span-2"><WindowsEditor value={form.windows || []} onChange={(v) => set("windows", v)} /></div>
             <div className="md:col-span-2" data-testid="help-recipients-section">
               <Label className="flex items-center gap-1.5"><HandHelping className="h-4 w-4 text-amber-600" />Collègues avertis quand un élève demande de l'aide</Label>
               <p className="mb-2 mt-1 text-xs text-slate-500">Vous recevez toujours les demandes « J'ai besoin d'aide ». Cochez les collègues (surveillants, techniciens) qui doivent aussi les recevoir — dans l'application et dans Teams s'ils l'ont configuré.</p>

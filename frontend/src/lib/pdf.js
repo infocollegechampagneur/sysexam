@@ -18,7 +18,7 @@ export async function renderPdfPages(blob, onPage) {
   }
 }
 
-export async function downloadAnnotatedPdf(blob, annotations, filename) {
+export async function annotatedPdfBytes(blob, annotations) {
   const doc = await PDFDocument.load(await blob.arrayBuffer());
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const pages = doc.getPages();
@@ -39,10 +39,41 @@ export async function downloadAnnotatedPdf(blob, annotations, filename) {
     const size = a.fs * width;
     p.drawText(safe(a.text), { x: a.x * width + 3, y: height - a.y * height - size - 2, size, font, color: rgb(0.05, 0.2, 0.6), maxWidth: a.w * width - 6, lineHeight: size * 1.3 });
   }
-  const bytes = await doc.save();
+  return doc.save();
+}
+
+const saveBlob = (blob, name) => {
   const el = document.createElement("a");
-  el.href = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-  el.download = `${filename}.pdf`;
+  el.href = URL.createObjectURL(blob);
+  el.download = name;
   el.click();
   URL.revokeObjectURL(el.href);
+};
+
+export async function downloadAnnotatedPdf(blob, annotations, filename) {
+  saveBlob(new Blob([await annotatedPdfBytes(blob, annotations)], { type: "application/pdf" }), `${filename}.pdf`);
+}
+
+export async function downloadAllAnnotatedMerged(blob, sessions, filename, examTitle) {
+  const out = await PDFDocument.create();
+  const font = await out.embedFont(StandardFonts.HelveticaBold);
+  const small = await out.embedFont(StandardFonts.Helvetica);
+  const ascii = (t) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "?");
+  for (const s of sessions) {
+    const sep = out.addPage([612, 792]);
+    sep.drawRectangle({ x: 0, y: 700, width: 612, height: 92, color: rgb(0.12, 0.23, 0.54) });
+    sep.drawText(ascii(s.student_name), { x: 48, y: 740, size: 26, font, color: rgb(1, 1, 1) });
+    sep.drawText(ascii(`${s.student_number ? `Matricule ${s.student_number}  -  ` : ""}${examTitle}`), { x: 48, y: 714, size: 12, font: small, color: rgb(0.85, 0.9, 1) });
+    sep.drawText(ascii(`Copie annotee  -  ${s.annotations?.length || 0} annotation(s)${s.grade?.score != null ? `  -  Note : ${s.grade.score} / ${s.grade.max_score}` : ""}`), { x: 48, y: 660, size: 12, font: small, color: rgb(0.3, 0.3, 0.3) });
+    const src = await PDFDocument.load(await annotatedPdfBytes(blob, s.annotations || []));
+    (await out.copyPages(src, src.getPageIndices())).forEach((p) => out.addPage(p));
+  }
+  saveBlob(new Blob([await out.save()], { type: "application/pdf" }), `${filename}.pdf`);
+}
+
+export async function downloadAllAnnotatedZip(blob, sessions, filename, slugFn) {
+  const { default: JSZip } = await import("jszip");
+  const zip = new JSZip();
+  for (const s of sessions) zip.file(`${slugFn(s.student_name)}${s.student_number ? `_${slugFn(s.student_number)}` : ""}_annote.pdf`, await annotatedPdfBytes(blob, s.annotations || []));
+  saveBlob(await zip.generateAsync({ type: "blob" }), `${filename}.zip`);
 }

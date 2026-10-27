@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, ClipboardPaste, HandHelping } from "lucide-react";
+import { ArrowLeft, RefreshCw, Users, FileDown, FileType2, Lock, ShieldAlert, ClipboardPaste, HandHelping, FilePen, FolderArchive } from "lucide-react";
 import { useHelpRequests, HelpRequestRow } from "@/components/HelpBell";
 import { SurveillanceReport } from "@/components/SurveillanceReport";
 import { ClassControls } from "@/components/TeacherControls";
@@ -12,6 +12,7 @@ import { SessionDetail } from "@/components/SessionDetail";
 import { StatsPanel } from "@/components/StatsPanel";
 import { CopyContent } from "@/components/CopyContent";
 import { exportPdf, exportWord, slug } from "@/lib/exportUtils";
+import { downloadAllAnnotatedMerged, downloadAllAnnotatedZip } from "@/lib/pdf";
 import { api, formatErr } from "@/lib/api";
 import { SESSION_LABELS } from "@/lib/tools";
 
@@ -46,6 +47,19 @@ export default function Results() {
   const [sel, setSel] = useState(null);
   const [view, setView] = useState("copies");
   const help = useHelpRequests(id);
+  const [annBusy, setAnnBusy] = useState("");
+  const inlinePdf = exam?.exam_type === "document" && exam?.doc_answer_mode === "inline" && exam?.file?.kind === "pdf";
+  const allAnnotated = async (mode) => {
+    const subs = sessions.filter((s) => s.status === "submitted" || s.status === "locked" || s.status === "in_progress");
+    if (!subs.length) return toast.error("Aucune copie");
+    setAnnBusy(mode);
+    try {
+      const blob = (await api.get(`/exams/${exam.id}/file`, { responseType: "blob" })).data;
+      const base = `${slug(exam.title)}_annotees`;
+      if (mode === "zip") await downloadAllAnnotatedZip(blob, subs, base, slug); else await downloadAllAnnotatedMerged(blob, subs, base, exam.title);
+      toast.success(`${subs.length} copie(s) annotée(s) exportée(s)`);
+    } catch (e) { toast.error("Export des PDF annotés impossible"); } finally { setAnnBusy(""); }
+  };
   const lockedRef = useRef(null);
   const pasteRef = useRef(null);
 
@@ -92,6 +106,8 @@ export default function Results() {
         <span className="rounded-lg border border-dashed border-blue-300 bg-blue-50 px-3 py-1.5 font-mono font-bold tracking-[0.25em] text-blue-900" data-testid="results-exam-code">{exam?.code}</span>
         <Button variant="outline" size="sm" onClick={load} data-testid="results-refresh-btn"><RefreshCw className="mr-1.5 h-4 w-4" />Actualiser</Button>
         <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />Toutes (PDF)</Button>
+        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("merged")} data-testid="export-all-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />{annBusy === "merged" ? "Génération…" : "Toutes annotées (PDF)"}</Button>}
+        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("zip")} data-testid="export-all-annotated-zip-btn"><FolderArchive className="mr-1.5 h-4 w-4" />{annBusy === "zip" ? "Génération…" : "Annotées (ZIP)"}</Button>}
         <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />Toutes (Word)</Button>
         <Button size="sm" onClick={() => { if (!sessions.length) return toast.error("Aucune copie"); exportPdf(reportRef.current, `${slug(exam?.title)}_rapport_surveillance`); }} className="bg-rose-700 hover:bg-rose-800" data-testid="export-surveillance-report-btn"><ShieldAlert className="mr-1.5 h-4 w-4" />Rapport de surveillance (PDF)</Button>
         {exam && <ClearSessionsButton exam={exam} sessions={sessions} onDone={() => { setSel(null); load(); }} />}

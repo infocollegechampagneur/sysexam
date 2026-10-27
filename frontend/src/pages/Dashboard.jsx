@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Copy, Pencil, BarChart3, Trash2, FileText, ListChecks, PenLine, Users, AlertTriangle, ClipboardList } from "lucide-react";
+import { Plus, Copy, Pencil, BarChart3, Trash2, FileText, ListChecks, PenLine, Users, AlertTriangle, ClipboardList, CalendarClock } from "lucide-react";
+import { fmtWindow } from "@/components/WindowsEditor";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +31,15 @@ const ExamCard = ({ exam, onDelete }) => {
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue-800"><Icon className="h-3.5 w-3.5" />{TYPE_LABEL[exam.exam_type]}</span>
         <Badge variant="outline" className={STATUS_CLS[exam.status]} data-testid={`exam-status-${exam.code}`}>{STATUS_LABELS[exam.status]}</Badge>
         {exam.paused_at && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900" data-testid={`exam-paused-${exam.code}`}>En pause</Badge>}
+        {exam.is_manager && <Badge variant="outline" className="border-indigo-300 bg-indigo-50 text-indigo-900" title={`Examen de ${exam.owner_name}`} data-testid={`exam-shared-${exam.code}`}>Géré · {exam.owner_name}</Badge>}
       </div>
       <h3 className="mt-3 font-display text-lg font-semibold leading-snug text-slate-900">{exam.title}</h3>
       <p className="text-sm text-slate-500">{exam.subject || "—"}</p>
+      {exam.windows?.length > 0 && (
+        <p className={`mt-1 flex items-center gap-1 text-xs ${exam.window?.open ? "text-emerald-700" : "text-amber-700"}`} data-testid={`exam-windows-${exam.code}`}>
+          <CalendarClock className="h-3.5 w-3.5" />{exam.window?.open ? "Plage en cours · " : "Hors plage · "}{exam.windows.map(fmtWindow).filter(Boolean).join(" ; ")}
+        </p>
+      )}
       <button
         className="mt-4 flex items-center justify-between rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-3 py-2 transition-colors hover:bg-blue-50"
         onClick={() => { navigator.clipboard?.writeText(exam.code); toast.success(`Code ${exam.code} copié`); }}
@@ -56,7 +63,7 @@ const ExamCard = ({ exam, onDelete }) => {
       <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
         <Button size="sm" variant="outline" className="flex-1" onClick={() => nav(`/enseignant/examens/${exam.id}`)} data-testid={`edit-exam-${exam.code}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Modifier</Button>
         <Button size="sm" className="flex-1 bg-blue-900 hover:bg-blue-800" onClick={() => nav(`/enseignant/examens/${exam.id}/resultats`)} data-testid={`results-exam-${exam.code}`}><BarChart3 className="mr-1.5 h-3.5 w-3.5" />Suivi</Button>
-        <AlertDialog>
+        {!exam.is_manager && <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" data-testid={`delete-exam-${exam.code}`}><Trash2 className="h-4 w-4" /></Button>
           </AlertDialogTrigger>
@@ -70,7 +77,7 @@ const ExamCard = ({ exam, onDelete }) => {
               <AlertDialogAction className="bg-rose-600 hover:bg-rose-700" onClick={() => onDelete(exam.id)} data-testid="confirm-delete-exam-btn">Supprimer</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog>}
       </div>
     </div>
   );
