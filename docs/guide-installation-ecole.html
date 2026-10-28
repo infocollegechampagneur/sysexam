@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MonExamEnLigne — Guide d'installation du serveur à l'école</title>
+<style>
+  @page { size: letter; margin: 20mm 18mm 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Public Sans", Arial, sans-serif; color: #0f172a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; color: #1e3a8a; margin: 0 0 4px; letter-spacing: -0.5px; }
+  h2 { font-size: 17pt; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; margin: 28px 0 12px; page-break-after: avoid; }
+  h3 { font-size: 12.5pt; color: #0f172a; margin: 18px 0 6px; page-break-after: avoid; }
+  p, li { page-break-inside: avoid; }
+  .cover { height: 230mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+  .cover .kicker { color: #b45309; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 10pt; }
+  .cover .sub { font-size: 14pt; color: #475569; margin-top: 6px; }
+  .cover .box { margin-top: 36px; border-left: 6px solid #1e3a8a; background: #eff6ff; padding: 14px 18px; border-radius: 0 8px 8px 0; }
+  .cover .meta { margin-top: auto; color: #64748b; font-size: 9.5pt; }
+  .toc { page-break-after: always; }
+  .toc li { margin: 4px 0; }
+  .tip { border-left: 4px solid #0ea5e9; background: #f0f9ff; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .warn { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .danger { border-left: 4px solid #e11d48; background: #fff1f2; padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .check { border: 2px dashed #047857; background: #ecfdf5; padding: 8px 12px; margin: 10px 0; border-radius: 6px; page-break-inside: avoid; }
+  .check b, .tip b, .warn b, .danger b { display: block; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; }
+  tr { page-break-inside: avoid; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 9.5pt; }
+  pre { font-family: Consolas, "Courier New", monospace; background: #0f172a; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-size: 9.5pt; white-space: pre-wrap; word-break: break-all; page-break-inside: avoid; margin: 8px 0; }
+  pre .c { color: #94a3b8; }
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 36px; margin: 10px 0; }
+  .steps > li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%; background: #1e3a8a; color: #fff; font-weight: 700; font-size: 10pt; text-align: center; line-height: 24px; }
+  .pb { page-break-before: always; }
+  ul { padding-left: 20px; }
+  .small { color: #64748b; font-size: 9.5pt; }
+  .kbd { border: 1px solid #94a3b8; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 9.5pt; background: #fff; }
+  .faq dt { font-weight: 700; margin-top: 10px; page-break-after: avoid; }
+  .faq dd { margin: 2px 0 0 0; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">Collège Champagneur · Service informatique</div>
+  <h1>Installer le serveur MonExamEnLigne à l'école</h1>
+  <div class="sub">Guide pas à pas pour débutant — VM Ubuntu Server + Docker, en remplacement de Render</div>
+  <div class="box">
+    <p style="margin:0"><strong>Résultat à la fin de ce guide :</strong></p>
+    <ul style="margin:6px 0 0">
+      <li>le serveur d'examens tourne sur une machine virtuelle de l'école, allumée en permanence, <strong>sans mise en veille ni quota</strong> ;</li>
+      <li>il est joignable en <strong>https://api-examen.VOTREDOMAINE.qc.ca</strong> depuis l'école et de la maison ;</li>
+      <li>vos données actuelles (comptes, examens, classes, copies) sont rapatriées ;</li>
+      <li>le site SiteGround et l'application Windows pointent vers ce serveur ;</li>
+      <li>sauvegardes automatiques chaque nuit, mise à jour en une commande.</li>
+    </ul>
+  </div>
+  <div class="meta">Temps : environ 2 h en tout, réparties sur 1 ou 2 jours (le DNS doit se propager). Version : juin 2026.</div>
+</section>
+
+<section class="toc">
+  <h2>Table des matières</h2>
+  <ol>
+    <li>Comment ça marche (schéma en mots)</li>
+    <li>Liste de préparation</li>
+    <li>Étape A — Créer la machine virtuelle et installer Ubuntu</li>
+    <li>Étape B — Se connecter à la VM depuis votre PC (SSH)</li>
+    <li>Étape C — Adresse Internet : DNS et pare-feu</li>
+    <li>Étape D — Installer Docker</li>
+    <li>Étape E — Autoriser la VM à lire votre dépôt GitHub</li>
+    <li>Étape F — Récupérer le code et remplir la configuration</li>
+    <li>Étape G — Démarrer le serveur et vérifier le HTTPS</li>
+    <li>Étape H — Rapatrier les données depuis Render / Atlas</li>
+    <li>Étape I — Brancher le site SiteGround et l'application Windows</li>
+    <li>Étape J — Sauvegardes automatiques</li>
+    <li>Au quotidien : mises à jour, surveillance, redémarrage</li>
+    <li>Dépannage : les 12 problèmes les plus fréquents</li>
+    <li>Annexes : garder Atlas · Cloudflare Tunnel · aide-mémoire des commandes</li>
+  </ol>
+</section>
+
+<h2>1. Comment ça marche (schéma en mots)</h2>
+<table>
+  <tr><th style="width:24%">Qui</th><th>Rôle</th><th style="width:22%">Où</th></tr>
+  <tr><td><strong>GitHub</strong></td><td>Garde le code et son historique. Le bouton « Save to GitHub » d'Emergent l'alimente. Il n'exécute rien.</td><td>Internet (déjà en place)</td></tr>
+  <tr><td><strong>VM Ubuntu</strong></td><td>Exécute l'API (le « cerveau ») et la base de données MongoDB (les données), via 3 « conteneurs » Docker : <code>api</code>, <code>mongo</code>, <code>caddy</code> (HTTPS automatique).</td><td>À l'école (à créer)</td></tr>
+  <tr><td><strong>SiteGround</strong></td><td>Affiche le site web (les pages). Il appelle l'API de la VM. Inchangé, sauf l'adresse de l'API.</td><td>Internet (déjà en place)</td></tr>
+  <tr><td><strong>Application Windows</strong></td><td>Sur les postes élèves ; appelle aussi l'API de la VM.</td><td>Postes (GPO)</td></tr>
+</table>
+<p>Docker, en une phrase : un programme qui fait tourner des logiciels dans des « boîtes » prêtes à l'emploi, que l'on démarre et met à jour avec une seule commande. Vous n'aurez jamais à installer Python ou MongoDB vous-même.</p>
+<div class="tip"><b>Convention dans ce guide</b> Les commandes à taper sont dans des cadres noirs. Tapez-les (ou copiez-collez) <strong>une ligne à la fois</strong>, puis <span class="kbd">Entrée</span>. Remplacez partout <code>VOTREDOMAINE.qc.ca</code> par votre vrai domaine et <code>192.168.10.50</code> par l'IP de votre VM. Les lignes qui commencent par <code>#</code> sont des commentaires : inutile de les taper.</div>
+
+<h2>2. Liste de préparation</h2>
+<table>
+  <tr><th style="width:4%"></th><th>Élément</th><th>Où le trouver</th></tr>
+  <tr><td>☐</td><td>Un hyperviseur pour créer une VM (Hyper-V sur Windows Server, VMware ESXi, Proxmox…) avec 2 vCPU, 4 Go de RAM, 40 Go de disque disponibles</td><td>Votre serveur physique</td></tr>
+  <tr><td>☐</td><td>L'image ISO <strong>Ubuntu Server 24.04 LTS</strong></td><td>https://ubuntu.com/download/server (bouton Download, ~3 Go)</td></tr>
+  <tr><td>☐</td><td>Une adresse IP interne fixe pour la VM (ex. <code>192.168.10.50</code>) et le nom de votre passerelle/DNS interne</td><td>Votre plan d'adressage réseau</td></tr>
+  <tr><td>☐</td><td>L'<strong>IP publique</strong> de l'école (idéalement fixe)</td><td>Depuis l'école : tapez « quelle est mon ip » dans Google</td></tr>
+  <tr><td>☐</td><td>Accès au <strong>pare-feu/routeur</strong> pour rediriger les ports 80 et 443 vers la VM</td><td>Interface du pare-feu (Fortinet, SonicWall, Ubiquiti, routeur du FAI…)</td></tr>
+  <tr><td>☐</td><td>Accès au <strong>DNS du domaine</strong> pour ajouter un sous-domaine <code>api-examen</code></td><td>Votre registraire (GoDaddy, SiteGround, Namecheap…)</td></tr>
+  <tr><td>☐</td><td>Votre compte <strong>GitHub</strong> et le nom du dépôt (ex. <code>infocollegechampagneur/sysexam</code>)</td><td>github.com</td></tr>
+  <tr><td>☐</td><td>Les valeurs de <strong>Render → votre service → Environment</strong> : <code>MONGO_URL</code>, <code>DB_NAME</code>, <code>JWT_SECRET</code>, <code>SMTP_*</code>, <code>MAIL_FROM*</code></td><td>dashboard.render.com</td></tr>
+</table>
+
+<h2 class="pb">3. Étape A — Créer la machine virtuelle et installer Ubuntu (30 min)</h2>
+<h3>A1. Créer la VM dans votre hyperviseur</h3>
+<ul>
+  <li>Nom : <code>monexam</code> · Génération 2 / UEFI si proposé · <strong>2 processeurs</strong> · <strong>4096 Mo</strong> de mémoire (fixe, pas dynamique) · disque <strong>40 Go</strong>.</li>
+  <li>Réseau : la carte réseau doit être sur le même réseau que vos serveurs (commutateur « externe » dans Hyper-V).</li>
+  <li>Lecteur DVD : l'ISO Ubuntu Server téléchargée. Dans Hyper-V : désactivez « Secure Boot » ou choisissez le modèle « Microsoft UEFI Certificate Authority ».</li>
+  <li>Réglez la VM pour <strong>démarrer automatiquement</strong> avec l'hôte (Hyper-V : Paramètres → Action de démarrage automatique → Toujours démarrer).</li>
+</ul>
+<h3>A2. Installer Ubuntu (suivez l'assistant, flèches + <span class="kbd">Entrée</span>)</h3>
+<ol class="steps">
+  <li>Démarrez la VM. Choisissez <strong>Try or Install Ubuntu Server</strong>.</li>
+  <li>Langue : <strong>Français</strong> (ou English). Disposition du clavier : <strong>French (Canada)</strong>.</li>
+  <li>Type d'installation : <strong>Ubuntu Server</strong> (pas « minimized »).</li>
+  <li><strong>Réseau</strong> : sélectionnez la carte (ex. <code>eth0</code>) → <strong>Edit IPv4</strong> → <strong>Manual</strong> :
+    <br>Subnet <code>192.168.10.0/24</code> · Address <code>192.168.10.50</code> · Gateway <code>192.168.10.1</code> · Name servers <code>192.168.10.1</code> (ou votre DNS interne) · puis <strong>Save</strong>, <strong>Done</strong>.</li>
+  <li>Proxy : laissez vide. Miroir : laissez tel quel. Disque : <strong>Use an entire disk</strong>, décochez « Set up this disk as an LVM group » (plus simple), <strong>Done</strong>, confirmez <strong>Continue</strong>.</li>
+  <li><strong>Profil</strong> : Your name <code>Admin Examen</code> · Server name <code>monexam</code> · Username <code>adminexam</code> · Mot de passe solide (notez-le !).</li>
+  <li>Ubuntu Pro : <strong>Skip for now</strong>.</li>
+  <li><strong>SSH Setup</strong> : cochez <strong>Install OpenSSH server</strong> (indispensable pour se connecter depuis votre PC).</li>
+  <li>Featured snaps : ne cochez <strong>rien</strong> (on installera Docker autrement). <strong>Done</strong>.</li>
+  <li>Attendez la fin, puis <strong>Reboot Now</strong>. Si le message « remove the installation medium » apparaît, retirez l'ISO du lecteur virtuel et appuyez sur <span class="kbd">Entrée</span>.</li>
+</ol>
+<div class="check"><b>Vérification A</b> Après le redémarrage, l'écran affiche <code>monexam login:</code>. Connectez-vous avec <code>adminexam</code> et votre mot de passe. Tapez <code>ip a</code> : vous devez voir <code>192.168.10.50</code>. Tapez <code>ping -c 3 google.com</code> : 3 réponses = Internet fonctionne.</div>
+
+<h2>4. Étape B — Se connecter à la VM depuis votre PC (5 min)</h2>
+<p>Plutôt que de taper dans la console de l'hyperviseur, on travaille depuis son PC Windows avec SSH (copier-coller possible).</p>
+<ol class="steps">
+  <li>Sur votre PC : <span class="kbd">Win</span> + <span class="kbd">X</span> → <strong>Terminal</strong> (ou PowerShell).</li>
+  <li>Tapez : <pre>ssh adminexam@192.168.10.50</pre></li>
+  <li>À la question « Are you sure you want to continue connecting? », tapez <code>yes</code>. Entrez le mot de passe (rien ne s'affiche pendant la saisie, c'est normal).</li>
+</ol>
+<div class="check"><b>Vérification B</b> L'invite devient <code>adminexam@monexam:~$</code>. Vous êtes « dans » la VM. Pour coller une commande : clic droit dans le Terminal. Pour quitter : <code>exit</code>.</div>
+
+<h2>5. Étape C — Adresse Internet : DNS et pare-feu (10 min + attente)</h2>
+<h3>C1. DNS — créer le sous-domaine</h3>
+<p>Chez votre registraire (là où est géré <code>VOTREDOMAINE.qc.ca</code>), section <strong>DNS / Zone DNS / Gestion des enregistrements</strong>, ajoutez :</p>
+<table>
+  <tr><th>Type</th><th>Nom (hôte)</th><th>Valeur (pointe vers)</th><th>TTL</th></tr>
+  <tr><td><strong>A</strong></td><td><code>api-examen</code></td><td><em>IP publique de l'école</em> (ex. 204.19.xx.xx)</td><td>600 (ou « 10 min »)</td></tr>
+</table>
+<p class="small">Si l'interface demande le nom complet, écrivez <code>api-examen.VOTREDOMAINE.qc.ca</code>. Ne touchez à rien d'autre (le site <code>examen.…</code> et le courriel restent tels quels).</p>
+<h3>C2. Pare-feu — rediriger 2 ports vers la VM</h3>
+<p>Dans le pare-feu/routeur de l'école, créez deux règles de <strong>redirection de port</strong> (« Port forwarding », « NAT », « Virtual IP », « DNAT » selon la marque) :</p>
+<table>
+  <tr><th>Protocole</th><th>Port externe (WAN)</th><th>Vers l'IP interne</th><th>Port interne</th><th>Pourquoi</th></tr>
+  <tr><td>TCP</td><td>80</td><td>192.168.10.50</td><td>80</td><td>Obtention/renouvellement automatique du certificat HTTPS</td></tr>
+  <tr><td>TCP</td><td>443</td><td>192.168.10.50</td><td>443</td><td>Le trafic HTTPS de l'application</td></tr>
+</table>
+<div class="warn"><b>Si la TI refuse d'ouvrir des ports</b> Passez par l'annexe B (Cloudflare Tunnel, gratuit, aucun port entrant). Le reste du guide reste identique.</div>
+<div class="check"><b>Vérification C (après 10 à 60 min de propagation)</b> Sur votre PC : <code>nslookup api-examen.VOTREDOMAINE.qc.ca</code> → la réponse doit contenir l'IP publique de l'école. Le test du pare-feu se fera à l'étape G.</div>
+
+<h2>6. Étape D — Installer Docker (10 min)</h2>
+<p>Dans la fenêtre SSH, collez ces commandes <strong>une à la fois</strong> (acceptez avec <span class="kbd">Entrée</span> ou <code>o</code>/<code>y</code> si on vous le demande) :</p>
+<pre><span class="c"># 1. Mises à jour du système</span>
+sudo apt update && sudo apt -y upgrade
+<span class="c"># 2. Outils de base</span>
+sudo apt -y install ca-certificates curl git
+<span class="c"># 3. Docker (script officiel)</span>
+curl -fsSL https://get.docker.com | sudo sh
+<span class="c"># 4. Permettre à votre utilisateur d'utiliser Docker sans sudo, et démarrer Docker au boot</span>
+sudo usermod -aG docker $USER
+sudo systemctl enable docker
+<span class="c"># 5. Fuseau horaire et pare-feu de la VM elle-même</span>
+sudo timedatectl set-timezone America/Toronto
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw --force enable</pre>
+<p>Puis tapez <code>exit</code>, et reconnectez-vous (<code>ssh adminexam@192.168.10.50</code>) pour que le droit Docker soit pris en compte.</p>
+<div class="check"><b>Vérification D</b> <code>docker compose version</code> affiche « Docker Compose version v2.x ». <code>docker run --rm hello-world</code> affiche « Hello from Docker! ».</div>
+
+<h2>7. Étape E — Autoriser la VM à lire votre dépôt GitHub (5 min)</h2>
+<p>Votre dépôt est privé : la VM a besoin d'une « clé » en lecture seule. On utilise un <strong>jeton d'accès</strong>.</p>
+<ol class="steps">
+  <li>Sur github.com, connecté : cliquez sur votre photo (en haut à droite) → <strong>Settings</strong> → tout en bas à gauche <strong>Developer settings</strong> → <strong>Personal access tokens</strong> → <strong>Fine-grained tokens</strong> → <strong>Generate new token</strong>.</li>
+  <li>Token name : <code>VM monexam</code>. Expiration : <strong>1 year</strong> (notez la date dans votre agenda). Repository access : <strong>Only select repositories</strong> → choisissez votre dépôt.</li>
+  <li>Permissions → Repository permissions → <strong>Contents : Read-only</strong>. (Metadata se coche automatiquement.) → <strong>Generate token</strong>.</li>
+  <li><strong>Copiez le jeton</strong> (commence par <code>github_pat_…</code>) : il ne sera plus jamais affiché. Gardez-le dans votre gestionnaire de mots de passe.</li>
+</ol>
+<p class="small">Le jeton sera utilisé une seule fois à l'étape F ; Git le mémorise ensuite sur la VM. Si l'organisation GitHub exige l'approbation des jetons, un administrateur de l'organisation doit l'approuver (Organisation → Settings → Personal access tokens).</p>
+
+<h2>8. Étape F — Récupérer le code et remplir la configuration (15 min)</h2>
+<h3>F1. Télécharger le code</h3>
+<pre>cd /opt
+sudo git clone https://github.com/VOTRE-COMPTE/VOTRE-DEPOT.git monexam
+<span class="c"># Username : votre identifiant GitHub   Password : collez le jeton github_pat_… (clic droit)</span>
+sudo chown -R $USER:$USER /opt/monexam
+cd /opt/monexam
+git config credential.helper store
+git pull   <span class="c"># redemandera une dernière fois le jeton, puis le mémorise</span></pre>
+<h3>F2. Créer le fichier de configuration</h3>
+<pre>cp ecole.env.exemple ecole.env
+openssl rand -hex 32     <span class="c"># génère une clé secrète : copiez le résultat pour JWT_SECRET</span>
+nano ecole.env</pre>
+<p><code>nano</code> est un petit éditeur : déplacez-vous avec les flèches, modifiez, puis <span class="kbd">Ctrl</span>+<span class="kbd">O</span>, <span class="kbd">Entrée</span> pour enregistrer et <span class="kbd">Ctrl</span>+<span class="kbd">X</span> pour quitter. Remplissez chaque ligne <strong>sans guillemets ni espaces autour du =</strong> :</p>
+<table>
+  <tr><th style="width:26%">Ligne</th><th>Que mettre</th></tr>
+  <tr><td><code>API_DOMAIN</code></td><td><code>api-examen.VOTREDOMAINE.qc.ca</code> (exactement le nom créé à l'étape C)</td></tr>
+  <tr><td><code>MONGO_URL</code></td><td>Laissez <code>mongodb://mongo:27017</code> (base de données locale, recommandé)</td></tr>
+  <tr><td><code>DB_NAME</code></td><td><code>monexam</code></td></tr>
+  <tr><td><code>FRONTEND_URL</code></td><td>L'adresse du site sur SiteGround, ex. <code>https://examen.VOTREDOMAINE.qc.ca</code> (sans / à la fin)</td></tr>
+  <tr><td><code>CORS_ORIGINS</code></td><td>La même valeur que FRONTEND_URL</td></tr>
+  <tr><td><code>JWT_SECRET</code></td><td>Le résultat de <code>openssl rand -hex 32</code>. <strong>Important :</strong> si vous préférez que les enseignants restent connectés pendant la bascule, copiez plutôt la valeur <code>JWT_SECRET</code> de Render.</td></tr>
+  <tr><td><code>ADMIN_EMAIL</code> / <code>ADMIN_PASSWORD</code></td><td>Compte admin créé <em>uniquement si la base est vide</em>. Comme vous importerez vos données (étape H), mettez n'importe quoi de solide ; vos comptes actuels seront conservés.</td></tr>
+  <tr><td><code>APP_TIMEZONE</code></td><td><code>America/Toronto</code></td></tr>
+  <tr><td><code>SMTP_HOST … MAIL_FROM_NAME</code></td><td>Copiez exactement les valeurs de Render → Environment (SMTP2GO).</td></tr>
+</table>
+<div class="danger"><b>Ne partagez jamais ce fichier</b> <code>ecole.env</code> contient vos mots de passe. Il reste sur la VM uniquement (il est exclu de GitHub).</div>
+
+<h2>9. Étape G — Démarrer le serveur et vérifier le HTTPS (10 min)</h2>
+<pre>cd /opt/monexam
+docker compose up -d --build
+<span class="c"># première fois : 2 à 5 minutes de téléchargement et de construction</span>
+docker compose ps</pre>
+<p>Vous devez voir trois lignes <code>monexam-mongo-1</code>, <code>monexam-api-1</code>, <code>monexam-caddy-1</code> avec l'état <strong>running</strong> (et <strong>healthy</strong> pour mongo et api après ~1 min).</p>
+<pre>docker compose logs -f api      <span class="c"># doit finir par « Application startup complete » ; Ctrl+C pour sortir</span>
+docker compose logs caddy | tail -20   <span class="c"># doit mentionner « certificate obtained successfully »</span></pre>
+<div class="check"><b>Vérification G (la plus importante)</b>
+<ol style="margin:4px 0 0">
+  <li>Depuis la VM : <code>curl -s http://localhost:80</code> renvoie une redirection, c'est normal.</li>
+  <li>Depuis un <strong>téléphone en données cellulaires (Wi-Fi désactivé)</strong>, ouvrez <code>https://api-examen.VOTREDOMAINE.qc.ca/api/</code> → vous devez voir <code>{"message":"MonExamEnLigne API"}</code> avec le <strong>cadenas</strong>. C'est la preuve que DNS + pare-feu + certificat fonctionnent.</li>
+  <li>Depuis un PC <strong>de l'école</strong>, même adresse. Si ça échoue ici mais marche au point 2, voir Dépannage n° 5 (DNS interne).</li>
+</ol></div>
+
+<h2>10. Étape H — Rapatrier les données depuis Render / Atlas (10 min)</h2>
+<p>Vos comptes, classes, examens et copies sont actuellement dans MongoDB Atlas. On les copie dans la base de la VM. <strong>À faire hors période d'examen</strong>, idéalement le soir même de la bascule.</p>
+<ol class="steps">
+  <li>Dans Render → votre service → <strong>Environment</strong>, copiez la valeur de <code>MONGO_URL</code> (commence par <code>mongodb+srv://</code>) et celle de <code>DB_NAME</code> (ex. <code>monexam_prod</code>).</li>
+  <li>Sur la VM, remplacez les deux valeurs et collez :
+<pre>cd /opt/monexam && mkdir -p sauvegardes
+ATLAS='COLLEZ_ICI_MONGO_URL_DE_RENDER'
+NOM='COLLEZ_ICI_DB_NAME_DE_RENDER'
+docker compose exec -T mongo sh -c "mongodump --uri='$ATLAS' --db='$NOM' --archive --gzip" > sauvegardes/atlas.gz
+ls -lh sauvegardes/atlas.gz      <span class="c"># la taille doit être > 0</span>
+docker compose exec -T mongo sh -c "mongorestore --archive --gzip --nsFrom='$NOM.*' --nsTo='monexam.*' --drop" < sauvegardes/atlas.gz
+docker compose restart api</pre></li>
+  <li>La dernière commande <code>mongorestore</code> se termine par « X document(s) restored successfully, 0 document(s) failed ».</li>
+</ol>
+<div class="tip"><b>Les fichiers PDF/Word des examens</b> sont stockés dans la base (GridFS) : ils font partie de la copie. Rien d'autre à transférer.</div>
+<div class="check"><b>Vérification H</b> Dans un navigateur : <code>https://api-examen.VOTREDOMAINE.qc.ca/api/</code> répond toujours. La vraie vérification se fera à l'étape I en vous connectant avec votre compte habituel.</div>
+
+<h2 class="pb">11. Étape I — Brancher le site SiteGround et l'application Windows (20 min)</h2>
+<h3>I1. Le site web (SiteGround)</h3>
+<ol class="steps">
+  <li>Sur github.com → votre dépôt → onglet <strong>Actions</strong> → dans la liste de gauche <strong>Site web</strong> → bouton <strong>Run workflow</strong> → champ <code>backend_url</code> : <code>https://api-examen.VOTREDOMAINE.qc.ca</code> → <strong>Run workflow</strong>.</li>
+  <li>Attendez le crochet vert (2-3 min), cliquez sur l'exécution, section <strong>Artifacts</strong> : téléchargez l'archive ZIP du site.</li>
+  <li>Décompressez-la et téléversez <strong>tout son contenu</strong> dans <code>public_html</code> (ou le dossier de <code>examen.VOTREDOMAINE.qc.ca</code>) via le FTP SiteGround ou le Gestionnaire de fichiers, en <strong>remplaçant</strong> les anciens fichiers. Le fichier <code>.htaccess</code> fourni doit être présent (routes et cache).</li>
+  <li>Ouvrez <code>https://examen.VOTREDOMAINE.qc.ca</code>, forcez un rechargement (<span class="kbd">Ctrl</span>+<span class="kbd">F5</span>), cliquez <strong>Espace enseignant</strong> et connectez-vous avec votre compte habituel.</li>
+</ol>
+<div class="check"><b>Vérification I1</b> Vous êtes connecté·e et vous voyez vos examens existants. Créez un examen test, ouvrez-le, puis depuis une fenêtre de navigation privée rejoignez-le comme élève, répondez, remettez. Le tout depuis l'école <strong>et</strong> depuis la maison (ou téléphone en cellulaire).</div>
+<h3>I2. L'application Windows (postes élèves)</h3>
+<ol class="steps">
+  <li>Dans le dépôt GitHub, ouvrez <code>desktop/config.json</code> → crayon ✏️ → remplacez l'adresse dans <code>"url"</code> par <code>https://examen.VOTREDOMAINE.qc.ca</code> si elle a changé, et vérifiez qu'aucune adresse Render n'y figure. <strong>Commit changes</strong>.</li>
+  <li>Ouvrez <code>desktop/package.json</code> → augmentez <code>"version"</code> (ex. <code>1.2.8</code> → <code>1.2.9</code>) → <strong>Commit changes</strong>. GitHub produit un nouveau <code>.msi</code> (onglet Actions → Desktop Windows → Artifacts, ou Releases).</li>
+  <li>Déployez le <code>.msi</code> par GPO comme d'habitude. Testez sur un poste : PreCheck, Antidote/WordQ/Lexibar, remise.</li>
+</ol>
+<p class="small">Remarque : l'application Windows charge le site SiteGround, qui lui-même appelle l'API. Si l'adresse du site n'a pas changé, l'étape I2 n'est pas strictement nécessaire, mais une nouvelle version est recommandée pour purger les caches.</p>
+<h3>I3. Éteindre Render</h3>
+<ul>
+  <li>Render → votre service → <strong>Settings → Suspend service</strong> (vous pourrez le réactiver en cas de besoin). Dans le dépôt GitHub, supprimez le fichier <code>.github/workflows/keep-awake.yml</code> (plus utile).</li>
+  <li>Gardez Atlas intact 2 à 4 semaines comme filet de sécurité, puis supprimez le cluster si vous le souhaitez.</li>
+</ul>
+
+<h2>12. Étape J — Sauvegardes automatiques (5 min)</h2>
+<p>Le script <code>sauvegarde.sh</code> crée chaque nuit une archive de la base (<code>sauvegardes/monexam_DATE.gz</code>) et garde 30 jours.</p>
+<pre>cd /opt/monexam
+./sauvegarde.sh                 <span class="c"># test immédiat : affiche « Sauvegarde OK : … »</span>
+crontab -e                      <span class="c"># choisissez « 1 » (nano) si on vous demande l'éditeur</span></pre>
+<p>Tout en bas du fichier, ajoutez cette ligne, puis <span class="kbd">Ctrl</span>+<span class="kbd">O</span>, <span class="kbd">Entrée</span>, <span class="kbd">Ctrl</span>+<span class="kbd">X</span> :</p>
+<pre>30 2 * * * cd /opt/monexam && ./sauvegarde.sh >> sauvegardes/journal.log 2>&1</pre>
+<div class="warn"><b>Une sauvegarde sur la même machine ne suffit pas</b> Faites aussi : (1) une sauvegarde de la <strong>VM entière</strong> par l'hyperviseur chaque semaine, et/ou (2) une copie du dossier <code>/opt/monexam/sauvegardes</code> vers un NAS ou OneDrive. Exemple de copie vers un partage Windows : installez <code>cifs-utils</code> et ajoutez un <code>cp</code> dans la tâche cron, ou utilisez l'agent de sauvegarde de votre hyperviseur.</div>
+<p><strong>Restaurer</strong> (en cas de besoin) : <code>docker compose exec -T mongo mongorestore --archive --gzip --drop &lt; sauvegardes/monexam_2026-10-27_0230.gz</code> puis <code>docker compose restart api</code>.</p>
+
+<h2>13. Au quotidien</h2>
+<table>
+  <tr><th style="width:34%">Besoin</th><th>Quoi faire</th></tr>
+  <tr><td>Mettre à jour après un « Save to GitHub » (nouvelle fonctionnalité)</td><td><code>cd /opt/monexam && ./mise-a-jour.sh</code> — 1 minute d'interruption, <strong>jamais pendant un examen</strong>. Le site SiteGround doit aussi être re-téléversé si l'interface a changé (étape I1).</td></tr>
+  <tr><td>Vérifier que tout va bien</td><td><code>docker compose ps</code> (3 × running) · <code>docker stats</code> (CPU/mémoire, <span class="kbd">Ctrl</span>+<span class="kbd">C</span> pour sortir) · <code>df -h /</code> (espace disque : agir sous 15 % libre)</td></tr>
+  <tr><td>Voir les erreurs de l'API</td><td><code>docker compose logs --since 1h api</code></td></tr>
+  <tr><td>Redémarrer l'application</td><td><code>docker compose restart</code></td></tr>
+  <tr><td>Redémarrer la VM</td><td><code>sudo reboot</code> — tout repart seul en 1 à 2 minutes (Docker démarre au boot).</td></tr>
+  <tr><td>Mises à jour Ubuntu (1 fois/mois, hors examen)</td><td><code>sudo apt update && sudo apt -y upgrade && sudo reboot</code></td></tr>
+  <tr><td>Jeton GitHub expiré (après 1 an)</td><td>Refaire l'étape E, puis sur la VM : <code>git pull</code> et entrer le nouveau jeton.</td></tr>
+  <tr><td>Changer un mot de passe SMTP, le domaine, etc.</td><td><code>nano ecole.env</code> puis <code>docker compose up -d</code></td></tr>
+</table>
+
+<h2 class="pb">14. Dépannage : les 12 problèmes les plus fréquents</h2>
+<dl class="faq">
+  <dt>1. <code>ssh</code> : « Connection refused » ou aucune réponse.</dt><dd>OpenSSH n'a pas été coché à l'installation : dans la console de la VM, <code>sudo apt -y install openssh-server</code>. Vérifiez aussi l'IP (<code>ip a</code>).</dd>
+  <dt>2. <code>docker</code> : « permission denied ».</dt><dd>Vous ne vous êtes pas reconnecté après <code>usermod</code>. Tapez <code>exit</code> puis reconnectez-vous en SSH.</dd>
+  <dt>3. <code>git clone</code> : « Authentication failed ».</dt><dd>Le mot de passe GitHub ne fonctionne pas : il faut coller le <strong>jeton</strong> (étape E). Vérifiez qu'il a accès à ce dépôt et la permission Contents.</dd>
+  <dt>4. <code>docker compose ps</code> : <code>api</code> est en « Restarting ».</dt><dd><code>docker compose logs api</code>. Causes typiques : une ligne de <code>ecole.env</code> manquante (KeyError: 'FRONTEND_URL'…), guillemets en trop, ou <code>MONGO_URL</code> erroné.</dd>
+  <dt>5. Ça marche en cellulaire mais pas depuis l'école.</dt><dd>« NAT hairpin » : dans votre DNS interne (serveur Windows/AD → DNS → zone VOTREDOMAINE.qc.ca ou nouvelle zone <code>api-examen.VOTREDOMAINE.qc.ca</code>), créez un enregistrement A → <code>192.168.10.50</code>. Testez avec <code>ipconfig /flushdns</code> puis <code>nslookup</code>.</dd>
+  <dt>6. Ça marche depuis l'école mais pas en cellulaire.</dt><dd>Redirection de ports 80/443 absente ou vers la mauvaise IP, ou le DNS public n'est pas encore propagé (<code>nslookup api-examen.VOTREDOMAINE.qc.ca 8.8.8.8</code>). Vérifiez aussi que votre FAI ne bloque pas le port 80/443 (certains forfaits résidentiels).</dd>
+  <dt>7. Le navigateur dit « connexion non privée » / pas de certificat.</dt><dd><code>docker compose logs caddy</code>. Caddy a besoin du port <strong>80</strong> ouvert et du DNS public correct pour obtenir le certificat. Corrigez, puis <code>docker compose restart caddy</code>. Let's Encrypt limite les essais : attendez 1 h entre deux tentatives ratées.</dd>
+  <dt>8. Le site s'affiche mais la connexion enseignant tourne en rond / erreur réseau.</dt><dd>Le site appelle encore Render : refaites l'étape I1 avec la bonne <code>backend_url</code> et videz le cache (<span class="kbd">Ctrl</span>+<span class="kbd">F5</span>). Ou <code>FRONTEND_URL</code>/<code>CORS_ORIGINS</code> dans <code>ecole.env</code> ne correspond pas exactement à l'adresse du site (https, sans / final).</dd>
+  <dt>9. Mes examens n'apparaissent pas après la connexion.</dt><dd>L'import (étape H) a été fait dans un autre nom de base : <code>DB_NAME</code> dans <code>ecole.env</code> doit être <code>monexam</code> (le <code>--nsTo</code> de l'import). Relancez l'import si besoin.</dd>
+  <dt>10. Les courriels (bienvenue, alertes d'aide) ne partent pas.</dt><dd>Variables <code>SMTP_*</code> incomplètes dans <code>ecole.env</code>, ou le port 2525/587 sortant bloqué par le pare-feu de l'école : autorisez-le vers <code>mail.smtp2go.com</code>.</dd>
+  <dt>11. Le disque se remplit.</dt><dd><code>df -h</code>. Nettoyez les anciennes images Docker : <code>docker system prune -af</code>. Les sauvegardes de plus de 30 jours sont supprimées automatiquement ; déplacez-les ailleurs si besoin.</dd>
+  <dt>12. Panne de courant / VM qui ne redémarre pas seule.</dt><dd>Dans l'hyperviseur, activez le démarrage automatique de la VM. Dans la VM, <code>sudo systemctl is-enabled docker</code> doit répondre « enabled ». Les conteneurs ont <code>restart: unless-stopped</code>.</dd>
+</dl>
+
+<h2>15. Annexes</h2>
+<h3>A. Garder MongoDB Atlas (sans base locale)</h3>
+<p>Dans <code>ecole.env</code> : <code>MONGO_URL=</code> la chaîne Atlas de Render et <code>DB_NAME=</code> la même valeur que Render ; sautez l'étape H. Le conteneur <code>mongo</code> tourne alors inutilement (sans conséquence). Limites gratuites Atlas : 512 Mo et 500 connexions ; pour 250-500 élèves qui sauvegardent toutes les 5 secondes, la base <strong>locale</strong> reste le choix recommandé (plus rapide, sans plafond, sauvegardée par vous).</p>
+<h3>B. Cloudflare Tunnel (si aucun port ne peut être ouvert)</h3>
+<ol class="steps">
+  <li>Créez un compte gratuit sur cloudflare.com, <strong>Add a domain</strong> → votre domaine → forfait Free. Cloudflare vous donne 2 serveurs de noms : changez les « nameservers » chez votre registraire. Le site SiteGround et vos courriels continuent de fonctionner (Cloudflare recopie vos enregistrements ; vérifiez-les).</li>
+  <li>Cloudflare → <strong>Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared</strong>, nom <code>monexam</code>. Choisissez <strong>Docker</strong> et copiez le long jeton après <code>--token</code>.</li>
+  <li>Sur la VM, <code>nano docker-compose.yml</code> et ajoutez sous <code>services:</code> (respectez les 2 espaces d'indentation) :
+<pre>  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token COLLEZ_LE_JETON_ICI
+    depends_on: [api]</pre></li>
+  <li>Dans Cloudflare, onglet <strong>Public Hostname → Add</strong> : Subdomain <code>api-examen</code>, Domain votre domaine, Service <strong>HTTP</strong> → <code>api:8001</code>. Save.</li>
+  <li><code>docker compose up -d</code>. Testez <code>https://api-examen.VOTREDOMAINE.qc.ca/api/</code>. Le conteneur <code>caddy</code> et la redirection de ports deviennent inutiles (vous pouvez retirer le bloc <code>caddy</code> du fichier).</li>
+</ol>
+<h3>C. Aide-mémoire des commandes</h3>
+<table>
+  <tr><th style="width:40%">Commande</th><th>Effet</th></tr>
+  <tr><td><code>ssh adminexam@192.168.10.50</code></td><td>Se connecter à la VM</td></tr>
+  <tr><td><code>cd /opt/monexam</code></td><td>Aller dans le dossier du projet (à faire avant les commandes docker)</td></tr>
+  <tr><td><code>docker compose ps</code></td><td>État des 3 services</td></tr>
+  <tr><td><code>docker compose up -d</code></td><td>Démarrer (ou appliquer un changement de <code>ecole.env</code>)</td></tr>
+  <tr><td><code>docker compose restart</code></td><td>Redémarrer l'application</td></tr>
+  <tr><td><code>docker compose logs -f api</code></td><td>Journal en direct (Ctrl+C pour sortir)</td></tr>
+  <tr><td><code>./mise-a-jour.sh</code></td><td>Mettre à jour le code depuis GitHub</td></tr>
+  <tr><td><code>./sauvegarde.sh</code></td><td>Sauvegarde immédiate de la base</td></tr>
+  <tr><td><code>nano ecole.env</code></td><td>Modifier la configuration (Ctrl+O, Entrée, Ctrl+X)</td></tr>
+  <tr><td><code>sudo reboot</code></td><td>Redémarrer la VM</td></tr>
+  <tr><td><code>exit</code></td><td>Quitter la session SSH</td></tr>
+</table>
+<p class="small" style="margin-top:28px">MonExamEnLigne — Collège Champagneur. Guide d'installation serveur, juin 2026. En cas de blocage à une étape, notez le numéro de l'étape et le message exact affiché : c'est tout ce qu'il faut pour vous dépanner rapidement.</p>
+
+</body>
+</html>
