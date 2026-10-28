@@ -1,0 +1,20 @@
+# HTTPS automatique (Let's Encrypt) pour l'API. API_DOMAIN vient de ecole.env.
+{$API_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 60MB
+	}
+	reverse_proxy api:8001 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	log {
+		output file /data/acces.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

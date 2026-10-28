@@ -171,3 +171,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - Cause : ping 24/7 (UptimeRobot 5 min) = ~744 h/mois → suspension. Solution documentée (DEPLOIEMENT.md 4.1) : éveil uniquement lun-ven 7 h-17 h (≈240 h) via fenêtres de maintenance UptimeRobot et/ou `keep-awake.yml` (cron `*/10 11-21 * * 1-5`).
 - Frontend : `ServerWarmup` (App.js) affiche une bannière « Le serveur démarre… » si `/api/` met > 2,5 s à répondre (réveil Render), puis « Serveur prêt ».
 - keep-awake.yml final : `*/5 13-22 * * 1-5` + `*/5 12-22 * * 6` (lun-ven 9h-17h30, sam 8h-17h Est, ≈250 h/mois). UptimeRobot abandonné (fenêtres de maintenance payantes). Reset Render : 1er du mois (UTC).
+
+## 2026-06 — Hébergement à l'école (remplacement de Render)
+- Fichiers : `backend/Dockerfile` (uvicorn 4 workers, proxy headers), `backend/.dockerignore`, `docker-compose.yml` (mongo:7 + api + caddy HTTPS auto), `Caddyfile`, `ecole.env.exemple`, `sauvegarde.sh` (mongodump quotidien, 30 j), `mise-a-jour.sh` (git pull + rebuild). `ecole.env` et `sauvegardes/` ignorés par git.
+- Guide `DEPLOIEMENT-ECOLE.md` : VM Ubuntu 24.04 recommandée, DNS A, ports 80/443, Docker, config, migration Atlas → local (mongodump/restore), rebranchement SiteGround (workflow site-web input backend_url) + desktop config.json, exploitation, plan B ; annexes Atlas, Cloudflare Tunnel, Windows Server.
+- Vérifié : import de server.py avec requirements-prod dans un venv propre ; compose YAML valide. Build Docker non testable ici (pas de Docker dans le pod).
