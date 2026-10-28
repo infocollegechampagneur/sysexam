@@ -95,7 +95,9 @@ Enregistrez (Ctrl+O, Entrée, Ctrl+X).
 
 ```bash
 cd /opt/monexam
-docker compose up -d --build
+# ports 80/443 libres :            docker compose --profile https up -d --build
+# ports 80/443 déjà utilisés :     docker compose --profile tunnel up -d --build   (jeton CF_TUNNEL_TOKEN dans ecole.env, voir annexe B)
+docker compose --profile https up -d --build
 docker compose ps          # les 3 services doivent être « running / healthy »
 docker compose logs -f api # Ctrl+C pour quitter
 ```

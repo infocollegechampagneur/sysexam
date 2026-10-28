@@ -33,6 +33,7 @@ services:
 
   caddy:
     image: caddy:2
+    profiles: ["https"]
     restart: unless-stopped
     ports:
       - "80:80"
@@ -43,6 +44,18 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - api
+
+  # Mode « tunnel » (ports 80/443 indisponibles) : docker compose --profile tunnel up -d
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    env_file: ./ecole.env
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
     depends_on:
       - api
 

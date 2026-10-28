@@ -50,7 +50,7 @@
   <div class="box">
     <p style="margin:0"><strong>Résultat à la fin de ce guide :</strong></p>
     <ul style="margin:6px 0 0">
-      <li>le serveur d'examens tourne sur une machine virtuelle de l'école, allumée en permanence, <strong>sans mise en veille ni quota</strong> ;</li>
+      <li>le serveur d'examens tourne sur une machine virtuelle de l'école, allumée en permanence, <strong>sans mise en veille ni quota</strong> — même si vos ports 80/443 sont déjà utilisés (option Cloudflare Tunnel) ;</li>
       <li>il est joignable en <strong>https://api-examen.VOTREDOMAINE.qc.ca</strong> depuis l'école et de la maison ;</li>
       <li>vos données actuelles (comptes, examens, classes, copies) sont rapatriées ;</li>
       <li>le site SiteGround et l'application Windows pointent vers ce serveur ;</li>
@@ -67,7 +67,7 @@
     <li>Liste de préparation</li>
     <li>Étape A — Créer la machine virtuelle et installer Ubuntu</li>
     <li>Étape B — Se connecter à la VM depuis votre PC (SSH)</li>
-    <li>Étape C — Adresse Internet : DNS et pare-feu</li>
+    <li>Étape C — Adresse Internet : ports 80/443 <em>ou</em> Cloudflare Tunnel (si les ports sont pris)</li>
     <li>Étape D — Installer Docker</li>
     <li>Étape E — Autoriser la VM à lire votre dépôt GitHub</li>
     <li>Étape F — Récupérer le code et remplir la configuration</li>
@@ -138,23 +138,44 @@
 </ol>
 <div class="check"><b>Vérification B</b> L'invite devient <code>adminexam@monexam:~$</code>. Vous êtes « dans » la VM. Pour coller une commande : clic droit dans le Terminal. Pour quitter : <code>exit</code>.</div>
 
-<h2>5. Étape C — Adresse Internet : DNS et pare-feu (10 min + attente)</h2>
-<h3>C1. DNS — créer le sous-domaine</h3>
-<p>Chez votre registraire (là où est géré <code>VOTREDOMAINE.qc.ca</code>), section <strong>DNS / Zone DNS / Gestion des enregistrements</strong>, ajoutez :</p>
+<h2>5. Étape C — Adresse Internet : choisir votre mode d'accès (10 min + attente)</h2>
+<p>Le serveur doit être joignable en HTTPS. Deux façons, <strong>choisissez-en une</strong> selon votre réseau :</p>
+<table>
+  <tr><th style="width:22%"></th><th>Option 1 — Ports 80/443 redirigés</th><th>Option 2 — Cloudflare Tunnel (recommandé si 80/443 sont déjà utilisés)</th></tr>
+  <tr><td>Quand</td><td>Les ports 80 et 443 de l'IP publique de l'école sont libres.</td><td>Les ports 80 et 443 sont <strong>déjà pris</strong> par autre chose, ou la TI refuse d'ouvrir des ports.</td></tr>
+  <tr><td>Comment</td><td>Caddy obtient le certificat Let's Encrypt et reçoit le trafic.</td><td>La VM ouvre une connexion <em>sortante</em> vers Cloudflare, qui publie l'adresse <code>https://api-examen…</code> et gère le certificat. <strong>Aucun port entrant</strong>.</td></tr>
+  <tr><td>Condition</td><td>Enregistrement DNS A chez votre registraire.</td><td>Le domaine doit utiliser les serveurs DNS de Cloudflare (gratuit, 10 min ; le site SiteGround et les courriels continuent de fonctionner).</td></tr>
+  <tr><td>Profil Docker</td><td><code>--profile https</code></td><td><code>--profile tunnel</code></td></tr>
+</table>
+<div class="warn"><b>Pourquoi ne pas simplement utiliser d'autres ports (ex. 8443) ?</b> Parce que Let's Encrypt vérifie le domaine <strong>uniquement</strong> via les ports 80 ou 443. Sans l'un des deux, aucun certificat gratuit n'est possible par cette méthode ; le tunnel Cloudflare règle le problème sans toucher aux ports. (Il existe une 3e voie, « certificat par DNS » avec un port 8443, plus technique : demandez-la si vous ne pouvez vraiment pas utiliser Cloudflare.)</div>
+
+<h3>C — Option 1 : DNS A + redirection des ports 80/443</h3>
+<p><strong>C1. DNS.</strong> Chez votre registraire, section <strong>DNS / Zone DNS</strong>, ajoutez :</p>
 <table>
   <tr><th>Type</th><th>Nom (hôte)</th><th>Valeur (pointe vers)</th><th>TTL</th></tr>
-  <tr><td><strong>A</strong></td><td><code>api-examen</code></td><td><em>IP publique de l'école</em> (ex. 204.19.xx.xx)</td><td>600 (ou « 10 min »)</td></tr>
+  <tr><td><strong>A</strong></td><td><code>api-examen</code></td><td><em>IP publique de l'école</em> (ex. 204.19.xx.xx)</td><td>600</td></tr>
 </table>
-<p class="small">Si l'interface demande le nom complet, écrivez <code>api-examen.VOTREDOMAINE.qc.ca</code>. Ne touchez à rien d'autre (le site <code>examen.…</code> et le courriel restent tels quels).</p>
-<h3>C2. Pare-feu — rediriger 2 ports vers la VM</h3>
-<p>Dans le pare-feu/routeur de l'école, créez deux règles de <strong>redirection de port</strong> (« Port forwarding », « NAT », « Virtual IP », « DNAT » selon la marque) :</p>
+<p><strong>C2. Pare-feu.</strong> Créez deux règles de redirection de port (« Port forwarding », « NAT », « Virtual IP ») :</p>
 <table>
-  <tr><th>Protocole</th><th>Port externe (WAN)</th><th>Vers l'IP interne</th><th>Port interne</th><th>Pourquoi</th></tr>
-  <tr><td>TCP</td><td>80</td><td>192.168.10.50</td><td>80</td><td>Obtention/renouvellement automatique du certificat HTTPS</td></tr>
-  <tr><td>TCP</td><td>443</td><td>192.168.10.50</td><td>443</td><td>Le trafic HTTPS de l'application</td></tr>
+  <tr><th>Protocole</th><th>Port externe</th><th>Vers l'IP interne</th><th>Port interne</th><th>Pourquoi</th></tr>
+  <tr><td>TCP</td><td>80</td><td>192.168.10.50</td><td>80</td><td>Certificat HTTPS (obtention et renouvellement)</td></tr>
+  <tr><td>TCP</td><td>443</td><td>192.168.10.50</td><td>443</td><td>Trafic HTTPS de l'application</td></tr>
 </table>
-<div class="warn"><b>Si la TI refuse d'ouvrir des ports</b> Passez par l'annexe B (Cloudflare Tunnel, gratuit, aucun port entrant). Le reste du guide reste identique.</div>
-<div class="check"><b>Vérification C (après 10 à 60 min de propagation)</b> Sur votre PC : <code>nslookup api-examen.VOTREDOMAINE.qc.ca</code> → la réponse doit contenir l'IP publique de l'école. Le test du pare-feu se fera à l'étape G.</div>
+<div class="check"><b>Vérification C (option 1, après 10 à 60 min)</b> Sur votre PC : <code>nslookup api-examen.VOTREDOMAINE.qc.ca</code> → l'IP publique de l'école. Le pare-feu sera testé à l'étape G.</div>
+
+<h3>C — Option 2 : Cloudflare Tunnel, pas à pas</h3>
+<ol class="steps">
+  <li><strong>Compte Cloudflare.</strong> Sur https://dash.cloudflare.com, créez un compte gratuit (courriel du service informatique).</li>
+  <li><strong>Ajouter le domaine.</strong> Bouton <strong>Add a domain</strong> → tapez <code>VOTREDOMAINE.qc.ca</code> → forfait <strong>Free</strong> → <strong>Continue</strong>. Cloudflare recopie vos enregistrements DNS actuels : vérifiez que la liste contient votre site (<code>examen</code>, <code>www</code>, <code>@</code>) et vos enregistrements courriel (<code>MX</code>, <code>TXT</code>). S'il en manque un, ajoutez-le tel qu'il est chez votre registraire. <strong>Continue</strong>.</li>
+  <li><strong>Nuage gris.</strong> Dans la liste DNS de Cloudflare, mettez les enregistrements du site SiteGround en <strong>DNS only</strong> (nuage <strong>gris</strong>) pour ne rien changer à son fonctionnement.</li>
+  <li><strong>Changer les serveurs de noms.</strong> Cloudflare affiche 2 noms du type <code>ada.ns.cloudflare.com</code>. Chez votre registraire, section <strong>Nameservers / Serveurs de noms</strong> → <strong>Personnalisés</strong> → remplacez les deux → Enregistrer. Propagation : 10 min à 24 h ; Cloudflare envoie le courriel « Your domain is now active ».</li>
+  <li><strong>Créer le tunnel.</strong> Menu de gauche <strong>Zero Trust</strong> (première fois : nom d'équipe quelconque, forfait <strong>Free</strong>) → <strong>Networks → Tunnels → Create a tunnel → Cloudflared</strong> → nom <code>monexam</code> → <strong>Save tunnel</strong>.</li>
+  <li><strong>Copier le jeton.</strong> Écran « Install and run a connector » → <strong>Docker</strong>. La commande affichée contient <code>--token eyJh…</code> : copiez <strong>uniquement</strong> la longue valeur après <code>--token</code>. <strong>Next</strong>.</li>
+  <li><strong>Publier l'adresse.</strong> Onglet <strong>Public Hostname</strong> : Subdomain <code>api-examen</code> · Domain <code>VOTREDOMAINE.qc.ca</code> · Path vide · Service : Type <strong>HTTP</strong>, URL <code>api:8001</code> → <strong>Save</strong>. Cloudflare crée lui-même l'enregistrement DNS <code>api-examen</code>.</li>
+  <li><strong>Le jeton ira dans la configuration de la VM</strong> à l'étape F : ligne <code>CF_TUNNEL_TOKEN=eyJh…</code> de <code>ecole.env</code>.</li>
+</ol>
+<div class="tip"><b>Taille des fichiers</b> Le forfait gratuit Cloudflare accepte des envois jusqu'à 100 Mo : largement assez pour les documents d'examen (20 Mo max).</div>
+<div class="check"><b>Vérification C (option 2)</b> Dans Cloudflare → Zero Trust → Tunnels, le tunnel <code>monexam</code> est <strong>INACTIVE</strong> pour l'instant (normal : la VM n'est pas démarrée). Il passera à <strong>HEALTHY</strong> à l'étape G.</div>
 
 <h2>6. Étape D — Installer Docker (10 min)</h2>
 <p>Dans la fenêtre SSH, collez ces commandes <strong>une à la fois</strong> (acceptez avec <span class="kbd">Entrée</span> ou <code>o</code>/<code>y</code> si on vous le demande) :</p>
@@ -170,8 +191,8 @@ sudo systemctl enable docker
 <span class="c"># 5. Fuseau horaire et pare-feu de la VM elle-même</span>
 sudo timedatectl set-timezone America/Toronto
 sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+sudo ufw allow 80/tcp      <span class="c"># option 1 seulement (sans danger avec le tunnel)</span>
+sudo ufw allow 443/tcp     <span class="c"># idem</span>
 sudo ufw --force enable</pre>
 <p>Puis tapez <code>exit</code>, et reconnectez-vous (<code>ssh adminexam@192.168.10.50</code>) pour que le droit Docker soit pris en compte.</p>
 <div class="check"><b>Vérification D</b> <code>docker compose version</code> affiche « Docker Compose version v2.x ». <code>docker run --rm hello-world</code> affiche « Hello from Docker! ».</div>
@@ -203,6 +224,7 @@ nano ecole.env</pre>
 <table>
   <tr><th style="width:26%">Ligne</th><th>Que mettre</th></tr>
   <tr><td><code>API_DOMAIN</code></td><td><code>api-examen.VOTREDOMAINE.qc.ca</code> (exactement le nom créé à l'étape C)</td></tr>
+  <tr><td><code>CF_TUNNEL_TOKEN</code></td><td><strong>Option 2 seulement</strong> : collez le jeton Cloudflare (<code>eyJh…</code>) copié à l'étape C. <strong>Option 1</strong> : laissez vide.</td></tr>
   <tr><td><code>MONGO_URL</code></td><td>Laissez <code>mongodb://mongo:27017</code> (base de données locale, recommandé)</td></tr>
   <tr><td><code>DB_NAME</code></td><td><code>monexam</code></td></tr>
   <tr><td><code>FRONTEND_URL</code></td><td>L'adresse du site sur SiteGround, ex. <code>https://examen.VOTREDOMAINE.qc.ca</code> (sans / à la fin)</td></tr>
@@ -215,18 +237,25 @@ nano ecole.env</pre>
 <div class="danger"><b>Ne partagez jamais ce fichier</b> <code>ecole.env</code> contient vos mots de passe. Il reste sur la VM uniquement (il est exclu de GitHub).</div>
 
 <h2>9. Étape G — Démarrer le serveur et vérifier le HTTPS (10 min)</h2>
+<p>La commande dépend de l'option choisie à l'étape C. <strong>Retenez-la : c'est elle que vous utiliserez toujours pour démarrer.</strong></p>
 <pre>cd /opt/monexam
-docker compose up -d --build
+<span class="c"># Option 1 (ports 80/443) :</span>
+docker compose --profile https up -d --build
+<span class="c"># Option 2 (Cloudflare Tunnel) :</span>
+docker compose --profile tunnel up -d --build
 <span class="c"># première fois : 2 à 5 minutes de téléchargement et de construction</span>
 docker compose ps</pre>
-<p>Vous devez voir trois lignes <code>monexam-mongo-1</code>, <code>monexam-api-1</code>, <code>monexam-caddy-1</code> avec l'état <strong>running</strong> (et <strong>healthy</strong> pour mongo et api après ~1 min).</p>
+<p>Vous devez voir <code>monexam-mongo-1</code>, <code>monexam-api-1</code> et, selon l'option, <code>monexam-caddy-1</code> ou <code>monexam-tunnel-1</code>, tous à l'état <strong>running</strong> (et <strong>healthy</strong> pour mongo et api après ~1 min).</p>
 <pre>docker compose logs -f api      <span class="c"># doit finir par « Application startup complete » ; Ctrl+C pour sortir</span>
-docker compose logs caddy | tail -20   <span class="c"># doit mentionner « certificate obtained successfully »</span></pre>
+<span class="c"># Option 1 :</span>
+docker compose logs caddy | tail -20   <span class="c"># doit mentionner « certificate obtained successfully »</span>
+<span class="c"># Option 2 :</span>
+docker compose logs tunnel | tail -20  <span class="c"># doit mentionner « Registered tunnel connection » ; dans Cloudflare le tunnel passe à HEALTHY</span></pre>
 <div class="check"><b>Vérification G (la plus importante)</b>
 <ol style="margin:4px 0 0">
-  <li>Depuis la VM : <code>curl -s http://localhost:80</code> renvoie une redirection, c'est normal.</li>
+  <li>Depuis la VM : <code>docker compose logs api | tail -3</code> montre « Application startup complete ».</li>
   <li>Depuis un <strong>téléphone en données cellulaires (Wi-Fi désactivé)</strong>, ouvrez <code>https://api-examen.VOTREDOMAINE.qc.ca/api/</code> → vous devez voir <code>{"message":"MonExamEnLigne API"}</code> avec le <strong>cadenas</strong>. C'est la preuve que DNS + pare-feu + certificat fonctionnent.</li>
-  <li>Depuis un PC <strong>de l'école</strong>, même adresse. Si ça échoue ici mais marche au point 2, voir Dépannage n° 5 (DNS interne).</li>
+  <li>Depuis un PC <strong>de l'école</strong>, même adresse. Si ça échoue ici mais marche au point 2 (option 1 seulement), voir Dépannage n° 5. Avec le tunnel, ce problème n'existe pas.</li>
 </ol></div>
 
 <h2>10. Étape H — Rapatrier les données depuis Render / Atlas (10 min)</h2>
@@ -288,7 +317,7 @@ crontab -e                      <span class="c"># choisissez « 1 » (nano) si o
   <tr><td>Redémarrer la VM</td><td><code>sudo reboot</code> — tout repart seul en 1 à 2 minutes (Docker démarre au boot).</td></tr>
   <tr><td>Mises à jour Ubuntu (1 fois/mois, hors examen)</td><td><code>sudo apt update && sudo apt -y upgrade && sudo reboot</code></td></tr>
   <tr><td>Jeton GitHub expiré (après 1 an)</td><td>Refaire l'étape E, puis sur la VM : <code>git pull</code> et entrer le nouveau jeton.</td></tr>
-  <tr><td>Changer un mot de passe SMTP, le domaine, etc.</td><td><code>nano ecole.env</code> puis <code>docker compose up -d</code></td></tr>
+  <tr><td>Changer un mot de passe SMTP, le domaine, etc.</td><td><code>nano ecole.env</code> puis <code>docker compose --profile https up -d</code> (ou <code>--profile tunnel</code>)</td></tr>
 </table>
 
 <h2 class="pb">14. Dépannage : les 12 problèmes les plus fréquents</h2>
@@ -304,32 +333,22 @@ crontab -e                      <span class="c"># choisissez « 1 » (nano) si o
   <dt>9. Mes examens n'apparaissent pas après la connexion.</dt><dd>L'import (étape H) a été fait dans un autre nom de base : <code>DB_NAME</code> dans <code>ecole.env</code> doit être <code>monexam</code> (le <code>--nsTo</code> de l'import). Relancez l'import si besoin.</dd>
   <dt>10. Les courriels (bienvenue, alertes d'aide) ne partent pas.</dt><dd>Variables <code>SMTP_*</code> incomplètes dans <code>ecole.env</code>, ou le port 2525/587 sortant bloqué par le pare-feu de l'école : autorisez-le vers <code>mail.smtp2go.com</code>.</dd>
   <dt>11. Le disque se remplit.</dt><dd><code>df -h</code>. Nettoyez les anciennes images Docker : <code>docker system prune -af</code>. Les sauvegardes de plus de 30 jours sont supprimées automatiquement ; déplacez-les ailleurs si besoin.</dd>
+  <dt>12b. Le tunnel reste INACTIVE / « Unauthorized ».</dt><dd>Jeton incomplet ou mal collé dans <code>CF_TUNNEL_TOKEN</code> (il commence par <code>eyJ</code>, sans espace ni guillemets). Corrigez puis <code>docker compose --profile tunnel up -d</code>. Vérifiez aussi que le domaine est <strong>Active</strong> dans Cloudflare.</dd>
   <dt>12. Panne de courant / VM qui ne redémarre pas seule.</dt><dd>Dans l'hyperviseur, activez le démarrage automatique de la VM. Dans la VM, <code>sudo systemctl is-enabled docker</code> doit répondre « enabled ». Les conteneurs ont <code>restart: unless-stopped</code>.</dd>
 </dl>
 
 <h2>15. Annexes</h2>
 <h3>A. Garder MongoDB Atlas (sans base locale)</h3>
 <p>Dans <code>ecole.env</code> : <code>MONGO_URL=</code> la chaîne Atlas de Render et <code>DB_NAME=</code> la même valeur que Render ; sautez l'étape H. Le conteneur <code>mongo</code> tourne alors inutilement (sans conséquence). Limites gratuites Atlas : 512 Mo et 500 connexions ; pour 250-500 élèves qui sauvegardent toutes les 5 secondes, la base <strong>locale</strong> reste le choix recommandé (plus rapide, sans plafond, sauvegardée par vous).</p>
-<h3>B. Cloudflare Tunnel (si aucun port ne peut être ouvert)</h3>
-<ol class="steps">
-  <li>Créez un compte gratuit sur cloudflare.com, <strong>Add a domain</strong> → votre domaine → forfait Free. Cloudflare vous donne 2 serveurs de noms : changez les « nameservers » chez votre registraire. Le site SiteGround et vos courriels continuent de fonctionner (Cloudflare recopie vos enregistrements ; vérifiez-les).</li>
-  <li>Cloudflare → <strong>Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared</strong>, nom <code>monexam</code>. Choisissez <strong>Docker</strong> et copiez le long jeton après <code>--token</code>.</li>
-  <li>Sur la VM, <code>nano docker-compose.yml</code> et ajoutez sous <code>services:</code> (respectez les 2 espaces d'indentation) :
-<pre>  tunnel:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token COLLEZ_LE_JETON_ICI
-    depends_on: [api]</pre></li>
-  <li>Dans Cloudflare, onglet <strong>Public Hostname → Add</strong> : Subdomain <code>api-examen</code>, Domain votre domaine, Service <strong>HTTP</strong> → <code>api:8001</code>. Save.</li>
-  <li><code>docker compose up -d</code>. Testez <code>https://api-examen.VOTREDOMAINE.qc.ca/api/</code>. Le conteneur <code>caddy</code> et la redirection de ports deviennent inutiles (vous pouvez retirer le bloc <code>caddy</code> du fichier).</li>
-</ol>
+<h3>B. Cloudflare Tunnel</h3>
+<p>Voir l'étape C, option 2 : le service <code>tunnel</code> est déjà prévu dans <code>docker-compose.yml</code> (profil <code>tunnel</code>) ; il suffit de mettre le jeton dans <code>ecole.env</code> et de démarrer avec <code>--profile tunnel</code>.</p>
 <h3>C. Aide-mémoire des commandes</h3>
 <table>
   <tr><th style="width:40%">Commande</th><th>Effet</th></tr>
   <tr><td><code>ssh adminexam@192.168.10.50</code></td><td>Se connecter à la VM</td></tr>
   <tr><td><code>cd /opt/monexam</code></td><td>Aller dans le dossier du projet (à faire avant les commandes docker)</td></tr>
   <tr><td><code>docker compose ps</code></td><td>État des 3 services</td></tr>
-  <tr><td><code>docker compose up -d</code></td><td>Démarrer (ou appliquer un changement de <code>ecole.env</code>)</td></tr>
+  <tr><td><code>docker compose --profile https up -d</code><br><code>docker compose --profile tunnel up -d</code></td><td>Démarrer (ou appliquer un changement de <code>ecole.env</code>) — option 1 / option 2</td></tr>
   <tr><td><code>docker compose restart</code></td><td>Redémarrer l'application</td></tr>
   <tr><td><code>docker compose logs -f api</code></td><td>Journal en direct (Ctrl+C pour sortir)</td></tr>
   <tr><td><code>./mise-a-jour.sh</code></td><td>Mettre à jour le code depuis GitHub</td></tr>
