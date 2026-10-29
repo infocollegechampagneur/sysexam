@@ -170,7 +170,7 @@
   <li><strong>Créer le tunnel.</strong> Menu de gauche <strong>Zero Trust</strong> (première fois : nom d'équipe quelconque, forfait <strong>Free</strong>) → <strong>Networks → Tunnels → Create a tunnel → Cloudflared</strong> → nom <code>monexam</code> → <strong>Save tunnel</strong>.</li>
   <li><strong>Copier le jeton.</strong> Écran « Install and run » → <strong>Docker</strong>. Copiez la commande « Run tunnel with Docker » dans le Bloc-notes : elle contient <code>--token eyJh…</code>. Le jeton est <strong>uniquement</strong> la longue valeur (150–250 caractères, commence par <code>eyJ</code>) après <code>--token</code>. ⚠ Le <em>Tunnel ID</em> (<code>0fdc…-…</code>) n'est <strong>pas</strong> le jeton. Inutile d'exécuter la commande <code>docker run</code> : Docker Compose s'en charge à l'étape G. <strong>Continue</strong>.</li>
   <li><strong>Publier l'adresse.</strong> Après <strong>Continue</strong>, écran des routes (ou plus tard : Networks → Tunnels → <code>monexam</code> → onglet <strong>Routes</strong>) → <strong>Add route → Published application</strong> (anciennement « Public Hostname ») : Subdomain <code>api-examen</code> · Domain <code>VOTREDOMAINE.qc.ca</code> · Path vide · <strong>Service URL</strong> <code>http://api:8001</code> (avec le <code>http://</code>) · réglages additionnels par défaut → <strong>Add route</strong>. Cloudflare crée lui-même l'enregistrement DNS <code>api-examen</code> (nuage orange : c'est la seule ligne qui doit l'être). Si Cloudflare dit que <code>api-examen</code> existe déjà : DNS → Records → supprimez l'ancienne ligne <code>api-examen</code> (vers Render), puis refaites Save.</li>
-  <li><strong>Le jeton ira dans la configuration de la VM</strong> à l'étape F : ligne <code>CF_TUNNEL_TOKEN=eyJh…</code> de <code>ecole.env</code>.</li>
+  <li><strong>Le jeton ira dans la configuration de la VM</strong> à l'étape F : ligne <code>TUNNEL_TOKEN=eyJh…</code> de <code>ecole.env</code>.</li>
 </ol>
 <div class="tip"><b>Taille des fichiers</b> Le forfait gratuit Cloudflare accepte des envois jusqu'à 100 Mo : largement assez pour les documents d'examen (20 Mo max).</div>
 
@@ -274,7 +274,7 @@ nano ecole.env</pre>
 <table>
   <tr><th style="width:26%">Ligne</th><th>Que mettre</th></tr>
   <tr><td><code>API_DOMAIN</code></td><td><code>api-examen.VOTREDOMAINE.qc.ca</code> (exactement le nom créé à l'étape C)</td></tr>
-  <tr><td><code>CF_TUNNEL_TOKEN</code></td><td><strong>Option 2 seulement</strong> : collez le jeton Cloudflare (<code>eyJh…</code>) copié à l'étape C. <strong>Option 1</strong> : laissez vide.</td></tr>
+  <tr><td><code>TUNNEL_TOKEN</code></td><td><strong>Option 2 seulement</strong> : collez le jeton Cloudflare (<code>eyJh…</code>) copié à l'étape C. <strong>Option 1</strong> : laissez vide.</td></tr>
   <tr><td><code>MONGO_URL</code></td><td>Laissez <code>mongodb://mongo:27017</code> (base de données locale, recommandé)</td></tr>
   <tr><td><code>DB_NAME</code></td><td><code>monexam</code></td></tr>
   <tr><td><code>FRONTEND_URL</code></td><td>L'adresse du site sur SiteGround, ex. <code>https://examen.VOTREDOMAINE.qc.ca</code> (sans / à la fin)</td></tr>
@@ -384,7 +384,7 @@ crontab -e                      <span class="c"># choisissez « 1 » (nano) si o
   <dt>10. Les courriels (bienvenue, alertes d'aide) ne partent pas.</dt><dd>Variables <code>SMTP_*</code> incomplètes dans <code>ecole.env</code>, ou le port 2525/587 sortant bloqué par le pare-feu de l'école : autorisez-le vers <code>mail.smtp2go.com</code>.</dd>
   <dt>11. Le disque se remplit.</dt><dd><code>df -h</code>. Nettoyez les anciennes images Docker : <code>docker system prune -af</code>. Les sauvegardes de plus de 30 jours sont supprimées automatiquement ; déplacez-les ailleurs si besoin.</dd>
   <dt>12a. Après le passage à Cloudflare, les courriels n'arrivent plus / le site ne s'affiche plus.</dt><dd>Une ligne DNS manque ou est en nuage orange. Comparez Cloudflare → DNS avec vos captures SiteGround (C2-1) : ajoutez la ligne manquante ou passez-la en gris. Si vous ne trouvez pas en 15 min : remettez les anciens serveurs de noms SiteGround (retour arrière C2), corrigez à tête reposée, rebasculez.</dd>
-  <dt>12b. Le tunnel reste INACTIVE / « Unauthorized ».</dt><dd>Jeton incomplet ou mal collé dans <code>CF_TUNNEL_TOKEN</code> (il commence par <code>eyJ</code>, sans espace ni guillemets). Corrigez puis <code>docker compose --profile tunnel up -d</code>. Vérifiez aussi que le domaine est <strong>Active</strong> dans Cloudflare.</dd>
+  <dt>12b. Le tunnel reste INACTIVE / « Unauthorized ».</dt><dd>Jeton incomplet ou mal collé dans <code>TUNNEL_TOKEN</code> (il commence par <code>eyJ</code>, sans espace ni guillemets). Corrigez puis <code>docker compose --profile tunnel up -d</code>. Vérifiez aussi que le domaine est <strong>Active</strong> dans Cloudflare.</dd>
   <dt>12. Panne de courant / VM qui ne redémarre pas seule.</dt><dd>Dans l'hyperviseur, activez le démarrage automatique de la VM. Dans la VM, <code>sudo systemctl is-enabled docker</code> doit répondre « enabled ». Les conteneurs ont <code>restart: unless-stopped</code>.</dd>
 </dl>
 

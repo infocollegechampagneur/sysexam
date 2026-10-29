@@ -54,8 +54,6 @@ services:
     restart: unless-stopped
     env_file: ./ecole.env
     command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN}
     depends_on:
       - api
 
