@@ -63,6 +63,19 @@ def send_welcome(to: str, name: str, password: str, reset: bool = False) -> bool
         return False
 
 
+def send_ops_alert(subject: str, text: str) -> bool:
+    to = os.environ.get("ADMIN_EMAIL", "")
+    if not mail_configured() or not to:
+        return False
+    html = f'<div style="font-family:Arial,sans-serif;max-width:560px;color:#0f172a"><h2 style="color:#be123c;margin:0 0 8px">{escape(subject)}</h2><pre style="white-space:pre-wrap;font-family:inherit">{escape(text)}</pre></div>'
+    try:
+        send_mail(to, f"[MonExamEnLigne serveur] {subject}", text, html)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log.error("Alerte serveur échouée : %s", type(e).__name__)
+        return False
+
+
 def send_help_alert(to: str, student: str, exam_title: str, reason: str, when: str) -> bool:
     if not mail_configured():
         return False

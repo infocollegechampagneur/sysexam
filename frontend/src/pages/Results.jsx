@@ -18,11 +18,12 @@ import { SESSION_LABELS } from "@/lib/tools";
 
 const DOT = { in_progress: "bg-blue-500", locked: "bg-rose-600", submitted: "bg-emerald-600" };
 
-const SessionRow = ({ s, active, onClick, i }) => {
+const SessionRow = ({ s, active, onClick, i, checked, onCheck }) => {
   const pastes = (s.events || []).filter((e) => e.type === "clipboard_tool" && e.suspect).length;
   return (
-  <button onClick={onClick} data-testid={`monitoring-student-card-${i}`}
-    className={`w-full rounded-lg border p-3 text-left transition-colors ${active ? "border-blue-900 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-300"} ${s.status === "locked" ? "ring-1 ring-rose-300" : ""}`}>
+  <div className={`flex w-full items-stretch gap-2 rounded-lg border p-2 transition-colors ${active ? "border-blue-900 bg-blue-50" : checked ? "border-blue-400 bg-blue-50/40" : "border-slate-200 bg-white hover:border-blue-300"} ${s.status === "locked" ? "ring-1 ring-rose-300" : ""}`}>
+  <input type="checkbox" checked={checked} onChange={(e) => onCheck(s.id, e.target.checked)} onClick={(e) => e.stopPropagation()} className="mt-1 h-4 w-4 shrink-0 accent-blue-900" aria-label={`Sélectionner ${s.student_name}`} data-testid={`select-session-${i}`} />
+  <button onClick={onClick} data-testid={`monitoring-student-card-${i}`} className="min-w-0 flex-1 text-left">
     <div className="flex items-center justify-between gap-2">
       <span className="truncate font-medium text-slate-900">{s.student_name}</span>
       <span className="flex items-center gap-1">
@@ -36,6 +37,7 @@ const SessionRow = ({ s, active, onClick, i }) => {
       {s.grade?.score != null && <span className="ml-auto font-mono text-blue-900">{s.grade.score}/{s.grade.max_score}</span>}
     </div>
   </button>
+  </div>
   );
 };
 
@@ -48,14 +50,19 @@ export default function Results() {
   const [view, setView] = useState("copies");
   const help = useHelpRequests(id);
   const [annBusy, setAnnBusy] = useState("");
+  const [checked, setChecked] = useState(() => new Set());
+  const toggle = (sid, on) => setChecked((prev) => { const n = new Set(prev); if (on) n.add(sid); else n.delete(sid); return n; });
+  const picked = sessions.filter((s) => checked.has(s.id));
+  const target = picked.length ? picked : sessions;
+  const scope = picked.length ? `${picked.length} sélectionnée(s)` : "Toutes";
   const inlinePdf = exam?.exam_type === "document" && exam?.doc_answer_mode === "inline" && exam?.file?.kind === "pdf";
   const allAnnotated = async (mode) => {
-    const subs = sessions.filter((s) => s.status === "submitted" || s.status === "locked" || s.status === "in_progress");
+    const subs = target.filter((s) => s.status === "submitted" || s.status === "locked" || s.status === "in_progress");
     if (!subs.length) return toast.error("Aucune copie");
     setAnnBusy(mode);
     try {
       const blob = (await api.get(`/exams/${exam.id}/file`, { responseType: "blob" })).data;
-      const base = `${slug(exam.title)}_annotees`;
+      const base = `${slug(exam.title)}_${picked.length ? "selection_" : ""}annotees`;
       if (mode === "zip") await downloadAllAnnotatedZip(blob, subs, base, slug); else await downloadAllAnnotatedMerged(blob, subs, base, exam.title);
       toast.success(`${subs.length} copie(s) annotée(s) exportée(s)`);
     } catch (e) { toast.error("Export des PDF annotés impossible"); } finally { setAnnBusy(""); }
@@ -92,8 +99,8 @@ export default function Results() {
   const counts = ["in_progress", "locked", "submitted"].map((k) => [k, sessions.filter((s) => s.status === k).length]);
   const groupRef = useRef(null);
   const reportRef = useRef(null);
-  const groupName = `${slug(exam?.title)}_toutes_les_copies`;
-  const groupExport = (fn) => { if (!sessions.length) return toast.error("Aucune copie à exporter"); fn(groupRef.current, groupName); };
+  const groupName = `${slug(exam?.title)}_${picked.length ? "selection" : "toutes_les_copies"}`;
+  const groupExport = (fn) => { if (!target.length) return toast.error("Aucune copie à exporter"); fn(groupRef.current, groupName); };
 
   return (
     <TeacherLayout>
@@ -105,10 +112,10 @@ export default function Results() {
         </div>
         <span className="rounded-lg border border-dashed border-blue-300 bg-blue-50 px-3 py-1.5 font-mono font-bold tracking-[0.25em] text-blue-900" data-testid="results-exam-code">{exam?.code}</span>
         <Button variant="outline" size="sm" onClick={load} data-testid="results-refresh-btn"><RefreshCw className="mr-1.5 h-4 w-4" />Actualiser</Button>
-        <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />Toutes (PDF)</Button>
-        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("merged")} data-testid="export-all-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />{annBusy === "merged" ? "Génération…" : "Toutes annotées (PDF)"}</Button>}
+        <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />{scope} (PDF)</Button>
+        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("merged")} data-testid="export-all-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />{annBusy === "merged" ? "Génération…" : `${scope} annotées (PDF)`}</Button>}
         {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("zip")} data-testid="export-all-annotated-zip-btn"><FolderArchive className="mr-1.5 h-4 w-4" />{annBusy === "zip" ? "Génération…" : "Annotées (ZIP)"}</Button>}
-        <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />Toutes (Word)</Button>
+        <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />{scope} (Word)</Button>
         <Button size="sm" onClick={() => { if (!sessions.length) return toast.error("Aucune copie"); exportPdf(reportRef.current, `${slug(exam?.title)}_rapport_surveillance`); }} className="bg-rose-700 hover:bg-rose-800" data-testid="export-surveillance-report-btn"><ShieldAlert className="mr-1.5 h-4 w-4" />Rapport de surveillance (PDF)</Button>
         {exam && <ClearSessionsButton exam={exam} sessions={sessions} onDone={() => { setSel(null); load(); }} />}
       </div>
@@ -143,7 +150,13 @@ export default function Results() {
       {view === "stats" && exam && <div className="mt-4"><StatsPanel examId={id} /></div>}
       {view === "copies" && <div className="mt-4 grid gap-6 lg:grid-cols-12">
         <aside className="space-y-2 lg:col-span-4" data-testid="sessions-list">
-          {sessions.map((s, i) => <SessionRow key={s.id} s={s} i={i} active={s.id === sel} onClick={() => setSel(s.id)} />)}
+          {sessions.length > 0 && (
+            <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-600" data-testid="selection-bar">
+              <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-blue-900" checked={picked.length === sessions.length} onChange={(e) => setChecked(e.target.checked ? new Set(sessions.map((s) => s.id)) : new Set())} data-testid="select-all-sessions" />Tout sélectionner</label>
+              <span data-testid="selection-count">{picked.length ? `${picked.length} cochée(s) — les boutons d'export s'appliquent à la sélection` : "Cochez des élèves pour exporter seulement leurs copies"}</span>
+            </div>
+          )}
+          {sessions.map((s, i) => <SessionRow key={s.id} s={s} i={i} active={s.id === sel} onClick={() => setSel(s.id)} checked={checked.has(s.id)} onCheck={toggle} />)}
           {!sessions.length && (
             <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500" data-testid="sessions-empty">
               <Users className="mx-auto mb-2 h-6 w-6 text-slate-400" />Aucun élève n'a encore rejoint. Partagez le code <strong className="font-mono">{exam?.code}</strong>.
@@ -159,7 +172,7 @@ export default function Results() {
       {exam && (
         <div className="fixed -left-[9999px] top-0 w-[760px] bg-white p-6" aria-hidden>
           <div ref={groupRef} className="export-root">
-            {sessions.map((s, i) => (
+            {target.map((s, i) => (
               <div key={s.id}>
                 {i > 0 && <div className="html2pdf__page-break" style={{ pageBreakBefore: "always", breakBefore: "page", height: 0, margin: 0 }} />}
                 <CopyContent exam={exam} session={s} />

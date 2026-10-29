@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Copy, Pencil, BarChart3, Trash2, FileText, ListChecks, PenLine, Users, AlertTriangle, ClipboardList, CalendarClock } from "lucide-react";
+import { Plus, Copy, Pencil, BarChart3, Trash2, FileText, ListChecks, PenLine, Users, AlertTriangle, ClipboardList, CalendarClock, CopyPlus } from "lucide-react";
 import { fmtWindow } from "@/components/WindowsEditor";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,13 @@ const Stat = ({ icon: Icon, label, value, testId }) => (
 const ExamCard = ({ exam, onDelete }) => {
   const Icon = TYPE_ICON[exam.exam_type] || ListChecks;
   const nav = useNavigate();
+  const duplicate = async () => {
+    try {
+      const { data } = await api.post(`/exams/${exam.id}/duplicate`);
+      toast.success(`Copie créée : « ${data.title} » (brouillon, nouveau code ${data.code})`);
+      nav(`/enseignant/examens/${data.id}`);
+    } catch (e) { toast.error(formatErr(e)); }
+  };
   return (
     <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md" data-testid={`exam-card-${exam.code}`}>
       <div className="flex items-start justify-between gap-3">
@@ -63,6 +70,7 @@ const ExamCard = ({ exam, onDelete }) => {
       <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
         <Button size="sm" variant="outline" className="flex-1" onClick={() => nav(`/enseignant/examens/${exam.id}`)} data-testid={`edit-exam-${exam.code}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Modifier</Button>
         <Button size="sm" className="flex-1 bg-blue-900 hover:bg-blue-800" onClick={() => nav(`/enseignant/examens/${exam.id}/resultats`)} data-testid={`results-exam-${exam.code}`}><BarChart3 className="mr-1.5 h-3.5 w-3.5" />Suivi</Button>
+        <Button size="sm" variant="ghost" title="Dupliquer cet examen (nouveau brouillon à modifier, sans les copies)" onClick={duplicate} data-testid={`duplicate-exam-${exam.code}`}><CopyPlus className="h-4 w-4" /></Button>
         {!exam.is_manager && <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" data-testid={`delete-exam-${exam.code}`}><Trash2 className="h-4 w-4" /></Button>

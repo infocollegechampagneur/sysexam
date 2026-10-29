@@ -74,7 +74,20 @@ curl -s https://api-examen.champagneur.qc.ca/api/   <span class="c"># {"message"
 <div class="check"><b>Attendu</b> Les 3 conteneurs en <em>running</em>, <code>api</code> passe à <em>healthy</em> en ~1 min, le curl renvoie le JSON. Sur Cloudflare → Networking → Tunnels, <code>monexam</code> = HEALTHY.</div>
 <div class="warn"><b>Si <code>api</code> reste en « Restarting »</b> → <code>docker compose logs api | tail -40</code>. Cause fréquente : une nouvelle variable attendue dans <code>ecole.env</code> (KeyError: 'NOM_VARIABLE'). Ajoutez la ligne (<code>nano ecole.env</code>, modèle dans <code>ecole.env.exemple</code>) puis <code>docker compose --profile tunnel up -d</code>.</div>
 
-<h2>4. Mettre à jour le site web (SiteGround) — 10 min</h2>
+<h2>4. Mettre à jour le site web (SiteGround) — automatique</h2>
+<div class="check"><b>Depuis la version « FTP automatique »</b> : un push qui touche <code>frontend/</code> déclenche le workflow <strong>Site web</strong>, qui compile le site avec l'adresse de l'API et le <strong>dépose lui-même sur SiteGround par FTP</strong>. Il n'y a plus rien à téléverser. Vérifiez simplement le crochet vert dans GitHub → Actions (3–5 min), puis <span class="kbd">Ctrl</span>+<span class="kbd">F5</span> sur le site.</div>
+<p><strong>Configuration à faire une seule fois</strong> (GitHub → dépôt <code>sysexam</code> → <strong>Settings → Secrets and variables → Actions</strong>) :</p>
+<table>
+  <tr><th style="width:30%">Onglet <em>Variables</em></th><th>Valeur</th></tr>
+  <tr><td><code>BACKEND_URL</code></td><td><code>https://api-examen.champagneur.qc.ca</code></td></tr>
+  <tr><td><code>FTP_DIR</code></td><td>Dossier cible sur SiteGround, ex. <code>./examen.champagneur.qc.ca/public_html/</code> (le chemin vu à la connexion FTP ; <code>./</code> si le compte FTP pointe déjà dans le bon dossier)</td></tr>
+  <tr><th>Onglet <em>Secrets</em></th><th>Valeur</th></tr>
+  <tr><td><code>FTP_SERVER</code></td><td>Hôte FTP SiteGround (Site Tools → Site → FTP Accounts → « Hostname », ex. <code>ftp.champagneur.qc.ca</code> ou <code>giowm1234.siteground.biz</code>)</td></tr>
+  <tr><td><code>FTP_USERNAME</code></td><td>Identifiant du compte FTP créé dans Site Tools (créez-en un dédié, ex. <code>deploy@examen.champagneur.qc.ca</code>, dont le dossier racine est celui du site)</td></tr>
+  <tr><td><code>FTP_PASSWORD</code></td><td>Son mot de passe</td></tr>
+</table>
+<p class="small">Tant que les secrets FTP n'existent pas, le workflow produit seulement l'artefact ZIP (procédure manuelle ci-dessous). Le workflow peut aussi être lancé à la main : Actions → Site web → Run workflow.</p>
+<p><strong>Procédure manuelle (secours)</strong></p>
 <ol class="steps">
   <li>GitHub → dépôt <code>sysexam</code> → onglet <strong>Actions</strong> → à gauche, workflow <strong>Site web</strong> → bouton <strong>Run workflow</strong>.</li>
   <li>Champ <code>backend_url</code> : <code>https://api-examen.champagneur.qc.ca</code> → <strong>Run workflow</strong>. (Toujours cette adresse : c'est elle qui relie le site à la VM. Jamais l'adresse Render.)</li>
@@ -103,7 +116,9 @@ curl -s https://api-examen.champagneur.qc.ca/api/   <span class="c"># {"message"
   <tr><td><code>docker compose logs api --tail 50</code><br><code>docker compose logs tunnel --tail 20</code></td><td>Journaux API / tunnel</td></tr>
   <tr><td><code>docker compose --profile tunnel up -d</code></td><td>Appliquer un changement de <code>ecole.env</code> (sans rebuild)</td></tr>
   <tr><td><code>docker compose --profile tunnel restart api</code></td><td>Redémarrer seulement l'API</td></tr>
-  <tr><td><code>./sauvegarde.sh</code></td><td>Sauvegarde immédiate de la base (si base locale ; avec Atlas, Atlas sauvegarde lui-même)</td></tr>
+  <tr><td><code>./sauvegarde.sh</code></td><td>Sauvegarde immédiate de la base (Atlas ou locale, selon <code>MONGO_URL</code>) ; courriel à l'admin si échec</td></tr>
+  <tr><td><code>./surveillance.sh</code></td><td>Vérifie API + tunnel ; courriel à l'admin si panne, puis « rétabli ». Dans cron toutes les 10 min (voir § 8)</td></tr>
+  <tr><td>Site → Comptes → onglet <strong>État du serveur</strong></td><td>Vue admin : base, tunnel, disque, sauvegardes, version du code</td></tr>
   <tr><td><code>git log --oneline -5</code></td><td>Voir quelle version du code tourne sur la VM</td></tr>
   <tr><td><code>df -h</code> · <code>docker system prune -af</code></td><td>Espace disque · nettoyer les anciennes images</td></tr>
   <tr><td><code>sudo reboot</code></td><td>Redémarrer la VM : les 3 services repartent seuls (<code>restart: unless-stopped</code>)</td></tr>
@@ -117,8 +132,13 @@ curl -s https://api-examen.champagneur.qc.ca/api/   <span class="c"># {"message"
   <tr><td>Supprimer la ligne DNS <code>api-examen</code> (Cloudflare) ou le tunnel</td><td>L'API devient injoignable. Si cela arrive : recréer le CNAME <code>api-examen</code> → <code>TUNNEL-ID.cfargotunnel.com</code> (nuage orange).</td></tr>
 </table>
 
-<div class="tip"><b>Option pour plus tard</b> Le workflow « Site web » peut déposer les fichiers directement sur SiteGround par FTP (identifiants FTP stockés comme <em>secrets</em> GitHub). Un push = site à jour, sans téléversement manuel. À demander à l'agent le jour où la routine FTP devient lourde.</div>
+<h2>8. Alertes automatiques par courriel (cron, une seule fois)</h2>
+<p>Sur la VM, <code>crontab -e</code> (choisir <code>1</code> = nano si demandé), puis ajoutez ces deux lignes à la fin, <span class="kbd">Ctrl</span>+<span class="kbd">O</span>, Entrée, <span class="kbd">Ctrl</span>+<span class="kbd">X</span> :</p>
+<pre>30 2 * * * cd /opt/monexam &amp;&amp; ./sauvegarde.sh &gt;&gt; sauvegardes/journal.log 2&gt;&amp;1
+*/10 * * * * cd /opt/monexam &amp;&amp; ./surveillance.sh &gt;&gt; sauvegardes/surveillance.log 2&gt;&amp;1</pre>
+<p>Les courriels partent vers <code>ADMIN_EMAIL</code> (dans <code>ecole.env</code>) via SMTP2GO : « problème détecté » (un seul courriel par incident, avec redémarrage automatique du tunnel) puis « rétabli » ; « échec de la sauvegarde nocturne ». Test immédiat : <code>./surveillance.sh</code> doit afficher <code>OK hh:mm</code>.</p>
 
-<p class="small" style="margin-top:14px">MonExamEnLigne — Collège Champagneur · Aide-mémoire v1 · Guides complets : <code>guide-installation-serveur-ecole.pdf</code>, <code>guide-enseignant.pdf</code> (sur le site, à la racine).</p>
+
+<p class="small" style="margin-top:14px">MonExamEnLigne — Collège Champagneur · Aide-mémoire v2 · Guides complets : <code>guide-installation-serveur-ecole.pdf</code>, <code>guide-enseignant.pdf</code> (sur le site, à la racine).</p>
 </body>
 </html>

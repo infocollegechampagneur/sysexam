@@ -1,12 +1,22 @@
-name: Construire le site web (Siteground)
+name: Site web
 
+# Se lance automatiquement à chaque push touchant frontend/, ou à la main (Run workflow).
+# Déploiement FTP vers SiteGround si les secrets FTP_SERVER / FTP_USERNAME / FTP_PASSWORD existent ; sinon, artefact ZIP seulement.
+# Adresse de l'API : variable de dépôt BACKEND_URL (Settings → Secrets and variables → Actions → Variables), remplaçable à la main.
 on:
+  push:
+    branches: [main, master]
+    paths: ["frontend/**", ".github/workflows/site-web.yml"]
   workflow_dispatch:
     inputs:
       backend_url:
-        description: "Adresse du serveur (sans /api), ex. https://monexamenligne-api.onrender.com"
-        required: true
+        description: "Adresse du serveur (sans /api). Vide = variable BACKEND_URL du dépôt"
+        required: false
         type: string
+
+concurrency:
+  group: site-web
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -19,13 +29,38 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Adresse du serveur
+        id: cfg
+        run: |
+          URL="${{ inputs.backend_url }}"
+          [ -z "$URL" ] && URL="${{ vars.BACKEND_URL }}"
+          if [ -z "$URL" ]; then echo "::error::Aucune adresse : remplissez backend_url ou créez la variable de dépôt BACKEND_URL"; exit 1; fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "API : $URL"
       - run: yarn install --no-frozen-lockfile --network-timeout 300000
       - run: yarn build
         env:
-          REACT_APP_BACKEND_URL: ${{ inputs.backend_url }}
+          REACT_APP_BACKEND_URL: ${{ steps.cfg.outputs.url }}
           CI: "false"
       - uses: actions/upload-artifact@v4
         with:
           name: MonExamEnLigne-SiteWeb
           path: frontend/build/
           include-hidden-files: true
+      - name: Déploiement FTP vers SiteGround
+        if: ${{ env.FTP_SERVER != '' }}
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: frontend/build/
+          server-dir: ${{ vars.FTP_DIR || './' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**

@@ -353,7 +353,9 @@ docker compose restart api</pre></li>
 ./sauvegarde.sh                 <span class="c"># test immédiat : affiche « Sauvegarde OK : … »</span>
 crontab -e                      <span class="c"># choisissez « 1 » (nano) si on vous demande l'éditeur</span></pre>
 <p>Tout en bas du fichier, ajoutez cette ligne, puis <span class="kbd">Ctrl</span>+<span class="kbd">O</span>, <span class="kbd">Entrée</span>, <span class="kbd">Ctrl</span>+<span class="kbd">X</span> :</p>
-<pre>30 2 * * * cd /opt/monexam && ./sauvegarde.sh >> sauvegardes/journal.log 2>&1</pre>
+<pre>30 2 * * * cd /opt/monexam && ./sauvegarde.sh >> sauvegardes/journal.log 2>&1
+*/10 * * * * cd /opt/monexam && ./surveillance.sh >> sauvegardes/surveillance.log 2>&1</pre>
+<p>La 2e ligne vérifie toutes les 10 min que l'API répond via Internet (tunnel) et envoie un courriel à <code>ADMIN_EMAIL</code> en cas de panne, puis quand c'est rétabli. La sauvegarde envoie aussi un courriel si elle échoue. Vue d'ensemble dans le site : Comptes → <strong>État du serveur</strong>.</p>
 <div class="warn"><b>Une sauvegarde sur la même machine ne suffit pas</b> Faites aussi : (1) une sauvegarde de la <strong>VM entière</strong> par l'hyperviseur chaque semaine, et/ou (2) une copie du dossier <code>/opt/monexam/sauvegardes</code> vers un NAS ou OneDrive. Exemple de copie vers un partage Windows : installez <code>cifs-utils</code> et ajoutez un <code>cp</code> dans la tâche cron, ou utilisez l'agent de sauvegarde de votre hyperviseur.</div>
 <p><strong>Restaurer</strong> (en cas de besoin) : <code>docker compose exec -T mongo mongorestore --archive --gzip --drop &lt; sauvegardes/monexam_2026-10-27_0230.gz</code> puis <code>docker compose restart api</code>.</p>
 

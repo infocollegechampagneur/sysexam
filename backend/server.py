@@ -13,6 +13,8 @@ import random
 import string
 import asyncio
 import logging
+import time
+import shutil
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from typing import List, Optional, Dict, Any
@@ -540,6 +542,40 @@ async def admin_mail_status(_: dict = Depends(current_admin)):
     return {"configured": mail_configured(), "sender": os.environ.get("MAIL_FROM", "")}
 
 
+STARTED_AT = now_iso()
+
+
+@api.get("/admin/health")
+async def admin_health(_: dict = Depends(current_admin)):
+    t0 = time.perf_counter()
+    try:
+        await db.command("ping")
+        db_ok, db_ms = True, round((time.perf_counter() - t0) * 1000)
+    except Exception:
+        db_ok, db_ms = False, None
+    counts = {c: await db[c].estimated_document_count() for c in ("users", "exams", "sessions", "classes")} if db_ok else {}
+    du = shutil.disk_usage("/")
+    api_domain = os.environ.get("API_DOMAIN", "")
+    tunnel = {"domain": api_domain, "ok": None, "ms": None}
+    if api_domain:
+        try:
+            t1 = time.perf_counter()
+            async with httpx.AsyncClient(timeout=8) as client:
+                r = await client.get(f"https://{api_domain}/api/")
+            tunnel.update(ok=r.status_code == 200, ms=round((time.perf_counter() - t1) * 1000))
+        except Exception:
+            tunnel["ok"] = False
+    backups = sorted(Path("/sauvegardes").glob("monexam_*.gz"), key=lambda p: p.stat().st_mtime) if Path("/sauvegardes").is_dir() else []
+    last = backups[-1] if backups else None
+    return {
+        "time": now_iso(), "started_at": STARTED_AT, "version": os.environ.get("GIT_SHA", "dev"), "workers": os.environ.get("WEB_CONCURRENCY", "1"),
+        "db": {"ok": db_ok, "ms": db_ms, "name": os.environ.get("DB_NAME", ""), "atlas": "mongodb+srv" in os.environ.get("MONGO_URL", ""), "counts": counts},
+        "disk": {"total_gb": round(du.total / 1e9, 1), "free_gb": round(du.free / 1e9, 1), "used_pct": round(du.used / du.total * 100)},
+        "tunnel": tunnel, "mail": mail_configured(),
+        "backup": {"last_at": datetime.fromtimestamp(last.stat().st_mtime, tz=timezone.utc).isoformat() if last else None, "size_mb": round(last.stat().st_size / 1e6, 2) if last else None, "count": len(backups)},
+    }
+
+
 @api.get("/admin/activity")
 async def admin_activity(_: dict = Depends(current_admin)):
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("name", 1).to_list(1000)
@@ -850,6 +886,25 @@ async def create_exam(body: ExamIn, user: dict = Depends(current_teacher)):
 @api.get("/exams/{exam_id}")
 async def get_exam(exam_id: str, user: dict = Depends(current_teacher)):
     return await own_exam(exam_id, user)
+
+
+@api.post("/exams/{exam_id}/duplicate", status_code=201)
+async def duplicate_exam(exam_id: str, user: dict = Depends(current_teacher)):
+    src = await own_exam(exam_id, user)
+    code = new_code()
+    while await db.exams.find_one({"code": code}):
+        code = new_code()
+    exam = {k: v for k, v in src.items() if k not in ("id", "code", "teacher_id", "created_at", "paused_at", "pause_message", "file")}
+    exam.update({"id": str(uuid.uuid4()), "code": code, "teacher_id": user["id"], "title": f"{src['title']} (copie)", "status": "draft",
+                 "windows": [], "file": None, "created_at": now_iso()})
+    exam["settings"] = {**(src.get("settings") or {}), "exit_code": new_exit_code()}
+    if src.get("file"):
+        data = await read_file(src["file"])
+        fid = await files_bucket.upload_from_stream(src["file"]["filename"], data, metadata={"contentType": src["file"]["content_type"], "exam_id": exam["id"]})
+        exam["file"] = {**src["file"], "id": str(uuid.uuid4()), "gridfs_id": str(fid), "uploaded_at": now_iso()}
+    await db.exams.insert_one(exam)
+    exam.pop("_id", None)
+    return exam
 
 
 @api.put("/exams/{exam_id}")
