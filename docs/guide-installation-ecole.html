@@ -67,7 +67,7 @@
     <li>Liste de préparation</li>
     <li>Étape A — Créer la machine virtuelle et installer Ubuntu</li>
     <li>Étape B — Se connecter à la VM depuis votre PC (SSH)</li>
-    <li>Étape C — Adresse Internet : ports 80/443 <em>ou</em> Cloudflare Tunnel (si les ports sont pris)</li>
+    <li>Étape C — Adresse Internet : ports 80/443 <em>ou</em> Cloudflare Tunnel (si les ports sont pris) · C2 : déplacer les DNS de SiteGround vers Cloudflare sans rien casser</li>
     <li>Étape D — Installer Docker</li>
     <li>Étape E — Autoriser la VM à lire votre dépôt GitHub</li>
     <li>Étape F — Récupérer le code et remplir la configuration</li>
@@ -166,15 +166,65 @@
 <h3>C — Option 2 : Cloudflare Tunnel, pas à pas</h3>
 <ol class="steps">
   <li><strong>Compte Cloudflare.</strong> Sur https://dash.cloudflare.com, créez un compte gratuit (courriel du service informatique).</li>
-  <li><strong>Ajouter le domaine.</strong> Bouton <strong>Add a domain</strong> → tapez <code>VOTREDOMAINE.qc.ca</code> → forfait <strong>Free</strong> → <strong>Continue</strong>. Cloudflare recopie vos enregistrements DNS actuels : vérifiez que la liste contient votre site (<code>examen</code>, <code>www</code>, <code>@</code>) et vos enregistrements courriel (<code>MX</code>, <code>TXT</code>). S'il en manque un, ajoutez-le tel qu'il est chez votre registraire. <strong>Continue</strong>.</li>
-  <li><strong>Nuage gris.</strong> Dans la liste DNS de Cloudflare, mettez les enregistrements du site SiteGround en <strong>DNS only</strong> (nuage <strong>gris</strong>) pour ne rien changer à son fonctionnement.</li>
-  <li><strong>Changer les serveurs de noms.</strong> Cloudflare affiche 2 noms du type <code>ada.ns.cloudflare.com</code>. Chez votre registraire, section <strong>Nameservers / Serveurs de noms</strong> → <strong>Personnalisés</strong> → remplacez les deux → Enregistrer. Propagation : 10 min à 24 h ; Cloudflare envoie le courriel « Your domain is now active ».</li>
+  <li><strong>Déplacer la gestion DNS de SiteGround vers Cloudflare</strong> — suivez le sous-chapitre <strong>C2</strong> ci-dessous (c'est l'étape la plus importante ; comptez 30 min, à faire un soir ou un vendredi).</li>
   <li><strong>Créer le tunnel.</strong> Menu de gauche <strong>Zero Trust</strong> (première fois : nom d'équipe quelconque, forfait <strong>Free</strong>) → <strong>Networks → Tunnels → Create a tunnel → Cloudflared</strong> → nom <code>monexam</code> → <strong>Save tunnel</strong>.</li>
   <li><strong>Copier le jeton.</strong> Écran « Install and run a connector » → <strong>Docker</strong>. La commande affichée contient <code>--token eyJh…</code> : copiez <strong>uniquement</strong> la longue valeur après <code>--token</code>. <strong>Next</strong>.</li>
   <li><strong>Publier l'adresse.</strong> Onglet <strong>Public Hostname</strong> : Subdomain <code>api-examen</code> · Domain <code>VOTREDOMAINE.qc.ca</code> · Path vide · Service : Type <strong>HTTP</strong>, URL <code>api:8001</code> → <strong>Save</strong>. Cloudflare crée lui-même l'enregistrement DNS <code>api-examen</code>.</li>
   <li><strong>Le jeton ira dans la configuration de la VM</strong> à l'étape F : ligne <code>CF_TUNNEL_TOKEN=eyJh…</code> de <code>ecole.env</code>.</li>
 </ol>
 <div class="tip"><b>Taille des fichiers</b> Le forfait gratuit Cloudflare accepte des envois jusqu'à 100 Mo : largement assez pour les documents d'examen (20 Mo max).</div>
+
+<h3 class="pb">C2. Déplacer la gestion DNS de SiteGround vers Cloudflare, sans casser le site ni les courriels (30 min)</h3>
+<div class="warn"><b>Comprendre d'abord : on ne déménage PAS le site.</b> Trois choses différentes se cachent derrière « votre domaine » :
+<table>
+  <tr><th style="width:28%">Quoi</th><th>Aujourd'hui</th><th>Après</th></tr>
+  <tr><td><strong>L'hébergement</strong> (fichiers du site, WordPress, courriels s'ils sont chez SiteGround)</td><td>SiteGround</td><td><strong>SiteGround — rien ne change</strong></td></tr>
+  <tr><td><strong>Le registraire</strong> (là où vous payez le nom <code>champagneur.qc.ca</code> chaque année)</td><td>SiteGround ou autre (CIRA/.qc.ca via un revendeur)</td><td><strong>Inchangé</strong> — on y modifie seulement 2 lignes « serveurs de noms »</td></tr>
+  <tr><td><strong>L'annuaire DNS</strong> (la liste « tel nom → telle adresse »)</td><td>SiteGround (ns1/ns2.siteground.net)</td><td><strong>Cloudflare</strong> (copie conforme de la liste actuelle + 1 ligne pour le tunnel)</td></tr>
+</table>
+Cloudflare Free ne peut pas gérer <em>uniquement</em> le sous-domaine <code>examen.</code> : c'est toute la liste DNS de <code>champagneur.qc.ca</code> qui déménage. Mais en mode « nuage gris » (DNS only), Cloudflare se contente de répondre « voici l'adresse », exactement comme SiteGround le fait aujourd'hui ; il ne voit jamais passer le trafic de votre site. Le seul vrai risque est <strong>d'oublier une ligne</strong> lors de la copie — d'où la liste de contrôle ci-dessous.</div>
+
+<p><strong>Faut-il supprimer quelque chose chez SiteGround ? NON.</strong> Ne supprimez rien : ni le site, ni la zone DNS de SiteGround, ni les courriels. La zone DNS de SiteGround restera simplement <em>ignorée</em> par Internet (puisque les serveurs de noms pointeront vers Cloudflare), mais elle sert de <strong>filet de sécurité</strong> : pour revenir en arrière il suffit de remettre les anciens serveurs de noms (voir « Retour arrière » plus bas).</p>
+
+<p><strong>C2-1. Photographier la liste DNS actuelle (SiteGround).</strong></p>
+<ol class="steps">
+  <li>SiteGround → <strong>Websites</strong> → votre site → <strong>Site Tools</strong> → <strong>Domaine → Éditeur de zone DNS</strong> (<em>Domain → DNS Zone Editor</em>).</li>
+  <li>Faites une <strong>capture d'écran de chaque onglet</strong> : <strong>A</strong>, <strong>AAAA</strong>, <strong>CNAME</strong>, <strong>MX</strong>, <strong>TXT</strong>, <strong>SRV</strong>. Faites défiler : il y a souvent plus de lignes que l'écran n'en montre. Gardez ces captures (elles servent aussi au retour arrière).</li>
+  <li>Toujours dans Site Tools → <strong>Domaine → Serveurs de noms</strong> (ou dans votre compte registraire) : notez les 2 serveurs de noms actuels, par ex. <code>ns1.siteground.net</code> / <code>ns2.siteground.net</code>.</li>
+</ol>
+<div class="tip"><b>Courriels : la partie à ne surtout pas rater.</b> Si vos courriels <code>@champagneur.qc.ca</code> sont chez Microsoft 365 ou Google, vous verrez : des lignes <strong>MX</strong> (ex. <code>…mail.protection.outlook.com</code>), des <strong>TXT</strong> commençant par <code>v=spf1</code>, <code>MS=</code>, <code>google-site-verification</code>, des <strong>CNAME</strong> <code>autodiscover</code>, <code>selector1._domainkey</code>, <code>selector2._domainkey</code>, <code>enterpriseenrollment</code>, <code>enterpriseregistration</code>, et un TXT <code>_dmarc</code>. <strong>Chacune</strong> de ces lignes doit se retrouver à l'identique dans Cloudflare, sinon les courriels s'arrêtent.</div>
+
+<p><strong>C2-2. Ajouter le domaine dans Cloudflare et comparer.</strong></p>
+<ol class="steps">
+  <li>https://dash.cloudflare.com → <strong>Add a domain</strong> → <code>champagneur.qc.ca</code> (le domaine principal, <em>pas</em> <code>examen.champagneur.qc.ca</code>) → <strong>Quick scan for DNS records</strong> → forfait <strong>Free</strong> → <strong>Continue</strong>.</li>
+  <li>Cloudflare affiche la liste qu'il a trouvée. <strong>Comparez-la ligne par ligne avec vos captures d'écran.</strong> Le scan trouve bien les lignes courantes (<code>@</code>, <code>www</code>, <code>mail</code>, <code>MX</code>) mais <strong>rate souvent</strong> les sous-domaines peu connus (<code>examen</code>, <code>intranet</code>, <code>portail</code>…), les <code>_domainkey</code>, <code>_dmarc</code>, les <code>SRV</code>.</li>
+  <li>Pour chaque ligne manquante : <strong>Add record</strong> → même <em>Type</em>, même <em>Name</em> (tapez seulement la partie avant <code>.champagneur.qc.ca</code>, ou <code>@</code> pour le domaine nu), même <em>Content/Target</em>, <em>TTL</em> Auto, <strong>Proxy status : DNS only</strong> → <strong>Save</strong>.</li>
+  <li><strong>Tout en nuage gris.</strong> Pour chaque ligne A / AAAA / CNAME qui affiche un nuage <strong>orange</strong> (Proxied), cliquez sur <strong>Edit</strong> → désactivez <strong>Proxy status</strong> (il devient gris « DNS only ») → Save. À la fin, <strong>aucune ligne ne doit être orange</strong>. Seule la ligne <code>api-examen</code>, créée plus tard par le tunnel, sera orange.</li>
+  <li>Comptez : le nombre de lignes dans Cloudflare doit être <strong>égal ou supérieur</strong> au nombre de lignes sur vos captures SiteGround. <strong>Continue</strong>.</li>
+  <li>Écran « Review your DNS records » / recommandations : <strong>décochez</strong> « Always Use HTTPS » et « Automatic HTTPS Rewrites » (en nuage gris ils sont sans effet, mais inutile de les activer). <strong>Continue</strong>. Cloudflare affiche alors ses 2 serveurs de noms (ex. <code>ada.ns.cloudflare.com</code>, <code>rob.ns.cloudflare.com</code>). <strong>Notez-les</strong>. Ne fermez pas la page.</li>
+</ol>
+
+<p><strong>C2-3. Changer les serveurs de noms (le « basculement »).</strong></p>
+<ol class="steps">
+  <li><strong>Où ?</strong> Chez le <em>registraire</em> du domaine. Si vous le payez à SiteGround : Site Tools → <strong>Domaine → Serveurs de noms</strong> (ou <em>Client Area → Services → Domains → Manage Nameservers</em>). S'il est chez un autre revendeur .qc.ca (Namespro, GoDaddy, Web Hosting Canada…) : connectez-vous à ce compte → votre domaine → <strong>Nameservers</strong>.</li>
+  <li>Choisissez <strong>Custom / Personnalisés</strong>, remplacez les 2 noms SiteGround par les 2 noms Cloudflare, <strong>exactement</strong>, sans espace. Enregistrer.</li>
+  <li>Retour sur Cloudflare → <strong>Check nameservers</strong>. Propagation : généralement 10 min à 2 h, parfois jusqu'à 24 h. Vous recevrez le courriel <em>« champagneur.qc.ca is now active on Cloudflare »</em>.</li>
+  <li><strong>Pendant la propagation, rien ne casse</strong> : les deux annuaires (SiteGround et Cloudflare) donnent les mêmes réponses puisque la liste est identique. C'est précisément pour ça que la copie doit être complète <em>avant</em> ce basculement.</li>
+</ol>
+
+<p><strong>C2-4. Vérifier après le basculement (15 min plus tard, puis le lendemain).</strong></p>
+<table>
+  <tr><th style="width:35%">Test</th><th>Attendu</th></tr>
+  <tr><td>Ouvrir <code>https://www.champagneur.qc.ca</code> et <code>https://examen.champagneur.qc.ca</code> depuis un téléphone en 4G/5G (pas le Wi-Fi de l'école)</td><td>Le site s'affiche normalement, cadenas présent.</td></tr>
+  <tr><td>Envoyer un courriel <strong>depuis</strong> une adresse <code>@champagneur.qc.ca</code> vers un Gmail personnel, et <strong>vers</strong> une adresse de l'école depuis ce Gmail</td><td>Les deux arrivent en moins de 5 min, pas dans les indésirables.</td></tr>
+  <tr><td>Sur https://dnschecker.org, taper <code>champagneur.qc.ca</code>, type <strong>NS</strong></td><td>Les serveurs Cloudflare apparaissent partout dans le monde.</td></tr>
+  <tr><td>Sur https://mxtoolbox.com → <em>MX Lookup</em> puis <em>SPF</em>, <em>DMARC</em></td><td>Mêmes valeurs qu'avant (vos captures), aucune erreur rouge.</td></tr>
+  <tr><td>Dans Cloudflare → DNS : chaque ligne (sauf <code>api-examen</code>)</td><td>Nuage <strong>gris</strong>.</td></tr>
+</table>
+
+<div class="check"><b>Retour arrière (si quelque chose ne va pas et que vous ne trouvez pas la ligne fautive)</b> Chez le registraire, remettez les 2 anciens serveurs de noms SiteGround notés en C2-1. En 10 min à 2 h, tout revient exactement comme avant, puisque vous n'avez rien supprimé chez SiteGround. Vous pourrez corriger la liste Cloudflare tranquillement et rebasculer plus tard.</div>
+
+<div class="tip"><b>Et plus tard ?</b> Dès que le domaine est actif sur Cloudflare, <strong>toute nouvelle modification DNS se fait dans Cloudflare</strong> (plus dans l'Éditeur de zone SiteGround, qui n'est plus consulté par Internet). Par exemple, si SiteGround vous demande un jour de changer l'adresse IP du site, c'est la ligne <code>A</code> dans Cloudflare qu'il faudra modifier. Le forfait Free de Cloudflare n'a pas de limite de trafic DNS ni de date d'expiration ; ses serveurs DNS sont parmi les plus fiables au monde (c'est l'infrastructure utilisée par des millions de sites).</div>
 <div class="check"><b>Vérification C (option 2)</b> Dans Cloudflare → Zero Trust → Tunnels, le tunnel <code>monexam</code> est <strong>INACTIVE</strong> pour l'instant (normal : la VM n'est pas démarrée). Il passera à <strong>HEALTHY</strong> à l'étape G.</div>
 
 <h2>6. Étape D — Installer Docker (10 min)</h2>
@@ -333,6 +383,7 @@ crontab -e                      <span class="c"># choisissez « 1 » (nano) si o
   <dt>9. Mes examens n'apparaissent pas après la connexion.</dt><dd>L'import (étape H) a été fait dans un autre nom de base : <code>DB_NAME</code> dans <code>ecole.env</code> doit être <code>monexam</code> (le <code>--nsTo</code> de l'import). Relancez l'import si besoin.</dd>
   <dt>10. Les courriels (bienvenue, alertes d'aide) ne partent pas.</dt><dd>Variables <code>SMTP_*</code> incomplètes dans <code>ecole.env</code>, ou le port 2525/587 sortant bloqué par le pare-feu de l'école : autorisez-le vers <code>mail.smtp2go.com</code>.</dd>
   <dt>11. Le disque se remplit.</dt><dd><code>df -h</code>. Nettoyez les anciennes images Docker : <code>docker system prune -af</code>. Les sauvegardes de plus de 30 jours sont supprimées automatiquement ; déplacez-les ailleurs si besoin.</dd>
+  <dt>12a. Après le passage à Cloudflare, les courriels n'arrivent plus / le site ne s'affiche plus.</dt><dd>Une ligne DNS manque ou est en nuage orange. Comparez Cloudflare → DNS avec vos captures SiteGround (C2-1) : ajoutez la ligne manquante ou passez-la en gris. Si vous ne trouvez pas en 15 min : remettez les anciens serveurs de noms SiteGround (retour arrière C2), corrigez à tête reposée, rebasculez.</dd>
   <dt>12b. Le tunnel reste INACTIVE / « Unauthorized ».</dt><dd>Jeton incomplet ou mal collé dans <code>CF_TUNNEL_TOKEN</code> (il commence par <code>eyJ</code>, sans espace ni guillemets). Corrigez puis <code>docker compose --profile tunnel up -d</code>. Vérifiez aussi que le domaine est <strong>Active</strong> dans Cloudflare.</dd>
   <dt>12. Panne de courant / VM qui ne redémarre pas seule.</dt><dd>Dans l'hyperviseur, activez le démarrage automatique de la VM. Dans la VM, <code>sudo systemctl is-enabled docker</code> doit répondre « enabled ». Les conteneurs ont <code>restart: unless-stopped</code>.</dd>
 </dl>
