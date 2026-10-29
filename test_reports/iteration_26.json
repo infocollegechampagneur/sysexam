@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 26: tested exam duplication (API + Dashboard UI), selection-based exports in Results, and the admin 'État du serveur' tab (GET /api/admin/health). Backend 10/10 pytest passed. Frontend: all 3 flows work end-to-end (duplicate -> toast + navigation to ExamBuilder with '(copie)', new draft card with 0 copie(s); checkbox selection, label changes, name click doesn't check, select all/unselect all, Word export with selection downloads '<slug>_selection.doc'; health panel shows all cards + refresh triggers new API call). Only minor issues found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/exams/{id}/duplicate", "issue": "The 'managers' field is copied from the source exam. If a manager (not the owner) duplicates an exam, the copy belongs to the manager but keeps the old managers list, and the original owner is not on it. Decide whether to reset managers=[] or add the source owner."},
+      {"endpoint": "GET /api/admin/health", "issue": "The 'Alertes automatiques' status only reflects mail_configured(). Nothing checks that the surveillance cron is actually running (informational only)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Results selection-bar", "issue": "select-all checkbox is checked when there are 0 sessions (picked.length === sessions.length -> 0===0)", "selector": "[data-testid='select-all-sessions']", "priority": "LOW"},
+      {"component": "ServerHealthPanel", "issue": "If the first /admin/health call fails, the panel stays on 'Vérification du serveur…' for good, with no retry button (only a toast is shown)", "selector": "[data-testid='server-health-panel']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Results / Copies tab", "issues": ["The selection-bar is cramped: 'Tout sélectionner' and the long selection-count text both wrap onto 2 lines in the narrow left column even at 1920px. Shorten the text or stack it."]},
+      {"screen": "Results header", "issues": ["The 'Annotées (ZIP)' label does not show the selection scope, unlike the other export buttons (it does use the selection)."]},
+      {"screen": "Users / État du serveur", "issues": ["When no backup exists, the backup card says 'Plus de 30 h sans sauvegarde', which is misleading. Use a separate message for 'aucune sauvegarde'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter26_duplicate_health.py", "/app/test_reports/pytest/pytest_iter26.xml"],
+  "action_items": [
+    "(Optional) Reset or adjust the 'managers' list when duplicating an exam",
+    "(Optional) Fix the select-all checked state when there are 0 sessions; add a retry/error state in ServerHealthPanel",
+    "(Optional) Note: Word export produces .doc (HTML Word), not .docx as the review request says. This is the existing design, so confirm it is intended."
+  ],
+  "critical_code_review_comments": [
+    "duplicate_exam correctly excludes _id, id, code, teacher_id, created_at, paused_at, pause_message and file, regenerates exit_code, and copies the GridFS file to a new gridfs_id. Deleting the copy does not affect the source file (verified).",
+    "duplicate_exam does not call sync_bank (acceptable, since the questions are identical to the source).",
+    "admin_health: shutil.disk_usage and the Path.glob/stat calls are synchronous but cheap. OK."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter26_duplicate_health.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "TEST_iter26 exams created and deleted by the pytest fixture; UI duplicate of TEST_iter24_7ddb57 deleted after the test. Pre-existing 'Test (copie)' (HYZ2ZN) was already there, not created by me.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Exam f2b1fa82-6f11-40e8-a8dc-6c14b2c8fe1d (BC2PXU) has 4 copies, which is useful for selection tests. The teacher test account test_manager_iter25@example.com / Gestion2026! is reset by the fixture. PDF and annotated exports were not clicked (slow html2pdf); the annotated buttons only show for inline-PDF document exams."
+}

@@ -894,9 +894,9 @@ async def duplicate_exam(exam_id: str, user: dict = Depends(current_teacher)):
     code = new_code()
     while await db.exams.find_one({"code": code}):
         code = new_code()
-    exam = {k: v for k, v in src.items() if k not in ("id", "code", "teacher_id", "created_at", "paused_at", "pause_message", "file")}
+    exam = {k: v for k, v in src.items() if k not in ("id", "code", "teacher_id", "created_at", "paused_at", "pause_message", "file", "managers")}
     exam.update({"id": str(uuid.uuid4()), "code": code, "teacher_id": user["id"], "title": f"{src['title']} (copie)", "status": "draft",
-                 "windows": [], "file": None, "created_at": now_iso()})
+                 "windows": [], "file": None, "managers": [m for m in (src.get("managers") or []) + [src["teacher_id"]] if m != user["id"]], "created_at": now_iso()})
     exam["settings"] = {**(src.get("settings") or {}), "exit_code": new_exit_code()}
     if src.get("file"):
         data = await read_file(src["file"])

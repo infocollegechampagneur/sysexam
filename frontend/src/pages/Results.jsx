@@ -114,7 +114,7 @@ export default function Results() {
         <Button variant="outline" size="sm" onClick={load} data-testid="results-refresh-btn"><RefreshCw className="mr-1.5 h-4 w-4" />Actualiser</Button>
         <Button size="sm" variant="outline" onClick={() => groupExport(exportPdf)} data-testid="export-all-pdf-btn"><FileDown className="mr-1.5 h-4 w-4" />{scope} (PDF)</Button>
         {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("merged")} data-testid="export-all-annotated-pdf-btn"><FilePen className="mr-1.5 h-4 w-4" />{annBusy === "merged" ? "Génération…" : `${scope} annotées (PDF)`}</Button>}
-        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("zip")} data-testid="export-all-annotated-zip-btn"><FolderArchive className="mr-1.5 h-4 w-4" />{annBusy === "zip" ? "Génération…" : "Annotées (ZIP)"}</Button>}
+        {inlinePdf && <Button size="sm" variant="outline" disabled={!!annBusy} onClick={() => allAnnotated("zip")} data-testid="export-all-annotated-zip-btn"><FolderArchive className="mr-1.5 h-4 w-4" />{annBusy === "zip" ? "Génération…" : `${scope} annotées (ZIP)`}</Button>}
         <Button size="sm" variant="outline" onClick={() => groupExport(exportWord)} data-testid="export-all-word-btn"><FileType2 className="mr-1.5 h-4 w-4" />{scope} (Word)</Button>
         <Button size="sm" onClick={() => { if (!sessions.length) return toast.error("Aucune copie"); exportPdf(reportRef.current, `${slug(exam?.title)}_rapport_surveillance`); }} className="bg-rose-700 hover:bg-rose-800" data-testid="export-surveillance-report-btn"><ShieldAlert className="mr-1.5 h-4 w-4" />Rapport de surveillance (PDF)</Button>
         {exam && <ClearSessionsButton exam={exam} sessions={sessions} onDone={() => { setSel(null); load(); }} />}
@@ -151,9 +151,9 @@ export default function Results() {
       {view === "copies" && <div className="mt-4 grid gap-6 lg:grid-cols-12">
         <aside className="space-y-2 lg:col-span-4" data-testid="sessions-list">
           {sessions.length > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-600" data-testid="selection-bar">
-              <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-blue-900" checked={picked.length === sessions.length} onChange={(e) => setChecked(e.target.checked ? new Set(sessions.map((s) => s.id)) : new Set())} data-testid="select-all-sessions" />Tout sélectionner</label>
-              <span data-testid="selection-count">{picked.length ? `${picked.length} cochée(s) — les boutons d'export s'appliquent à la sélection` : "Cochez des élèves pour exporter seulement leurs copies"}</span>
+            <div className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-600" data-testid="selection-bar">
+              <label className="flex items-center gap-2 font-medium"><input type="checkbox" className="h-4 w-4 accent-blue-900" checked={sessions.length > 0 && picked.length === sessions.length} onChange={(e) => setChecked(e.target.checked ? new Set(sessions.map((s) => s.id)) : new Set())} data-testid="select-all-sessions" />Tout sélectionner</label>
+              <p className="mt-0.5 text-slate-500" data-testid="selection-count">{picked.length ? `${picked.length} cochée(s) : les exports portent sur la sélection` : "Cochez des élèves pour n'exporter que leurs copies"}</p>
             </div>
           )}
           {sessions.map((s, i) => <SessionRow key={s.id} s={s} i={i} active={s.id === sel} onClick={() => setSel(s.id)} checked={checked.has(s.id)} onCheck={toggle} />)}

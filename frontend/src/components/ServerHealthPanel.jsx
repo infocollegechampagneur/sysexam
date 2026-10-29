@@ -25,10 +25,13 @@ const Card = ({ icon: Icon, title, ok, warn, children, testId }) => (
 
 export const ServerHealthPanel = () => {
   const [h, setH] = useState(null);
+  const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const load = () => { setBusy(true); api.get("/admin/health").then((r) => setH(r.data)).catch((e) => toast.error(formatErr(e))).finally(() => setBusy(false)); };
+  const load = () => { setBusy(true); setErr(""); api.get("/admin/health").then((r) => setH(r.data)).catch((e) => { setErr(formatErr(e)); toast.error(formatErr(e)); }).finally(() => setBusy(false)); };
   useEffect(() => { load(); }, []);
-  if (!h) return <p className="py-8 text-center text-sm text-slate-500">Vérification du serveur…</p>;
+  if (!h) return err
+    ? <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800" data-testid="server-health-error">Impossible d'interroger le serveur : {err} <Button size="sm" variant="outline" className="ml-3" onClick={load} data-testid="health-retry-btn">Réessayer</Button></div>
+    : <p className="py-8 text-center text-sm text-slate-500">Vérification du serveur…</p>;
   const bAge = ageH(h.backup.last_at);
   const backupOk = h.db.atlas ? true : bAge !== null && bAge < 30;
   const diskWarn = h.disk.used_pct >= 80;
@@ -56,7 +59,7 @@ export const ServerHealthPanel = () => {
         <Card icon={Archive} title="Sauvegardes" ok={backupOk} warn={!h.db.atlas && bAge !== null && bAge >= 30 && bAge < 72} testId="health-backup">
           {h.backup.last_at ? <p>Dernière : {fmt(h.backup.last_at)} ({h.backup.size_mb} Mo) · {h.backup.count} archive(s) conservée(s)</p> : <p>Aucune archive dans <code>sauvegardes/</code></p>}
           {h.db.atlas && <p className="text-slate-500">Atlas conserve aussi ses propres sauvegardes.</p>}
-          {!h.db.atlas && !backupOk && <p className="text-rose-700">Plus de 30 h sans sauvegarde : vérifier <code>crontab -l</code> et <code>./sauvegarde.sh</code></p>}
+          {!h.db.atlas && !backupOk && <p className="text-rose-700">{h.backup.last_at ? "Plus de 30 h sans sauvegarde" : "Aucune sauvegarde encore faite"} : vérifier <code>crontab -l</code> et lancer <code>./sauvegarde.sh</code></p>}
         </Card>
         <Card icon={Mail} title="Courriels (SMTP)" ok={h.mail} testId="health-mail">
           <p>{h.mail ? "Configurés : alertes d'aide, bienvenue et alertes serveur actives." : "Non configurés : aucune alerte par courriel ne peut partir."}</p>
