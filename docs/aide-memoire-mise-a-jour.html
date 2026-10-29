@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MonExamEnLigne — Aide-mémoire : mettre à jour après un push GitHub</title>
+<style>
+  @page { size: letter; margin: 16mm 16mm 16mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Public Sans", Arial, sans-serif; color: #0f172a; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 20pt; color: #1e3a8a; margin: 0 0 2px; letter-spacing: -0.4px; }
+  .sub { color: #475569; font-size: 11pt; margin: 0 0 14px; }
+  h2 { font-size: 13.5pt; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; }
+  tr { page-break-inside: avoid; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 9.5pt; }
+  pre { font-family: Consolas, "Courier New", monospace; background: #0f172a; color: #e2e8f0; padding: 9px 12px; border-radius: 8px; font-size: 9.5pt; white-space: pre-wrap; word-break: break-all; page-break-inside: avoid; margin: 6px 0; }
+  pre .c { color: #94a3b8; }
+  .tip { border-left: 4px solid #0ea5e9; background: #f0f9ff; padding: 7px 11px; margin: 8px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .warn { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 7px 11px; margin: 8px 0; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .check { border: 2px dashed #047857; background: #ecfdf5; padding: 7px 11px; margin: 8px 0; border-radius: 6px; page-break-inside: avoid; }
+  .tip b, .warn b, .check b { display: block; margin-bottom: 2px; }
+  .steps { counter-reset: step; padding-left: 0; list-style: none; margin: 6px 0; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 32px; margin: 7px 0; page-break-inside: avoid; }
+  .steps > li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: #1e3a8a; color: #fff; font-weight: 700; font-size: 9.5pt; text-align: center; line-height: 22px; }
+  .flow { display: flex; gap: 8px; margin: 10px 0; }
+  .flow div { flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; background: #f8fafc; font-size: 9.5pt; }
+  .flow div b { display: block; color: #1e3a8a; font-size: 10.5pt; margin-bottom: 3px; }
+  .pb { page-break-before: always; }
+  .small { color: #64748b; font-size: 9pt; }
+  .kbd { border: 1px solid #94a3b8; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 9pt; background: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Aide-mémoire — Mettre à jour MonExamEnLigne</h1>
+<p class="sub">Que faire après un « Save to GitHub » · Collège Champagneur · serveur VM Ubuntu + Docker + Cloudflare Tunnel</p>
+
+<div class="warn"><b>Règle n° 1 : un push GitHub ne met rien à jour tout seul.</b> GitHub n'est que la copie de référence du code. Il faut ensuite <strong>déployer</strong> vers l'endroit concerné : la VM (API), SiteGround (site web) ou les postes (application Windows).</div>
+
+<h2>1. Où va quoi ?</h2>
+<div class="flow">
+  <div><b>GitHub</b> <code>infocollegechampagneur/sysexam</code><br>Code source, historique, fabrication automatique du site et du .msi (onglet Actions).</div>
+  <div><b>VM école</b> <code>/opt/monexam</code><br>API (FastAPI) dans Docker, exposée par Cloudflare Tunnel : <code>https://api-examen.champagneur.qc.ca</code></div>
+  <div><b>SiteGround</b><br>Fichiers du site web : <code>https://examen.champagneur.qc.ca</code> (ce que voient enseignants et élèves).</div>
+  <div><b>MongoDB Atlas</b><br>La base de données (comptes, examens, copies). Jamais touchée par une mise à jour.</div>
+</div>
+
+<h2>2. Tableau de décision : qu'est-ce qui a changé ?</h2>
+<table>
+  <tr><th style="width:34%">Dossier modifié dans le commit</th><th style="width:18%">Où agir</th><th>Action</th></tr>
+  <tr><td><code>backend/…</code>, <code>docker-compose.yml</code>, <code>Caddyfile</code>, <code>*.sh</code></td><td><strong>VM</strong></td><td>§ 3 — <code>./mise-a-jour.sh</code></td></tr>
+  <tr><td><code>frontend/…</code> (écrans, textes, guides PDF dans <code>frontend/public</code>)</td><td><strong>SiteGround</strong></td><td>§ 4 — workflow « Site web » puis FTP</td></tr>
+  <tr><td><code>desktop/…</code> (application Windows)</td><td><strong>Postes</strong></td><td>§ 5 — nouvelle version → .msi → GPO</td></tr>
+  <tr><td><code>docs/…</code>, <code>*.md</code>, <code>.github/…</code></td><td>—</td><td>Rien à déployer (documentation / automatisations GitHub)</td></tr>
+  <tr><td>Plusieurs dossiers</td><td>Les endroits concernés</td><td>Faire chaque section applicable, dans l'ordre § 3 → § 4 → § 5</td></tr>
+</table>
+<div class="tip"><b>Comment savoir ?</b> Sur GitHub → onglet <strong>Commits</strong> → cliquez sur le dernier commit : la liste des fichiers modifiés s'affiche avec leur dossier. Dans le chat Emergent, l'agent précise aussi « VM », « SiteGround » ou « les deux ».</div>
+
+<h2>3. Mettre à jour l'API (VM) — 2 à 3 min</h2>
+<p>À faire <strong>hors période d'examen</strong> (coupure de 5 à 20 secondes pendant le redémarrage).</p>
+<ol class="steps">
+  <li>Connexion SSH à la VM (PuTTY / Terminal) : <code>ssh adminexam@192.168.x.x</code></li>
+  <li>Lancer la mise à jour :
+<pre>cd /opt/monexam
+./mise-a-jour.sh</pre>
+Le script fait : <code>git pull</code> → reconstruction de l'image <code>api</code> → redémarrage (<code>--profile tunnel</code> détecté automatiquement grâce à <code>TUNNEL_TOKEN</code> dans <code>ecole.env</code>) → <code>docker compose ps</code>.</li>
+  <li>Vérifier :
+<pre>docker compose ps                      <span class="c"># mongo, api, tunnel : running / healthy</span>
+docker compose logs api | tail -20     <span class="c"># « Application startup complete », aucune ligne ERROR</span>
+curl -s https://api-examen.champagneur.qc.ca/api/   <span class="c"># {"message":"MonExamEnLigne API"}</span></pre></li>
+</ol>
+<div class="check"><b>Attendu</b> Les 3 conteneurs en <em>running</em>, <code>api</code> passe à <em>healthy</em> en ~1 min, le curl renvoie le JSON. Sur Cloudflare → Networking → Tunnels, <code>monexam</code> = HEALTHY.</div>
+<div class="warn"><b>Si <code>api</code> reste en « Restarting »</b> → <code>docker compose logs api | tail -40</code>. Cause fréquente : une nouvelle variable attendue dans <code>ecole.env</code> (KeyError: 'NOM_VARIABLE'). Ajoutez la ligne (<code>nano ecole.env</code>, modèle dans <code>ecole.env.exemple</code>) puis <code>docker compose --profile tunnel up -d</code>.</div>
+
+<h2>4. Mettre à jour le site web (SiteGround) — 10 min</h2>
+<ol class="steps">
+  <li>GitHub → dépôt <code>sysexam</code> → onglet <strong>Actions</strong> → à gauche, workflow <strong>Site web</strong> → bouton <strong>Run workflow</strong>.</li>
+  <li>Champ <code>backend_url</code> : <code>https://api-examen.champagneur.qc.ca</code> → <strong>Run workflow</strong>. (Toujours cette adresse : c'est elle qui relie le site à la VM. Jamais l'adresse Render.)</li>
+  <li>Attendez le crochet vert (2–3 min) → cliquez sur l'exécution → section <strong>Artifacts</strong> → téléchargez le ZIP.</li>
+  <li>Décompressez le ZIP sur votre PC.</li>
+  <li>SiteGround → <strong>Site Tools</strong> → <strong>Site → Gestionnaire de fichiers</strong> (ou client FTP FileZilla) → dossier de <code>examen.champagneur.qc.ca</code> (généralement <code>public_html</code> du sous-domaine).</li>
+  <li>Téléversez <strong>tout le contenu</strong> du ZIP en <strong>remplaçant</strong> les fichiers existants. Le fichier <code>.htaccess</code> doit être présent (fichiers cachés : activez « Afficher les fichiers cachés » si besoin).</li>
+  <li>Navigateur : <code>https://examen.champagneur.qc.ca</code> → <span class="kbd">Ctrl</span>+<span class="kbd">F5</span> → connexion enseignant → vérifier la nouveauté.</li>
+</ol>
+<div class="check"><b>Attendu</b> Connexion réussie, vos examens apparaissent. Si le site « tourne en rond » ou affiche une erreur réseau : le <code>backend_url</code> était faux, ou le cache n'est pas vidé (navigation privée pour tester).</div>
+<div class="tip"><b>Pourquoi le ZIP et pas un simple copier-coller des fichiers GitHub ?</b> Le site doit être « compilé » (React) avec la bonne adresse d'API. Le workflow s'en charge : vous ne téléversez jamais le dossier <code>frontend/</code> brut.</div>
+
+<h2>5. Mettre à jour l'application Windows (postes élèves) — quand <code>desktop/</code> change</h2>
+<ol class="steps">
+  <li>GitHub → <code>desktop/package.json</code> → crayon ✏️ → augmentez <code>"version"</code> (ex. <code>1.2.9</code> → <code>1.2.10</code>) → <strong>Commit changes</strong>.</li>
+  <li>Onglet <strong>Actions</strong> → workflow <strong>Desktop Windows</strong> → attendez le crochet vert → <strong>Artifacts</strong> (ou <strong>Releases</strong>) → téléchargez le <code>.msi</code>.</li>
+  <li>Déployez par GPO comme d'habitude. Testez sur un poste : PreCheck, Antidote / WordQ / Lexibar, remise d'un examen test.</li>
+</ol>
+<p class="small">L'application Windows charge le site SiteGround : une mise à jour du site (§ 4) est donc visible immédiatement dans l'application, sans nouveau .msi. Le .msi n'est nécessaire que pour des changements de l'application elle-même (kiosque, détection de logiciels, PreCheck…).</p>
+
+<h2>6. Vérifications rapides &amp; commandes utiles (VM)</h2>
+<table>
+  <tr><th style="width:46%">Commande</th><th>Pour</th></tr>
+  <tr><td><code>cd /opt/monexam &amp;&amp; ./mise-a-jour.sh</code></td><td>Mettre à jour l'API après un push</td></tr>
+  <tr><td><code>docker compose ps</code></td><td>État des 3 services</td></tr>
+  <tr><td><code>docker compose logs api --tail 50</code><br><code>docker compose logs tunnel --tail 20</code></td><td>Journaux API / tunnel</td></tr>
+  <tr><td><code>docker compose --profile tunnel up -d</code></td><td>Appliquer un changement de <code>ecole.env</code> (sans rebuild)</td></tr>
+  <tr><td><code>docker compose --profile tunnel restart api</code></td><td>Redémarrer seulement l'API</td></tr>
+  <tr><td><code>./sauvegarde.sh</code></td><td>Sauvegarde immédiate de la base (si base locale ; avec Atlas, Atlas sauvegarde lui-même)</td></tr>
+  <tr><td><code>git log --oneline -5</code></td><td>Voir quelle version du code tourne sur la VM</td></tr>
+  <tr><td><code>df -h</code> · <code>docker system prune -af</code></td><td>Espace disque · nettoyer les anciennes images</td></tr>
+  <tr><td><code>sudo reboot</code></td><td>Redémarrer la VM : les 3 services repartent seuls (<code>restart: unless-stopped</code>)</td></tr>
+</table>
+
+<h2>7. Ce qu'il ne faut PAS faire</h2>
+<table>
+  <tr><td>Modifier des fichiers directement sur la VM avec <code>nano</code> (sauf <code>ecole.env</code>)</td><td>Le prochain <code>git pull</code> échouera (conflit). Toute modification de code passe par Emergent → GitHub.</td></tr>
+  <tr><td>Mettre <code>ecole.env</code> ou des mots de passe dans GitHub</td><td><code>ecole.env</code> n'existe que sur la VM. Secrets = jamais dans le dépôt, jamais en clair dans une capture d'écran.</td></tr>
+  <tr><td>Lancer <code>./mise-a-jour.sh</code> pendant un examen</td><td>Coupure de quelques secondes → élèves déconnectés momentanément. Attendre la fin.</td></tr>
+  <tr><td>Supprimer la ligne DNS <code>api-examen</code> (Cloudflare) ou le tunnel</td><td>L'API devient injoignable. Si cela arrive : recréer le CNAME <code>api-examen</code> → <code>TUNNEL-ID.cfargotunnel.com</code> (nuage orange).</td></tr>
+</table>
+
+<div class="tip"><b>Option pour plus tard</b> Le workflow « Site web » peut déposer les fichiers directement sur SiteGround par FTP (identifiants FTP stockés comme <em>secrets</em> GitHub). Un push = site à jour, sans téléversement manuel. À demander à l'agent le jour où la routine FTP devient lourde.</div>
+
+<p class="small" style="margin-top:14px">MonExamEnLigne — Collège Champagneur · Aide-mémoire v1 · Guides complets : <code>guide-installation-serveur-ecole.pdf</code>, <code>guide-enseignant.pdf</code> (sur le site, à la racine).</p>
+</body>
+</html>
