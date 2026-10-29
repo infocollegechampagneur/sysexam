@@ -241,8 +241,8 @@ sudo systemctl enable docker
 <span class="c"># 5. Fuseau horaire et pare-feu de la VM elle-même</span>
 sudo timedatectl set-timezone America/Toronto
 sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp      <span class="c"># option 1 seulement (sans danger avec le tunnel)</span>
-sudo ufw allow 443/tcp     <span class="c"># idem</span>
+sudo ufw allow 80/tcp      <span class="c"># OPTION 1 SEULEMENT — avec le tunnel (option 2), SAUTEZ ces 2 lignes</span>
+sudo ufw allow 443/tcp     <span class="c"># (ufw = pare-feu interne de la VM, pas celui de l'école)</span>
 sudo ufw --force enable</pre>
 <p>Puis tapez <code>exit</code>, et reconnectez-vous (<code>ssh adminexam@192.168.10.50</code>) pour que le droit Docker soit pris en compte.</p>
 <div class="check"><b>Vérification D</b> <code>docker compose version</code> affiche « Docker Compose version v2.x ». <code>docker run --rm hello-world</code> affiche « Hello from Docker! ».</div>
