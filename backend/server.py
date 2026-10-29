@@ -23,6 +23,7 @@ import mammoth
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import DuplicateKeyError
 from pydantic import BaseModel, Field
 
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
@@ -1536,7 +1537,10 @@ async def startup():
     if not admin:
         admin = {"id": str(uuid.uuid4()), "email": email, "name": "Administrateur·trice", "role": "admin", "active": True,
                  "password_hash": hash_password(pwd), "created_at": now_iso()}
-        await db.users.insert_one(admin)
+        try:
+            await db.users.insert_one(admin)
+        except DuplicateKeyError:
+            admin = await db.users.find_one({"email": email})
     else:
         upd = {"role": "admin", "active": True}
         if not verify_password(pwd, admin["password_hash"]):
@@ -1545,7 +1549,10 @@ async def startup():
     if await db.exams.count_documents({"teacher_id": admin["id"]}) == 0:
         for ex in sample_exams():
             ex["settings"]["exit_code"] = new_exit_code()
-            await db.exams.insert_one({**ex, "id": str(uuid.uuid4()), "teacher_id": admin["id"], "file": None, "created_at": now_iso()})
+            try:
+                await db.exams.insert_one({**ex, "id": str(uuid.uuid4()), "teacher_id": admin["id"], "file": None, "created_at": now_iso()})
+            except DuplicateKeyError:
+                pass
     async for e in db.exams.find({"$or": [{"settings.exit_code": {"$exists": False}}, {"settings.exit_code": ""}]}, {"id": 1}):
         await db.exams.update_one({"id": e["id"]}, {"$set": {"settings.exit_code": new_exit_code()}})
 
