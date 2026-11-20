@@ -307,10 +307,24 @@ ipcMain.handle("machine-info", () => ({ hostname: os.hostname(), user: (os.userI
 
 ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; setTimeout(() => app.quit(), 200); return true; });
 
+function setupAutoUpdate() {
+  if (!app.isPackaged || config.autoUpdate === false) return;
+  let autoUpdater;
+  try { ({ autoUpdater } = require("electron-updater")); } catch (e) { return log("electron-updater absent"); }
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = { info: (m) => log(`maj: ${m}`), warn: (m) => log(`maj: ${m}`), error: (m) => log(`maj erreur: ${m}`), debug: () => {} };
+  autoUpdater.on("update-downloaded", (info) => {
+    log(`maj ${info.version} téléchargée`);
+    if (!locked) setTimeout(() => autoUpdater.quitAndInstall(true, true), 1500);
+  });
+  autoUpdater.checkForUpdates().catch((e) => log(`maj indisponible: ${e.message}`));
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => { createWindow(); setupAutoUpdate(); });
   app.on("window-all-closed", () => app.quit());
 }

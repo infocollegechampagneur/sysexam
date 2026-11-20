@@ -1,9 +1,19 @@
 name: Build application Windows
 
+# À chaque push touchant desktop/ : version incrémentée automatiquement (1.2.x → 1.2.x+1),
+# construction .exe/.msi et publication d'une Release GitHub (vX.Y.Z) avec latest.yml pour la mise à jour automatique.
 on:
   workflow_dispatch:
   push:
+    branches: [main, master]
     paths: ["desktop/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-windows
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -15,18 +25,37 @@ jobs:
       CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
       CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Calculer la prochaine version
+        id: ver
+        shell: bash
+        run: |
+          BASE=$(node -p "require('./package.json').version")
+          LAST=$(git tag -l 'v*' --sort=-v:refname | head -n1 | sed 's/^v//')
+          if [ -n "$LAST" ] && [ "$(printf '%s\n%s\n' "$BASE" "$LAST" | sort -V | tail -n1)" = "$LAST" ]; then
+            NEXT=$(echo "$LAST" | awk -F. '{printf "%d.%d.%d",$1,$2,$3+1}')
+          else
+            NEXT=$BASE
+          fi
+          npm version "$NEXT" --no-git-tag-version --allow-same-version
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Version construite : $NEXT (package.json=$BASE, dernier tag=${LAST:-aucun})"
       - run: yarn install --no-frozen-lockfile --network-timeout 300000
-      - run: yarn electron-builder --win nsis msi --publish never
+      - name: Construire et publier la Release
+        run: yarn electron-builder --win nsis msi --publish always
         env:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: "true"
       - uses: actions/upload-artifact@v4
         with:
-          name: MonExamEnLigne-Windows
+          name: MonExamEnLigne-Windows-v${{ steps.ver.outputs.version }}
           path: |
             desktop/dist/*.exe
             desktop/dist/*.msi
+            desktop/dist/latest.yml

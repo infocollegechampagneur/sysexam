@@ -1,5 +1,6 @@
 {
   "appUrl": "https://examen.champagneur.qc.ca",
+  "autoUpdate": true,
   "emergencyCode": "",
   "autoLaunchTools": true,
   "forbidden": [

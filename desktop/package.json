@@ -10,6 +10,9 @@
     "start": "electron .",
     "dist": "electron-builder --win nsis msi"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
   "devDependencies": {
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8"
@@ -18,6 +21,7 @@
     "appId": "com.monexamenligne.desktop",
     "productName": "MonExamEnLigne",
     "files": ["main.js", "preload.js", "config.json"],
+    "publish": { "provider": "github", "owner": "infocollegechampagneur", "repo": "sysexam", "releaseType": "release" },
     "win": { "target": ["nsis", "msi"], "icon": "build/icon.ico" },
     "nsis": { "oneClick": false, "perMachine": true, "allowToChangeInstallationDirectory": true, "shortcutName": "MonExamEnLigne" },
     "msi": { "oneClick": true, "perMachine": true, "createDesktopShortcut": true, "shortcutName": "MonExamEnLigne", "upgradeCode": "8C3E6B1A-4F2D-4B7E-9A51-6D2F0C7B3E19" }
