@@ -81,7 +81,6 @@
     <li>Corriger, noter et exporter (sélection d'élèves, PDF annotés groupés)</li>
     <li>Réutiliser un examen (dupliquer, vider les copies), statistiques et banque de questions</li>
     <li>Listes de classe et temps supplémentaire</li>
-    <li>Pour l'administrateur : comptes, alertes, postes, état du serveur</li>
     <li>Questions fréquentes et dépannage</li>
   </ol>
 </section>
@@ -112,7 +111,7 @@
 </ul>
 
 <h2>3. Le tableau de bord enseignant</h2>
-<p>C'est la page d'accueil après la connexion. En haut : le menu <strong>Tableau de bord</strong>, <strong>Classes</strong> et, pour l'administrateur, <strong>Comptes</strong>. À droite : la <strong>cloche</strong> des demandes d'aide et votre profil.</p>
+<p>C'est la page d'accueil après la connexion. En haut : le menu <strong>Tableau de bord</strong>, <strong>Classes</strong> . À droite : la <strong>cloche</strong> des demandes d'aide et votre profil.</p>
 <table>
   <tr><th style="width:30%">Élément</th><th>À quoi ça sert</th></tr>
   <tr><td>Compteurs</td><td>Nombre d'examens, d'examens ouverts et d'élèves en cours.</td></tr>
@@ -274,18 +273,7 @@
 </ol>
 <div class="tip"><b>Sans liste de classe</b> l'examen est ouvert à toute personne ayant le code : pratique pour un test rapide, moins pour une évaluation officielle.</div>
 
-<h2>14. Pour l'administrateur : comptes, alertes, postes</h2>
-<p>Le menu <strong>Comptes</strong> n'est visible que par les comptes administrateurs.</p>
-<table>
-  <tr><th style="width:26%">Onglet</th><th>Fonctions</th></tr>
-  <tr><td>Comptes</td><td>Créer un enseignant (courriel de bienvenue automatique avec mot de passe temporaire), importer plusieurs enseignants d'un coup, réinitialiser un mot de passe, désactiver ou réactiver un compte, nommer un autre administrateur.</td></tr>
-  <tr><td>Journal d'activité</td><td>Historique des actions administratives et des connexions.</td></tr>
-  <tr><td>Alertes d'aide</td><td><strong>Sonnerie par défaut</strong> de l'école ; <strong>chemins des logiciels d'aide</strong> (si l'application Windows ne trouve pas Lexibar ou WordQ, collez le chemin complet de l'exécutable) ; <strong>surveillants par défaut</strong> qui reçoivent toutes les demandes d'aide ; destinataires par examen.</td></tr>
-  <tr><td>Postes</td><td>Liste des ordinateurs vus par l'application Windows : nom du poste, utilisateur, version de l'application, logiciels d'aide trouvés ou absents (survolez pour voir le chemin), applications interdites fermées. Filtres « Lexibar manquant », « WordQ manquant ». Le même résumé de diagnostic apparaît dans le détail de chaque copie (page Suivi).</td></tr>
-  <tr><td>État du serveur</td><td>Santé du serveur de l'école en un coup d'œil : base de données (temps de réponse, nombre de comptes/examens/copies), accès Internet par le tunnel Cloudflare, espace disque, dernière sauvegarde, courriels, version du code installée. Un voyant rouge indique quoi vérifier ; les pannes déclenchent aussi un courriel automatique à l'administrateur.</td></tr>
-</table>
-
-<h2 class="pb">15. Questions fréquentes et dépannage</h2>
+<h2 class="pb">14. Questions fréquentes et dépannage</h2>
 <dl class="faq">
   <dt>Un élève dit que son code ne fonctionne pas.</dt>
   <dd>Vérifiez que l'examen est <strong>Ouvert</strong> (pas Brouillon ni Fermé) et, s'il est lié à une classe, que le nom et le matricule correspondent exactement à la liste.</dd>
@@ -304,7 +292,7 @@
   <dt>Je ne reçois pas la sonnerie des demandes d'aide.</dt>
   <dd>Le navigateur ne joue un son qu'après une interaction sur la page : cliquez une fois n'importe où dans la page Suivi après l'avoir ouverte. Vérifiez aussi le volume et, dans votre profil, le bouton <span class="btn">Écouter</span>.</dd>
   <dt>Combien d'élèves en même temps ?</dt>
-  <dd>Le serveur de l'école (VM Ubuntu + Docker, API publiée via Cloudflare Tunnel) est dimensionné pour plusieurs centaines d'élèves simultanés. Pour un examen de niveau regroupant plusieurs groupes, prévenez tout de même l'administrateur, qui peut vérifier l'onglet « État du serveur » avant le début.</dd>
+  <dd>Le serveur de l'école est dimensionné pour plusieurs centaines d'élèves simultanés. Pour un examen de niveau regroupant plusieurs groupes, prévenez tout de même l'administrateur à l'avance.</dd>
 </dl>
 <p class="small" style="margin-top:28px">MonExamEnLigne — Collège Champagneur. Ce guide décrit la version de novembre 2026 (application Windows 1.2.9 et suivantes, mise à jour automatiquement). Pour toute question technique, contactez le service informatique du Collège.</p>
 
