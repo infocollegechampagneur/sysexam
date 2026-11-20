@@ -62,7 +62,7 @@
       <li>comment surveiller en direct, répondre aux demandes d'aide, corriger et exporter.</li>
     </ul>
   </div>
-  <div class="meta">Version du guide : juin 2026 · Application Windows 1.2.8 · Conçu par le Collège Champagneur</div>
+  <div class="meta">Version du guide : novembre 2026 · Application Windows 1.2.9+ (mise à jour automatique) · Conçu par le Collège Champagneur</div>
 </section>
 
 <section class="toc">
@@ -71,17 +71,17 @@
     <li>Comprendre MonExamEnLigne en 2 minutes</li>
     <li>Se connecter et gérer son profil</li>
     <li>Le tableau de bord enseignant</li>
-    <li>Créer un examen — étape 1 : informations</li>
+    <li>Créer un examen — étape 1 : informations (classe, gestionnaires, plages de disponibilité)</li>
     <li>Créer un examen — étape 2 : type et contenu</li>
     <li>Créer un examen — étape 3 : outils et sécurité</li>
     <li>Tester l'examen comme un élève (aperçu)</li>
     <li>Le jour de l'examen : ce que vit l'élève</li>
     <li>Surveiller en direct (page Suivi)</li>
     <li>Demandes d'aide, sonnerie et Teams</li>
-    <li>Corriger, noter et exporter</li>
-    <li>Réutiliser un examen, statistiques et banque de questions</li>
+    <li>Corriger, noter et exporter (sélection d'élèves, PDF annotés groupés)</li>
+    <li>Réutiliser un examen (dupliquer, vider les copies), statistiques et banque de questions</li>
     <li>Listes de classe et temps supplémentaire</li>
-    <li>Pour l'administrateur : comptes, alertes, postes</li>
+    <li>Pour l'administrateur : comptes, alertes, postes, état du serveur</li>
     <li>Questions fréquentes et dépannage</li>
   </ol>
 </section>
@@ -120,6 +120,7 @@
   <tr><td>Liste « Mes examens »</td><td>Une carte par examen : titre, matière, code, statut (<em>Brouillon</em>, <em>Ouvert</em>, <em>Fermé</em>), durée, outils permis.</td></tr>
   <tr><td><span class="btn">Suivi</span></td><td>Ouvre la surveillance en direct et la correction (section 9 et 11).</td></tr>
   <tr><td><span class="btn">Modifier</span></td><td>Rouvre l'éditeur de l'examen.</td></tr>
+  <tr><td><span class="btn">⧉ Dupliquer</span></td><td>Crée une copie de l'examen en <em>Brouillon</em> (titre « … (copie) », nouveau code, mêmes questions, réglages et document, <strong>sans les copies d'élèves</strong>) et l'ouvre dans l'éditeur. Idéal pour préparer la version de l'an prochain ou une variante pour un autre groupe.</td></tr>
   <tr><td><span class="btn red">Supprimer</span></td><td>Supprime l'examen <strong>et toutes les copies</strong>. Pour vider seulement les copies, voir section 12.</td></tr>
   <tr><td><span class="btn">Créer un examen</span></td><td>Lance l'éditeur en trois étapes (sections 4 à 6).</td></tr>
 </table>
@@ -133,7 +134,10 @@
   <li><strong>Consignes pour les élèves</strong> : affichées sur l'écran d'accueil de l'examen, avant le départ.</li>
   <li><strong>Liste de classe</strong> (facultatif) : si vous en choisissez une, seuls les élèves inscrits (nom + matricule) peuvent rejoindre et leur temps supplémentaire est appliqué automatiquement (voir section 13).</li>
   <li><strong>Collègues avertis quand un élève demande de l'aide</strong> : cochez les surveillant·e·s ou technicien·ne·s qui doivent recevoir les alertes « J'ai besoin d'aide » en plus de vous.</li>
+  <li><strong>Gestionnaires de l'examen</strong> : cochez les collègues qui doivent pouvoir gérer cet examen <em>comme vous</em> (il apparaît dans leur tableau de bord ; ils peuvent le modifier, le surveiller, le corriger, l'exporter, vider les copies). Seul le propriétaire peut le supprimer. Pratique pour un remplaçant, un co-enseignant ou le technicien qui surveille la salle.</li>
+  <li><strong>Plages de disponibilité</strong> (facultatif) : <span class="btn">Ajouter une plage</span> → date et heure de <strong>début</strong> et de <strong>fin</strong>. Vous pouvez en ajouter plusieurs (ex. groupe 201 lundi 9 h–10 h, groupe 202 mardi 13 h–14 h). L'examen doit être <em>Ouvert</em> <strong>et</strong> dans une plage pour que les élèves puissent entrer le code ; hors plage, ils voient « L'examen n'est pas disponible pour le moment » avec la prochaine plage. <strong>Sans plage</strong>, l'examen ouvert est disponible en tout temps. Un élève déjà commencé peut terminer même si la plage se ferme.</li>
 </ol>
+<div class="tip"><b>Plages ou statut ?</b> Le statut (Brouillon / Ouvert / Fermé) reste l'interrupteur principal. Les plages servent à <em>programmer</em> l'ouverture : vous pouvez mettre l'examen Ouvert la veille, il ne deviendra accessible qu'à l'heure prévue. Les heures sont celles de l'école (Montréal).</div>
 
 <h2>5. Créer un examen — étape 2 : type et contenu</h2>
 <h3>Formulaire</h3>
@@ -245,11 +249,15 @@
   <li>Page <span class="btn">Suivi</span> → cliquez sur une copie <strong>Remise</strong>.</li>
   <li>Chaque question affiche la réponse de l'élève. Pour les choix multiples avec bonne réponse définie, un badge indique <strong>✓ Bonne réponse</strong>, <strong>◐ Partiellement correct</strong> ou <strong>✗ Mauvaise réponse</strong> et les points sont préremplis. Pour les autres, votre <em>réponse attendue</em> s'affiche en vert pour vous aider.</li>
   <li>Saisissez les <strong>points</strong> et un <strong>commentaire</strong> par question, puis la <strong>note globale</strong> et un commentaire général. Cliquez <span class="btn">Enregistrer la note</span>.</li>
-  <li>Exports : <span class="btn">PDF</span> et <span class="btn">Word</span> (la copie corrigée, avec points et commentaires), <span class="btn">PDF annoté</span> pour les documents remplis directement dans le PDF. En haut de la page : <span class="btn">Toutes (PDF)</span> / <span class="btn">Toutes (Word)</span> pour l'ensemble des copies en un seul fichier (une copie par page).</li>
+  <li>Exports d'une copie : <span class="btn">PDF</span> et <span class="btn">Word</span> (la copie corrigée, avec points et commentaires), <span class="btn">PDF annoté</span> pour les documents remplis directement dans le PDF.</li>
+  <li>Exports groupés (boutons en haut de la page Suivi) : <span class="btn">Toutes (PDF)</span> / <span class="btn">Toutes (Word)</span> réunissent toutes les copies en un seul fichier (une copie par page). Pour les examens « réponse dans le document » : <span class="btn">Toutes annotées (PDF)</span> = un seul PDF avec toutes les copies annotées à la suite ; <span class="btn">Annotées (ZIP)</span> = un fichier ZIP contenant un PDF annoté par élève (nom de l'élève dans le nom du fichier).</li>
+  <li><strong>Exporter seulement certains élèves</strong> : dans la liste de gauche, <strong>cochez</strong> les élèves voulus (ou <strong>Tout sélectionner</strong>). Les boutons du haut changent alors de libellé (ex. « 3 sélectionnée(s) (PDF) ») et n'exportent que ces copies. Décochez tout pour revenir à l'ensemble. Cliquer sur le <em>nom</em> ouvre la copie sans la cocher.</li>
 </ol>
 <div class="tip"><b>Mise en page des exports</b> Les questions courtes et leurs réponses ne sont jamais coupées entre deux pages ; les longues réponses sont coupées uniquement entre deux paragraphes.</div>
 
 <h2 class="pb">12. Réutiliser un examen, statistiques et banque de questions</h2>
+<h3>Dupliquer un examen</h3>
+<p>Sur la carte de l'examen (tableau de bord), l'icône <span class="btn">⧉</span> crée une copie en brouillon avec un nouveau code et sans aucune copie d'élève, puis l'ouvre dans l'éditeur. Modifiez le titre, les questions ou les plages, puis passez-la à <em>Ouvert</em>. L'original reste intact avec ses copies et ses notes.</p>
 <h3>Vider les copies pour une autre passation</h3>
 <p>Dans la page Suivi, <span class="btn red">Vider les copies</span> supprime toutes les copies (réponses, notes, historiques) en conservant l'examen, son code et ses réglages. Il faut taper <span class="key">SUPPRIMER</span> pour confirmer ; un avertissement s'affiche si des élèves sont encore en cours.</p>
 <div class="danger"><b>Exportez d'abord</b> Cette action est définitive. Téléchargez <span class="btn">Toutes (PDF)</span> et le <span class="btn red">Rapport de surveillance</span> avant de vider.</div>
@@ -273,7 +281,8 @@
   <tr><td>Comptes</td><td>Créer un enseignant (courriel de bienvenue automatique avec mot de passe temporaire), importer plusieurs enseignants d'un coup, réinitialiser un mot de passe, désactiver ou réactiver un compte, nommer un autre administrateur.</td></tr>
   <tr><td>Journal d'activité</td><td>Historique des actions administratives et des connexions.</td></tr>
   <tr><td>Alertes d'aide</td><td><strong>Sonnerie par défaut</strong> de l'école ; <strong>chemins des logiciels d'aide</strong> (si l'application Windows ne trouve pas Lexibar ou WordQ, collez le chemin complet de l'exécutable) ; <strong>surveillants par défaut</strong> qui reçoivent toutes les demandes d'aide ; destinataires par examen.</td></tr>
-  <tr><td>Postes</td><td>Liste des ordinateurs vus par l'application Windows : nom du poste, utilisateur, version de l'application, logiciels d'aide trouvés ou absents (survolez pour voir le chemin), applications interdites fermées. Filtres « Lexibar manquant », « WordQ manquant ».</td></tr>
+  <tr><td>Postes</td><td>Liste des ordinateurs vus par l'application Windows : nom du poste, utilisateur, version de l'application, logiciels d'aide trouvés ou absents (survolez pour voir le chemin), applications interdites fermées. Filtres « Lexibar manquant », « WordQ manquant ». Le même résumé de diagnostic apparaît dans le détail de chaque copie (page Suivi).</td></tr>
+  <tr><td>État du serveur</td><td>Santé du serveur de l'école en un coup d'œil : base de données (temps de réponse, nombre de comptes/examens/copies), accès Internet par le tunnel Cloudflare, espace disque, dernière sauvegarde, courriels, version du code installée. Un voyant rouge indique quoi vérifier ; les pannes déclenchent aussi un courriel automatique à l'administrateur.</td></tr>
 </table>
 
 <h2 class="pb">15. Questions fréquentes et dépannage</h2>
@@ -295,9 +304,9 @@
   <dt>Je ne reçois pas la sonnerie des demandes d'aide.</dt>
   <dd>Le navigateur ne joue un son qu'après une interaction sur la page : cliquez une fois n'importe où dans la page Suivi après l'avoir ouverte. Vérifiez aussi le volume et, dans votre profil, le bouton <span class="btn">Écouter</span>.</dd>
   <dt>Combien d'élèves en même temps ?</dt>
-  <dd>Le serveur actuel est prévu pour environ 250 élèves simultanés. Pour un examen de niveau (plusieurs centaines d'élèves), prévenez l'administrateur à l'avance.</dd>
+  <dd>Le serveur de l'école (VM Ubuntu + Docker, API publiée via Cloudflare Tunnel) est dimensionné pour plusieurs centaines d'élèves simultanés. Pour un examen de niveau regroupant plusieurs groupes, prévenez tout de même l'administrateur, qui peut vérifier l'onglet « État du serveur » avant le début.</dd>
 </dl>
-<p class="small" style="margin-top:28px">MonExamEnLigne — Collège Champagneur. Ce guide décrit la version de juin 2026 (application Windows 1.2.8). Pour toute question technique, contactez le service informatique du Collège.</p>
+<p class="small" style="margin-top:28px">MonExamEnLigne — Collège Champagneur. Ce guide décrit la version de novembre 2026 (application Windows 1.2.9 et suivantes, mise à jour automatiquement). Pour toute question technique, contactez le service informatique du Collège.</p>
 
 </body>
 </html>
