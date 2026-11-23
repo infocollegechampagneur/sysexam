@@ -15,6 +15,7 @@ import asyncio
 import logging
 import time
 import shutil
+import hashlib
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from typing import List, Optional, Dict, Any
@@ -24,6 +25,7 @@ import httpx
 import mammoth
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
 from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError
 from pydantic import BaseModel, Field
@@ -1463,6 +1465,119 @@ async def student_device(body: DeviceIn, s: dict = Depends(current_session)):
 @api.get("/admin/devices")
 async def admin_devices(_: dict = Depends(current_admin)):
     return await db.devices.find({}, {"_id": 0}).sort("checked_at", -1).to_list(2000)
+
+
+# ---- Distribution de l'application Windows (téléversée par l'admin, installée par la tâche planifiée des postes) ----
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_TMP_DIR", "/tmp/monexam_uploads"))
+VERSION_RE = re.compile(r"(\d+\.\d+\.\d+)")
+
+
+def version_key(v: str):
+    return tuple(int(x) for x in VERSION_RE.search(v or "0.0.0").group(1).split("."))
+
+
+async def desktop_release_doc() -> Optional[dict]:
+    return await db.settings.find_one({"key": "desktop_release"}, {"_id": 0})
+
+
+@api.post("/admin/desktop/upload/{upload_id}/chunk")
+async def desktop_upload_chunk(upload_id: str, index: int, request: Request, _: dict = Depends(current_admin)):
+    if not re.fullmatch(r"[a-f0-9-]{8,40}", upload_id) or index < 0 or index > 5000:
+        raise HTTPException(status_code=400, detail="Téléversement invalide")
+    d = UPLOAD_DIR / upload_id
+    d.mkdir(parents=True, exist_ok=True)
+    data = await request.body()
+    if len(data) > 6 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Morceau trop gros")
+    (d / f"{index:05d}").write_bytes(data)
+    return {"ok": True, "index": index}
+
+
+class DesktopFinish(BaseModel):
+    filename: str
+    version: str
+    total_chunks: int
+    notes: str = ""
+
+
+@api.post("/admin/desktop/upload/{upload_id}/finish")
+async def desktop_upload_finish(upload_id: str, body: DesktopFinish, user: dict = Depends(current_admin)):
+    d = UPLOAD_DIR / upload_id
+    parts = sorted(d.glob("*")) if d.is_dir() else []
+    if len(parts) != body.total_chunks or not parts:
+        raise HTTPException(status_code=400, detail=f"Morceaux manquants ({len(parts)}/{body.total_chunks}) : recommencez le téléversement")
+    ext = body.filename.rsplit(".", 1)[-1].lower()
+    if ext not in ("msi", "exe"):
+        raise HTTPException(status_code=400, detail="Fichier .msi ou .exe attendu")
+    if not VERSION_RE.fullmatch(body.version.strip()):
+        raise HTTPException(status_code=400, detail="Version attendue au format 1.2.10")
+    h = hashlib.sha256()
+    size = 0
+    stream = files_bucket.open_upload_stream(body.filename, metadata={"contentType": "application/octet-stream", "kind": "desktop_release", "version": body.version.strip()})
+    for p in parts:
+        chunk = p.read_bytes()
+        h.update(chunk)
+        size += len(chunk)
+        await stream.write(chunk)
+    await stream.close()
+    shutil.rmtree(d, ignore_errors=True)
+    old = await desktop_release_doc()
+    doc = {"key": "desktop_release", "version": body.version.strip(), "filename": body.filename, "size": size, "sha256": h.hexdigest(), "kind": ext,
+           "gridfs_id": str(stream._id), "notes": body.notes.strip(), "uploaded_at": now_iso(), "uploaded_by": user["email"]}
+    await db.settings.replace_one({"key": "desktop_release"}, doc, upsert=True)
+    if old and old.get("gridfs_id"):
+        try:
+            await files_bucket.delete(ObjectId(old["gridfs_id"]))
+        except Exception:
+            pass
+    logger.info("Application Windows %s publiée par %s", doc["version"], user["email"])
+    return doc
+
+
+@api.delete("/admin/desktop/release")
+async def desktop_release_delete(user: dict = Depends(current_admin)):
+    old = await desktop_release_doc()
+    if old:
+        await db.settings.delete_one({"key": "desktop_release"})
+        try:
+            await files_bucket.delete(ObjectId(old["gridfs_id"]))
+        except Exception:
+            pass
+        logger.info("Application Windows %s retirée par %s", old["version"], user["email"])
+    return {"ok": True}
+
+
+@api.get("/admin/desktop/release")
+async def desktop_release_admin(_: dict = Depends(current_admin)):
+    rel = await desktop_release_doc()
+    devices = await db.devices.find({}, {"_id": 0, "hostname": 1, "app_version": 1}).to_list(2000)
+    outdated = [d["hostname"] for d in devices if rel and version_key(d.get("app_version")) < version_key(rel["version"])] if rel else []
+    return {"release": rel, "devices": len(devices), "outdated": outdated}
+
+
+@api.get("/desktop/latest")
+async def desktop_latest():
+    rel = await desktop_release_doc()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Aucune version publiée")
+    return {k: rel[k] for k in ("version", "filename", "size", "sha256", "kind", "uploaded_at", "notes")} | {"url": "/api/desktop/download"}
+
+
+@api.get("/desktop/download")
+async def desktop_download():
+    rel = await desktop_release_doc()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Aucune version publiée")
+    gs = await files_bucket.open_download_stream(ObjectId(rel["gridfs_id"]))
+
+    async def gen():
+        while True:
+            chunk = await gs.readchunk()
+            if not chunk:
+                break
+            yield chunk
+    headers = {"Content-Disposition": f'attachment; filename="{rel["filename"]}"', "Content-Length": str(rel["size"]), "X-App-Version": rel["version"]}
+    return StreamingResponse(gen(), media_type="application/octet-stream", headers=headers)
 
 
 @api.put("/student/answers")

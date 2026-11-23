@@ -101,6 +101,13 @@ curl -s https://api-examen.champagneur.qc.ca/api/   <span class="c"># {"message"
 <div class="tip"><b>Pourquoi le ZIP et pas un simple copier-coller des fichiers GitHub ?</b> Le site doit être « compilé » (React) avec la bonne adresse d'API. Le workflow s'en charge : vous ne téléversez jamais le dossier <code>frontend/</code> brut.</div>
 
 <h2>5. Mettre à jour l'application Windows (postes élèves) — quand <code>desktop/</code> change</h2>
+<div class="check"><b>Automatique depuis la v1.2.9</b> Un push touchant <code>desktop/</code> incrémente la version tout seul et publie une Release GitHub. Ensuite, deux façons d'arriver sur les postes, <strong>sans code administrateur</strong> :
+<ol class="steps">
+  <li><strong>Site → Comptes → Postes → carte « Application Windows »</strong> : téléversez le <code>.msi</code> téléchargé depuis la Release GitHub, indiquez la version (préremplie depuis le nom du fichier) → <strong>Publier</strong>. La carte indique ensuite combien de postes sont encore en retard.</li>
+  <li>Sur chaque poste, la tâche planifiée « MonExamEnLigne - Mise à jour » (installée <em>une seule fois</em> par GPO ou en admin avec <code>desktop/deploy/Installer-TachePlanifiee.ps1</code>) vérifie au démarrage et à 7 h 15 : d'abord le serveur de l'école, sinon GitHub ; elle installe silencieusement, jamais si l'application est ouverte. Journal : <code>C:\ProgramData\MonExamEnLigne\mise-a-jour.log</code>.</li>
+</ol>
+Pourquoi cette tâche est indispensable : Windows interdit à un élève sans droits d'installer un programme « pour tous les utilisateurs ». La tâche tourne en compte SYSTEM, c'est elle qui installe — c'est la seule méthode sans mot de passe admin.</div>
+<p><strong>Procédure manuelle (si vous préférez le GPO classique)</strong></p>
 <ol class="steps">
   <li>GitHub → <code>desktop/package.json</code> → crayon ✏️ → augmentez <code>"version"</code> (ex. <code>1.2.9</code> → <code>1.2.10</code>) → <strong>Commit changes</strong>.</li>
   <li>Onglet <strong>Actions</strong> → workflow <strong>Desktop Windows</strong> → attendez le crochet vert → <strong>Artifacts</strong> (ou <strong>Releases</strong>) → téléchargez le <code>.msi</code>.</li>

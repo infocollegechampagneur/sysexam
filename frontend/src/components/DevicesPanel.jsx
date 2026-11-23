@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, formatErr } from "@/lib/api";
 import { TOOLS } from "@/lib/tools";
+import { DesktopReleaseCard } from "@/components/DesktopReleaseCard";
 
 const DESKTOP = TOOLS.filter((t) => t.kind === "desktop");
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" }) : "—");
@@ -29,6 +30,7 @@ export const DevicesPanel = () => {
   const missingCount = (id) => rows.filter((d) => d.tools?.[id] && !d.tools[id].installed).length;
   return (
     <div className="space-y-4" data-testid="devices-panel">
+      <DesktopReleaseCard onPublished={load} />
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
         <Monitor className="h-5 w-5 text-blue-900" />
         <span className="text-sm text-slate-700"><strong data-testid="devices-count">{rows.length}</strong> poste(s) vu(s) via l'application Windows</span>
