@@ -56,8 +56,9 @@ function createWindow() {
       return { action: "allow", overrideBrowserWindowOptions: { parent: win, width: 780, height: 900, autoHideMenuBar: true, webPreferences: { devTools: false } } };
     }
     if (!locked && url.startsWith(APP_ORIGIN) && /\.pdf(\?|$)/i.test(url)) {
-      log(`ouverture PDF ${url}`);
-      return { action: "allow", overrideBrowserWindowOptions: { parent: win, width: 1000, height: 900, autoHideMenuBar: true, title: "Guide", webPreferences: { devTools: false, plugins: true, sandbox: true } } };
+      log(`ouverture PDF externe ${url}`);
+      shell.openExternal(url).catch((e) => log(`PDF: ${e.message}`));
+      return { action: "deny" };
     }
     return { action: "deny" };
   });
