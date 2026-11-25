@@ -50,7 +50,7 @@ h1, h2, h3, h4, .font-display { font-family: "Outfit", sans-serif; }
 }
 
 .lockdown { user-select: none; -webkit-user-select: none; }
-.lockdown input, .lockdown textarea, .lockdown .ProseMirror { user-select: text; -webkit-user-select: text; }
+.lockdown input, .lockdown textarea, .lockdown .ProseMirror, .lockdown .pdf-text-layer { user-select: text; -webkit-user-select: text; }
 
 .ProseMirror { outline: none; min-height: var(--editor-min, 220px); padding: 1rem 1.25rem; line-height: 1.7; font-size: 1rem; color: #0f172a; }
 .ProseMirror p { margin: 0 0 0.6em; }
@@ -71,3 +71,6 @@ h1, h2, h3, h4, .font-display { font-family: "Outfit", sans-serif; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 @media print { body { display: none !important; } }
+
+.pdf-text-layer span::selection { background: rgba(37, 99, 235, 0.35); color: transparent; }
+.pdf-text-layer span::-moz-selection { background: rgba(37, 99, 235, 0.35); color: transparent; }

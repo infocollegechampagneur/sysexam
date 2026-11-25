@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Loader2, Type, X, GripVertical, Highlighter, Underline as UnderlineIcon } from "lucide-react";
+import { Loader2, Type, X, GripVertical, Highlighter, Underline as UnderlineIcon, MousePointer2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { renderPdfPages } from "@/lib/pdf";
 
@@ -47,6 +47,15 @@ const Mark = ({ a, idx, readOnly, passive, onDelete }) => (
         <X className="h-3 w-3" />
       </button>
     )}
+  </div>
+);
+
+const TextLayer = ({ items, pageW, ratio, active }) => (
+  <div className={`pdf-text-layer absolute inset-0 overflow-hidden ${active ? "" : "pointer-events-none"}`} aria-label="Texte du document" data-testid="pdf-text-layer">
+    {items.map((t, i) => (
+      <span key={i} className="absolute origin-top-left whitespace-pre text-transparent"
+        style={{ left: `${t.x * 100}%`, top: `${t.y * 100}%`, fontSize: `${t.h * pageW * ratio}px`, lineHeight: 1, fontFamily: "sans-serif", transform: `scaleX(${t.k})`, cursor: active ? "text" : "default" }}>{t.s}</span>
+    ))}
   </div>
 );
 
@@ -107,6 +116,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
 
   const texts = annotations.filter((a) => !a.kind || a.kind === "text");
   const marks = annotations.length - texts.length;
+  const hasText = pages.some((p) => p.text?.length);
   const ModeBtn = ({ m, icon: Icon, label, testId }) => (
     <Button size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode((v) => (v === m ? null : m))}
       className={mode === m ? "bg-amber-500 text-white hover:bg-amber-600" : ""} data-testid={testId}>
@@ -144,8 +154,9 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
           </div>
           <ModeBtn m="underline" icon={UnderlineIcon} label="Souligner" testId="annotator-underline-btn" />
           <span className="text-xs text-slate-500" data-testid="annotator-counts">
-            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : "survolez une marque pour la retirer"}
+            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : mode === "text" ? "cliquez où placer la zone" : hasText ? "sélectionnez du texte avec la souris pour le faire lire (WordQ, Lexibar)" : "survolez une marque pour la retirer"}
           </span>
+          {pages.length > 0 && !hasText && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800" title="Ce PDF est une image (numérisation) : le texte ne peut pas être sélectionné ni lu à voix haute. Demandez à l'enseignant un PDF créé depuis Word." data-testid="pdf-no-text-badge"><MousePointer2 className="h-3 w-3" />Texte non sélectionnable (PDF numérisé)</span>}
         </div>
       )}
       <div ref={wrap} className="mx-auto max-w-[900px] space-y-4 p-4">
@@ -156,6 +167,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
             onPointerDown={(e) => startMark(e, i)}
             className={`relative bg-white shadow ${mode ? "cursor-crosshair" : ""}`} style={{ aspectRatio: `1 / ${p.ratio}`, touchAction: mode && mode !== "text" ? "none" : "auto" }} data-testid={`pdf-page-${i}`}>
             <img src={p.src} alt={`Page ${i + 1}`} draggable={false} className="pointer-events-auto block w-full select-none" />
+            {p.text?.length > 0 && <TextLayer items={p.text} pageW={width - 32} ratio={1} active={!mode} />}
             {annotations.map((a, k) => a.page === i && a.kind && a.kind !== "text" && (
               <Mark key={a.id} a={a} idx={k} readOnly={readOnly} passive={!!mode} onDelete={() => onChange(annotations.filter((o) => o.id !== a.id))} />
             ))}

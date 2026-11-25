@@ -13,8 +13,31 @@ export async function renderPdfPages(blob, onPage) {
     const c = document.createElement("canvas");
     c.width = vp.width;
     c.height = vp.height;
-    await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
-    if (onPage({ src: c.toDataURL("image/jpeg", 0.85), ratio: vp.height / vp.width }) === false) return;
+    const ctx = c.getContext("2d");
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const text = await extractTextItems(page, vp, ctx);
+    if (onPage({ src: c.toDataURL("image/jpeg", 0.85), ratio: vp.height / vp.width, text }) === false) return;
+  }
+}
+
+// Couche de texte invisible (sélection, lecture par WordQ/Lexibar) : positions normalisées 0–1 par rapport à la page.
+async function extractTextItems(page, vp, ctx) {
+  try {
+    const content = await page.getTextContent();
+    const out = [];
+    for (const it of content.items) {
+      if (!it.str || !it.str.trim()) continue;
+      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
+      const fh = Math.hypot(tx[2], tx[3]);
+      if (!fh) continue;
+      const w = it.width * vp.scale;
+      ctx.font = `${fh}px sans-serif`;
+      const measured = ctx.measureText(it.str).width || 1;
+      out.push({ s: it.str, x: tx[4] / vp.width, y: (tx[5] - fh * 0.8) / vp.height, w: w / vp.width, h: fh / vp.height, k: Math.min(3, Math.max(0.3, w / measured)) });
+    }
+    return out;
+  } catch (e) {
+    return [];
   }
 }
 
