@@ -27,10 +27,23 @@ export async function renderPdfPages(blob, onPage) {
 export function mountTextLayer(container, text, scale) {
   container.innerHTML = "";
   container.style.setProperty("--scale-factor", String(scale));
-  const content = { ...text.content, items: readingOrder(text.content.items) };
-  const task = pdfjsLib.renderTextLayer({ textContentSource: content, container, viewport: text.viewport, textDivs: [] });
-  task.promise.catch(() => {});
+  const items = readingOrder(text.content.items);
+  const textDivs = [];
+  const task = pdfjsLib.renderTextLayer({ textContentSource: { ...text.content, items }, container, viewport: text.viewport, textDivs });
+  task.promise.then(() => textDivs.forEach((d, i) => { d.dataset.i = i; })).catch(() => {});
+  container.__items = items;
   return task;
+}
+
+// Rectangle exact (normalisé 0–1) du mot n° i, de la fraction f0 à f1 de sa longueur, d'après la géométrie du PDF.
+export function itemRect(text, container, i, f0 = 0, f1 = 1) {
+  const it = container.__items?.[i];
+  if (!it) return null;
+  const vp = text.viewport;
+  const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
+  const fh = Math.hypot(tx[2], tx[3]) || 10;
+  const w = (it.width || 0) * vp.scale;
+  return { x: (tx[4] + w * f0) / vp.width, y: (tx[5] - fh * 0.85) / vp.height, w: (w * (f1 - f0)) / vp.width, h: (fh * 1.05) / vp.height };
 }
 
 // Les PDF stockent le texte dans un ordre arbitraire : on le remet en ordre de lecture (lignes de haut en bas, mots de gauche à droite)

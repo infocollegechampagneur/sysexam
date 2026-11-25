@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Type, X, GripVertical, Highlighter, Underline as UnderlineIcon, MousePointer2, TextCursor, Volume2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { renderPdfPages, mountTextLayer } from "@/lib/pdf";
+import { renderPdfPages, mountTextLayer, itemRect } from "@/lib/pdf";
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
@@ -200,16 +200,32 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
     if (!wrap.current.contains(range.commonAncestorContainer)) return false;
     const pageEls = [...wrap.current.querySelectorAll("[data-page]")];
     const lines = [];
-    for (const rc of range.getClientRects()) {
-      if (rc.width < 1 || rc.height < 1) continue;
-      const pi = pageEls.findIndex((el) => { const r = el.getBoundingClientRect(); return rc.top >= r.top - 1 && rc.bottom <= r.bottom + 1; });
-      if (pi < 0) continue;
-      const r = pageEls[pi].getBoundingClientRect();
-      const m = { page: pi, x: clamp((rc.left - r.left) / r.width), y: clamp((rc.top - r.top) / r.height), w: rc.width / r.width, h: rc.height / r.height };
+    const push = (m) => {
       const prev = lines[lines.length - 1];
-      if (prev && prev.page === pi && Math.abs(prev.y - m.y) < m.h * 0.5) { const x2 = Math.max(prev.x + prev.w, m.x + m.w); prev.x = Math.min(prev.x, m.x); prev.w = x2 - prev.x; prev.h = Math.max(prev.h, m.h); }
+      if (prev && prev.page === m.page && Math.abs(prev.y - m.y) < m.h * 0.5) { const x2 = Math.max(prev.x + prev.w, m.x + m.w); prev.x = Math.min(prev.x, m.x); prev.w = x2 - prev.x; prev.h = Math.max(prev.h, m.h); }
       else lines.push(m);
-    }
+    };
+    pageEls.forEach((pageEl, pi) => {
+      const layer = pageEl.querySelector(".pdf-text-layer");
+      const text = pages[pi]?.text;
+      if (layer && text) {
+        for (const span of layer.querySelectorAll("span[data-i]")) {
+          if (!span.firstChild || !range.intersectsNode(span)) continue;
+          const len = span.firstChild.length || 1;
+          const f0 = span.firstChild === range.startContainer ? range.startOffset / len : 0;
+          const f1 = span.firstChild === range.endContainer ? range.endOffset / len : 1;
+          if (f1 <= f0) continue;
+          const r = itemRect(text, layer, Number(span.dataset.i), f0, f1);
+          if (r && r.w > 0) push({ page: pi, ...r });
+        }
+        return;
+      }
+      const pr = pageEl.getBoundingClientRect();
+      for (const rc of range.getClientRects()) {
+        if (rc.width < 1 || rc.height < 1 || rc.top < pr.top - 1 || rc.bottom > pr.bottom + 1) continue;
+        push({ page: pi, x: clamp((rc.left - pr.left) / pr.width), y: clamp((rc.top - pr.top) / pr.height), w: rc.width / pr.width, h: rc.height / pr.height });
+      }
+    });
     if (!lines.length) return false;
     onChange([...annRef.current, ...lines.map((m) => ({ id: uid(), kind, ...(kind === "highlight" ? { color: hlColor } : {}), ...m }))]);
     sel.removeAllRanges();
