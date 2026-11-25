@@ -74,3 +74,5 @@ h1, h2, h3, h4, .font-display { font-family: "Outfit", sans-serif; }
 
 .pdf-text-layer span::selection { background: rgba(37, 99, 235, 0.35); color: transparent; }
 .pdf-text-layer span::-moz-selection { background: rgba(37, 99, 235, 0.35); color: transparent; }
+.pdf-text-layer.is-active span { cursor: text; border-radius: 2px; }
+.pdf-text-layer.is-active span:hover { background: rgba(37, 99, 235, 0.14); }
