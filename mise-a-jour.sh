@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 git pull --ff-only
 chmod +x ./*.sh
+mkdir -p sauvegardes && [ -w sauvegardes ] || sudo chown -R "$USER:$USER" sauvegardes
 export GIT_SHA=$(git rev-parse --short HEAD)
 docker compose build api
 PROFILE=$(grep -q '^TUNNEL_TOKEN=.\+' ecole.env && echo tunnel || echo https)
