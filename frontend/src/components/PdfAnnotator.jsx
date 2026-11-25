@@ -59,7 +59,7 @@ const TextLayer = ({ items, pageW, ratio, active }) => (
   </div>
 );
 
-export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = false }) => {
+export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = false, readAloud = true }) => {
   const [pages, setPages] = useState([]);
   const [error, setError] = useState(false);
   const [mode, setMode] = useState(null);
@@ -192,9 +192,9 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
               <Button size="sm" variant={mode === null ? "default" : "outline"} onClick={() => setMode(null)} className={mode === null ? "bg-blue-900 text-white hover:bg-blue-800" : ""} title="Glissez la souris sur le texte pour le sélectionner" data-testid="annotator-select-btn">
                 <TextCursor className="mr-1.5 h-4 w-4" />Sélectionner
               </Button>
-              <Button size="sm" variant="outline" disabled={!selText && !speaking} onClick={speak} className={speaking ? "border-emerald-600 text-emerald-700" : ""} title={selText ? "Lire la sélection à voix haute" : "Sélectionnez d'abord du texte"} data-testid="annotator-read-btn">
+              {readAloud && <Button size="sm" variant="outline" disabled={!selText && !speaking} onClick={speak} className={speaking ? "border-emerald-600 text-emerald-700" : ""} title={selText ? "Lire la sélection à voix haute" : "Sélectionnez d'abord du texte"} data-testid="annotator-read-btn">
                 {speaking ? <Square className="mr-1.5 h-4 w-4" /> : <Volume2 className="mr-1.5 h-4 w-4" />}{speaking ? "Arrêter" : "Lire"}
-              </Button>
+              </Button>}
               <span className="h-5 w-px bg-slate-200" />
             </>
           )}
@@ -210,7 +210,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
           </div>
           <ModeBtn m="underline" icon={UnderlineIcon} label="Souligner" testId="annotator-underline-btn" />
           <span className="text-xs text-slate-500" data-testid="annotator-counts">
-            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : mode === "text" ? "cliquez où placer la zone" : hasText ? (selText ? "texte sélectionné : Lire, Surligner ou Souligner" : "glissez la souris sur le texte pour le sélectionner") : "survolez une marque pour la retirer"}
+            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : mode === "text" ? "cliquez où placer la zone" : hasText ? (selText ? `texte sélectionné : ${readAloud ? "Lire, " : ""}Surligner ou Souligner` : "glissez la souris sur le texte pour le sélectionner") : "survolez une marque pour la retirer"}
           </span>
           {pages.length > 0 && !hasText && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800" title="Ce PDF est une image (numérisation) : le texte ne peut pas être sélectionné ni lu à voix haute. Demandez à l'enseignant un PDF créé depuis Word." data-testid="pdf-no-text-badge"><MousePointer2 className="h-3 w-3" />Texte non sélectionnable (PDF numérisé)</span>}
         </div>

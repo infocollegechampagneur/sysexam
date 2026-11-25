@@ -73,6 +73,7 @@ export const SettingsPanel = ({ settings, onChange }) => {
           <Row title="Barème partiel (choix multiples à plusieurs réponses)" desc="Points × (bonnes cochées − mauvaises cochées) ÷ nombre de bonnes réponses, minimum 0. Désactivé : tout ou rien." checked={!!settings.partial_credit} onChange={(v) => set("partial_credit", v)} testId="setting-partial-credit" />
           <Row title="Mélanger les choix de réponse" desc="Chaque élève voit les choix des questions à choix multiple dans un ordre différent." checked={!!settings.shuffle_options} onChange={(v) => set("shuffle_options", v)} testId="setting-shuffle-options" />
           <Row title="Bouton « J'ai besoin d'aide »" desc="L'élève peut vous envoyer une alerte (cloche, Teams/courriel) pour que vous veniez le voir." checked={settings.help_button !== false} onChange={(v) => set("help_button", v)} testId="setting-help-button" />
+          <Row title="Bouton « Lire » dans les PDF" desc="L'élève peut faire lire à voix haute le texte qu'il sélectionne dans le document PDF (voix de Windows). La sélection de texte pour WordQ / Lexibar reste toujours possible." checked={settings.pdf_read_aloud !== false} onChange={(v) => set("pdf_read_aloud", v)} testId="setting-pdf-read-aloud" />
         </div>
       </section>
       <div className="flex gap-3 rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-900" data-testid="settings-limits-note">

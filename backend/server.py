@@ -153,6 +153,7 @@ class ExamSettings(BaseModel):
     shuffle_options: bool = False
     help_button: bool = True
     clipboard_internal: bool = True
+    pdf_read_aloud: bool = True
 
 
 class ExamIn(BaseModel):

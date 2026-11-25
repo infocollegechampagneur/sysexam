@@ -62,7 +62,7 @@ export const ExamBody = ({ exam, answers, setAnswer, essay, setEssay, fetchBlob,
   const split = hasDoc && exam.exam_type === "document";
   return (
     <div className={`mx-auto px-4 py-8 ${split || inlinePdf ? "max-w-[1600px]" : "max-w-4xl"}`}>
-      {inlinePdf && <div className="mb-6"><PdfAnnotator fetchBlob={fetchBlob} annotations={annotations} onChange={setAnnotations} /></div>}
+      {inlinePdf && <div className="mb-6"><PdfAnnotator fetchBlob={fetchBlob} annotations={annotations} onChange={setAnnotations} readAloud={exam.settings.pdf_read_aloud !== false} /></div>}
       <div className={split ? "grid gap-6 lg:grid-cols-2" : "mx-auto max-w-4xl space-y-6"}>
         {hasDoc && <div className={split ? "lg:sticky lg:top-24 lg:self-start" : ""}><DocumentViewer file={exam.file} fetchBlob={fetchBlob} height={split ? "calc(100vh - 140px)" : "60vh"} /></div>}
         <div className="space-y-6">
