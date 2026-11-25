@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Type, X, GripVertical, Highlighter, Underline as UnderlineIcon, MousePointer2, TextCursor, Volume2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { renderPdfPages } from "@/lib/pdf";
+import { renderPdfPages, mountTextLayer } from "@/lib/pdf";
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
@@ -50,14 +50,67 @@ const Mark = ({ a, idx, readOnly, passive, onDelete }) => (
   </div>
 );
 
-const TextLayer = ({ items, pageW, ratio, active }) => (
-  <div className={`pdf-text-layer absolute inset-0 overflow-hidden ${active ? "is-active" : "pointer-events-none"}`} aria-label="Texte du document" data-testid="pdf-text-layer">
-    {items.map((t, i) => (
-      <span key={i} className="absolute origin-top-left whitespace-pre text-transparent"
-        style={{ left: `${t.x * 100}%`, top: `${t.y * 100}%`, fontSize: `${t.h * pageW * ratio}px`, lineHeight: 1, fontFamily: "sans-serif", transform: `scaleX(${t.k})`, cursor: active ? "text" : "default" }}>{t.s}</span>
-    ))}
-  </div>
-);
+const TextLayer = ({ text, pageW, active }) => {
+  const ref = useRef(null);
+  const drag = useRef(null);
+  const task = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !text || !(pageW > 0)) return;
+    task.current?.cancel();
+    task.current = mountTextLayer(ref.current, text, pageW / text.viewport.width);
+    return () => task.current?.cancel();
+  }, [text, pageW]);
+
+  // Position de texte la plus proche d'un point : caret exact si la souris est sur un mot, sinon mot le plus proche (même ligne d'abord).
+  const posAt = (x, y) => {
+    const layer = ref.current;
+    const cr = document.caretRangeFromPoint?.(x, y);
+    if (cr && layer.contains(cr.startContainer) && cr.startContainer.nodeType === 3) return { node: cr.startContainer, offset: cr.startOffset };
+    const spans = drag.current?.spans || [];
+    let best = null;
+    for (const s of spans) {
+      const r = s.rect;
+      const dy = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+      const dx = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
+      const d = dy * 1000 + dx;
+      if (!best || d < best.d) best = { d, s, after: x > r.right || (dy > 0 && y > r.bottom) };
+    }
+    if (!best) return null;
+    const node = best.s.el.firstChild;
+    return node ? { node, offset: best.after ? node.length : 0 } : null;
+  };
+  const apply = (a, b) => {
+    if (!a || !b) return;
+    const sel = window.getSelection();
+    const back = a.node === b.node ? a.offset > b.offset : !!(a.node.compareDocumentPosition(b.node) & Node.DOCUMENT_POSITION_PRECEDING);
+    const [s, e] = back ? [b, a] : [a, b];
+    const r = document.createRange();
+    r.setStart(s.node, s.offset);
+    r.setEnd(e.node, e.offset);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  };
+  const down = (e) => {
+    if (!active || e.button !== 0 || e.detail > 1) return;
+    e.preventDefault();
+    const spans = [...ref.current.querySelectorAll("span")].filter((el) => el.firstChild).map((el) => ({ el, rect: el.getBoundingClientRect() }));
+    drag.current = { spans, start: null };
+    drag.current.start = posAt(e.clientX, e.clientY);
+    if (drag.current.start) window.getSelection().setBaseAndExtent(drag.current.start.node, drag.current.start.offset, drag.current.start.node, drag.current.start.offset);
+    ref.current.setPointerCapture(e.pointerId);
+  };
+  const move = (e) => {
+    if (!drag.current?.start) return;
+    drag.current.last = { x: e.clientX, y: e.clientY };
+    if (!drag.current.raf) drag.current.raf = requestAnimationFrame(() => { const d = drag.current; if (d) { d.raf = 0; apply(d.start, posAt(d.last.x, d.last.y)); } });
+  };
+  const up = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d?.start && d.last) setTimeout(() => { drag.current = { spans: d.spans }; apply(d.start, posAt(d.last.x, d.last.y)); drag.current = null; }, 0);
+  };
+  return <div ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} className={`pdf-text-layer textLayer absolute inset-0 overflow-hidden ${active ? "is-active" : "pointer-events-none"}`} aria-label="Texte du document" data-testid="pdf-text-layer" />;
+};
 
 export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = false, readAloud = true }) => {
   const [pages, setPages] = useState([]);
@@ -137,7 +190,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
 
   const texts = annotations.filter((a) => !a.kind || a.kind === "text");
   const marks = annotations.length - texts.length;
-  const hasText = pages.some((p) => p.text?.length);
+  const hasText = pages.some((p) => p.text);
   const clamp = (v) => Math.min(1, Math.max(0, v));
   // Transforme la sélection de texte courante en marques (une par ligne) ; renvoie false s'il n'y a pas de sélection dans le PDF.
   const markSelection = (kind) => {
@@ -223,7 +276,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
             onPointerDown={(e) => startMark(e, i)}
             className={`relative bg-white shadow ${mode ? "cursor-crosshair" : ""}`} style={{ aspectRatio: `1 / ${p.ratio}`, touchAction: mode && mode !== "text" ? "none" : "auto" }} data-testid={`pdf-page-${i}`}>
             <img src={p.src} alt={`Page ${i + 1}`} draggable={false} className="pointer-events-auto block w-full select-none" />
-            {p.text?.length > 0 && <TextLayer items={p.text} pageW={width - 32} ratio={1} active={!mode} />}
+            {p.text && <TextLayer text={p.text} pageW={width - 32} active={!mode} />}
             {annotations.map((a, k) => a.page === i && a.kind && a.kind !== "text" && (
               <Mark key={a.id} a={a} idx={k} readOnly={readOnly} passive={!!mode} onDelete={() => onChange(annotations.filter((o) => o.id !== a.id))} />
             ))}

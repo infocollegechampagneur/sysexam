@@ -72,7 +72,11 @@ h1, h2, h3, h4, .font-display { font-family: "Outfit", sans-serif; }
 
 @media print { body { display: none !important; } }
 
+.pdf-text-layer { line-height: 1; text-align: initial; transform-origin: 0 0; text-size-adjust: none; -webkit-text-size-adjust: none; forced-color-adjust: none; }
+.pdf-text-layer :is(span, br) { color: transparent; position: absolute; white-space: pre; transform-origin: 0 0; }
 .pdf-text-layer span::selection { background: rgba(37, 99, 235, 0.35); color: transparent; }
-.pdf-text-layer span::-moz-selection { background: rgba(37, 99, 235, 0.35); color: transparent; }
+.pdf-text-layer br::selection { background: transparent; }
+.pdf-text-layer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: -1; cursor: default; user-select: none; }
+.pdf-text-layer.selecting .endOfContent { top: 0; }
 .pdf-text-layer.is-active span { cursor: text; border-radius: 2px; }
 .pdf-text-layer.is-active span:hover { background: rgba(37, 99, 235, 0.14); }

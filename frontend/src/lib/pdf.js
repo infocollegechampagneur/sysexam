@@ -13,32 +13,51 @@ export async function renderPdfPages(blob, onPage) {
     const c = document.createElement("canvas");
     c.width = vp.width;
     c.height = vp.height;
-    const ctx = c.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport: vp }).promise;
-    const text = await extractTextItems(page, vp, ctx);
+    await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    let text = null;
+    try {
+      const content = await page.getTextContent();
+      if (content.items.some((it) => it.str && it.str.trim())) text = { content, viewport: page.getViewport({ scale: 1 }) };
+    } catch (e) { /* PDF sans texte exploitable */ }
     if (onPage({ src: c.toDataURL("image/jpeg", 0.85), ratio: vp.height / vp.width, text }) === false) return;
   }
 }
 
-// Couche de texte invisible (sélection, lecture par WordQ/Lexibar) : positions normalisées 0–1 par rapport à la page.
-async function extractTextItems(page, vp, ctx) {
-  try {
-    const content = await page.getTextContent();
-    const out = [];
-    for (const it of content.items) {
-      if (!it.str || !it.str.trim()) continue;
-      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
-      const fh = Math.hypot(tx[2], tx[3]);
-      if (!fh) continue;
-      const w = it.width * vp.scale;
-      ctx.font = `${fh}px sans-serif`;
-      const measured = ctx.measureText(it.str).width || 1;
-      out.push({ s: it.str, x: tx[4] / vp.width, y: (tx[5] - fh * 0.8) / vp.height, w: w / vp.width, h: fh / vp.height, k: Math.min(3, Math.max(0.3, w / measured)) });
-    }
-    return out;
-  } catch (e) {
-    return [];
+// Couche de texte pdf.js (sélection précise, lecture WordQ/Lexibar). `scale` = largeur affichée / largeur du PDF à l'échelle 1.
+export function mountTextLayer(container, text, scale) {
+  container.innerHTML = "";
+  container.style.setProperty("--scale-factor", String(scale));
+  const content = { ...text.content, items: readingOrder(text.content.items) };
+  const task = pdfjsLib.renderTextLayer({ textContentSource: content, container, viewport: text.viewport, textDivs: [] });
+  task.promise.catch(() => {});
+  return task;
+}
+
+// Les PDF stockent le texte dans un ordre arbitraire : on le remet en ordre de lecture (lignes de haut en bas, mots de gauche à droite)
+// pour que glisser la souris sur plusieurs lignes sélectionne le passage visible, et non des fragments épars.
+function readingOrder(items) {
+  const horiz = [];
+  const other = [];
+  for (const it of items) {
+    if (it.str === undefined) continue;
+    const [a, b, c, d, x, y] = it.transform;
+    const fh = Math.hypot(c, d) || Math.hypot(a, b) || 1;
+    (Math.abs(b) < 0.01 && Math.abs(c) < 0.01 ? horiz : other).push({ it, x, y, fh });
   }
+  horiz.sort((p, q) => q.y - p.y || p.x - q.x);
+  const lines = [];
+  for (const w of horiz) {
+    const line = lines[lines.length - 1];
+    if (line && Math.abs(line.y - w.y) < Math.min(line.fh, w.fh) * 0.6) line.words.push(w);
+    else lines.push({ y: w.y, fh: w.fh, words: [w] });
+  }
+  const out = [];
+  for (const line of lines) {
+    line.words.sort((p, q) => p.x - q.x);
+    line.words.forEach((w, i) => out.push({ ...w.it, hasEOL: i === line.words.length - 1 }));
+  }
+  for (const w of other) out.push({ ...w.it, hasEOL: true });
+  return out;
 }
 
 export async function annotatedPdfBytes(blob, annotations) {
