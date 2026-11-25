@@ -50,16 +50,19 @@ const Mark = ({ a, idx, readOnly, passive, onDelete }) => (
   </div>
 );
 
-const TextLayer = ({ text, pageW, active }) => {
+const TextLayer = ({ text, active }) => {
   const ref = useRef(null);
   const drag = useRef(null);
   const task = useRef(null);
   useEffect(() => {
-    if (!ref.current || !text || !(pageW > 0)) return;
-    task.current?.cancel();
-    task.current = mountTextLayer(ref.current, text, pageW / text.viewport.width);
-    return () => task.current?.cancel();
-  }, [text, pageW]);
+    const el = ref.current;
+    if (!el || !text) return;
+    const render = () => { const w = el.clientWidth; if (w > 0) { task.current?.cancel(); task.current = mountTextLayer(el, text, w / text.viewport.width); } };
+    render();
+    const ro = new ResizeObserver(render);
+    ro.observe(el);
+    return () => { ro.disconnect(); task.current?.cancel(); };
+  }, [text]);
 
   // Position de texte la plus proche d'un point : caret exact si la souris est sur un mot, sinon mot le plus proche (même ligne d'abord).
   const posAt = (x, y) => {
@@ -292,7 +295,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
             onPointerDown={(e) => startMark(e, i)}
             className={`relative bg-white shadow ${mode ? "cursor-crosshair" : ""}`} style={{ aspectRatio: `1 / ${p.ratio}`, touchAction: mode && mode !== "text" ? "none" : "auto" }} data-testid={`pdf-page-${i}`}>
             <img src={p.src} alt={`Page ${i + 1}`} draggable={false} className="pointer-events-auto block w-full select-none" />
-            {p.text && <TextLayer text={p.text} pageW={width - 32} active={!mode} />}
+            {p.text && <TextLayer text={p.text} active={!mode} />}
             {annotations.map((a, k) => a.page === i && a.kind && a.kind !== "text" && (
               <Mark key={a.id} a={a} idx={k} readOnly={readOnly} passive={!!mode} onDelete={() => onChange(annotations.filter((o) => o.id !== a.id))} />
             ))}
