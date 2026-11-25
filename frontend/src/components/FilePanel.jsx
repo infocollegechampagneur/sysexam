@@ -3,6 +3,7 @@ import { Upload, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DocumentViewer } from "@/components/DocumentViewer";
+import { OcrStatus } from "@/components/OcrStatus";
 import { api, formatErr } from "@/lib/api";
 
 export const FilePanel = ({ examId, file, ensureSaved, onFile }) => {
@@ -48,7 +49,8 @@ export const FilePanel = ({ examId, file, ensureSaved, onFile }) => {
         </Button>
         {file && <Button variant="ghost" className="text-rose-600" onClick={remove} data-testid="remove-exam-file-btn"><Trash2 className="h-4 w-4" /></Button>}
       </div>
-      {file && examId && <DocumentViewer file={file} fetchBlob={fetchBlob} height="55vh" />}
+      {file && examId && <OcrStatus examId={examId} file={file} onFile={onFile} />}
+      {file && examId && <DocumentViewer key={file.gridfs_id} file={file} fetchBlob={fetchBlob} height="55vh" />}
     </div>
   );
 };

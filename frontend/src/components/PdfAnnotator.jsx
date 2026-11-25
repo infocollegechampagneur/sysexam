@@ -117,8 +117,32 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
   const texts = annotations.filter((a) => !a.kind || a.kind === "text");
   const marks = annotations.length - texts.length;
   const hasText = pages.some((p) => p.text?.length);
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+  // Transforme la sélection de texte courante en marques (une par ligne) ; renvoie false s'il n'y a pas de sélection dans le PDF.
+  const markSelection = (kind) => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !wrap.current) return false;
+    const range = sel.getRangeAt(0);
+    if (!wrap.current.contains(range.commonAncestorContainer)) return false;
+    const pageEls = [...wrap.current.querySelectorAll("[data-page]")];
+    const lines = [];
+    for (const rc of range.getClientRects()) {
+      if (rc.width < 1 || rc.height < 1) continue;
+      const pi = pageEls.findIndex((el) => { const r = el.getBoundingClientRect(); return rc.top >= r.top - 1 && rc.bottom <= r.bottom + 1; });
+      if (pi < 0) continue;
+      const r = pageEls[pi].getBoundingClientRect();
+      const m = { page: pi, x: clamp((rc.left - r.left) / r.width), y: clamp((rc.top - r.top) / r.height), w: rc.width / r.width, h: rc.height / r.height };
+      const prev = lines[lines.length - 1];
+      if (prev && prev.page === pi && Math.abs(prev.y - m.y) < m.h * 0.5) { const x2 = Math.max(prev.x + prev.w, m.x + m.w); prev.x = Math.min(prev.x, m.x); prev.w = x2 - prev.x; prev.h = Math.max(prev.h, m.h); }
+      else lines.push(m);
+    }
+    if (!lines.length) return false;
+    onChange([...annRef.current, ...lines.map((m) => ({ id: uid(), kind, ...(kind === "highlight" ? { color: hlColor } : {}), ...m }))]);
+    sel.removeAllRanges();
+    return true;
+  };
   const ModeBtn = ({ m, icon: Icon, label, testId }) => (
-    <Button size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode((v) => (v === m ? null : m))}
+    <Button size="sm" variant={mode === m ? "default" : "outline"} onClick={() => { if ((m === "highlight" || m === "underline") && markSelection(m)) return; setMode((v) => (v === m ? null : m)); }}
       className={mode === m ? "bg-amber-500 text-white hover:bg-amber-600" : ""} data-testid={testId}>
       <Icon className="mr-1.5 h-4 w-4" />{label}
     </Button>
@@ -154,7 +178,7 @@ export const PdfAnnotator = ({ fetchBlob, annotations, onChange, readOnly = fals
           </div>
           <ModeBtn m="underline" icon={UnderlineIcon} label="Souligner" testId="annotator-underline-btn" />
           <span className="text-xs text-slate-500" data-testid="annotator-counts">
-            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : mode === "text" ? "cliquez où placer la zone" : hasText ? "sélectionnez du texte avec la souris pour le faire lire (WordQ, Lexibar)" : "survolez une marque pour la retirer"}
+            {texts.length} zone(s) de texte · {marks} marque(s) · {mode === "highlight" || mode === "underline" ? "glissez sur le passage" : mode === "text" ? "cliquez où placer la zone" : hasText ? "sélectionnez du texte, puis cliquez Surligner ou Souligner (ou faites-le lire par WordQ / Lexibar)" : "survolez une marque pour la retirer"}
           </span>
           {pages.length > 0 && !hasText && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800" title="Ce PDF est une image (numérisation) : le texte ne peut pas être sélectionné ni lu à voix haute. Demandez à l'enseignant un PDF créé depuis Word." data-testid="pdf-no-text-badge"><MousePointer2 className="h-3 w-3" />Texte non sélectionnable (PDF numérisé)</span>}
         </div>

@@ -16,6 +16,9 @@ import logging
 import time
 import shutil
 import hashlib
+import subprocess
+import tempfile
+import pymupdf
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from typing import List, Optional, Dict, Any
@@ -969,9 +972,64 @@ async def upload_exam_file(exam_id: str, file: UploadFile = File(...), user: dic
         html = (await asyncio.to_thread(mammoth.convert_to_html, io.BytesIO(data))).value
     file_doc = {"id": str(uuid.uuid4()), "gridfs_id": str(fid), "filename": name, "content_type": ctype,
                 "kind": ext, "size": len(data), "html": html, "uploaded_at": now_iso()}
+    if ext == "pdf":
+        has_text = await asyncio.to_thread(pdf_has_text, data)
+        file_doc["ocr"] = "none" if has_text else ("pending" if shutil.which("ocrmypdf") else "unavailable")
     await drop_file(exam.get("file"))
     await db.exams.update_one({"id": exam_id}, {"$set": {"file": file_doc}})
+    if file_doc.get("ocr") == "pending":
+        asyncio.create_task(ocr_exam_file(exam_id, file_doc["id"], data, name))
     return file_doc
+
+
+def pdf_has_text(data: bytes) -> bool:
+    try:
+        with pymupdf.open(stream=data, filetype="pdf") as doc:
+            return sum(len(p.get_text("text").strip()) for p in doc) > 40
+    except Exception:
+        return True
+
+
+def run_ocr(data: bytes) -> bytes:
+    with tempfile.TemporaryDirectory() as td:
+        src, dst = Path(td) / "in.pdf", Path(td) / "out.pdf"
+        src.write_bytes(data)
+        subprocess.run(["ocrmypdf", "--skip-text", "--language", "fra+eng", "--optimize", "0", "--output-type", "pdf", "--jobs", "2", str(src), str(dst)],
+                       check=True, capture_output=True, timeout=600)
+        return dst.read_bytes()
+
+
+async def ocr_exam_file(exam_id: str, file_id: str, data: bytes, name: str):
+    try:
+        out = await asyncio.to_thread(run_ocr, data)
+        exam = await db.exams.find_one({"id": exam_id}, {"_id": 0, "file": 1})
+        if not exam or not exam.get("file") or exam["file"].get("id") != file_id:
+            return
+        fid = await files_bucket.upload_from_stream(name, out, metadata={"contentType": "application/pdf", "exam_id": exam_id, "ocr": True})
+        old_gid = exam["file"]["gridfs_id"]
+        await db.exams.update_one({"id": exam_id, "file.id": file_id}, {"$set": {"file.gridfs_id": str(fid), "file.size": len(out), "file.ocr": "done", "file.ocr_at": now_iso()}})
+        try:
+            await files_bucket.delete(ObjectId(old_gid))
+        except Exception:
+            pass
+        logger.info("OCR terminé pour l'examen %s (%s)", exam_id, name)
+    except Exception as e:
+        logger.error("OCR échoué pour %s : %s", exam_id, type(e).__name__)
+        await db.exams.update_one({"id": exam_id, "file.id": file_id}, {"$set": {"file.ocr": "failed"}})
+
+
+@api.post("/exams/{exam_id}/file/ocr")
+async def retry_ocr(exam_id: str, user: dict = Depends(current_teacher)):
+    exam = await own_exam(exam_id, user)
+    f = exam.get("file")
+    if not f or f.get("kind") != "pdf":
+        raise HTTPException(status_code=400, detail="Aucun PDF à traiter")
+    if not shutil.which("ocrmypdf"):
+        raise HTTPException(status_code=503, detail="La reconnaissance de texte n'est pas installée sur ce serveur")
+    data = await read_file(f)
+    await db.exams.update_one({"id": exam_id}, {"$set": {"file.ocr": "pending"}})
+    asyncio.create_task(ocr_exam_file(exam_id, f["id"], data, f["filename"]))
+    return {"ok": True}
 
 
 @api.delete("/exams/{exam_id}/file")
