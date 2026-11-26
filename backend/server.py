@@ -67,7 +67,7 @@ app = FastAPI()
 api = APIRouter(prefix="/api")
 
 TOOLS = ["usito", "wordreference", "antidote", "wordq", "lexibar"]
-COUNTED_EVENTS = {"tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt", "forbidden_app"}
+COUNTED_EVENTS = {"tab_hidden", "window_blur", "fullscreen_exit", "paste_attempt", "copy_attempt", "cut_attempt", "shortcut", "devtools", "print_attempt", "forbidden_app", "exit_attempt"}
 
 
 def text_similarity(pasted: str, before: str) -> int:

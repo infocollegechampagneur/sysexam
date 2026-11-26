@@ -90,6 +90,11 @@ export default function StudentExam() {
     } catch (e) { /* network issue: ignore */ }
   }, [sapi]);
 
+  useEffect(() => {
+    if (!(phase === "exam" && status === "in_progress")) return;
+    const names = { blur: "changement de fenêtre", minimize: "réduction de la fenêtre", hide: "masquage de la fenêtre" };
+    return window.monExam?.onExitAttempt?.((reason) => onEvent("exit_attempt", `Tentative de sortie de l'examen bloquée : ${names[reason] || reason}`));
+  }, [phase, status, onEvent]);
   const { isFullscreen, enterFullscreen, openTool, closeTool, toolOpen } = useAntiCheat({ active: phase === "exam" && status === "in_progress" && !paused, settings, onEvent });
   const desktopTools = useDesktopTools({ active: phase === "exam" && status === "in_progress", allowed: settings?.allowed_tools || [], onEvent });
   useForbiddenApps({ active: phase === "exam" && status === "in_progress", onEvent });

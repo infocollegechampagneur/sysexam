@@ -19,4 +19,9 @@ contextBridge.exposeInMainWorld("monExam", {
     ipcRenderer.on("emergency-request", h);
     return () => ipcRenderer.removeListener("emergency-request", h);
   },
+  onExitAttempt: (cb) => {
+    const h = (_e, reason) => cb(reason);
+    ipcRenderer.on("exit-attempt", h);
+    return () => ipcRenderer.removeListener("exit-attempt", h);
+  },
 });

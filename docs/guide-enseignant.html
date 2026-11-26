@@ -80,7 +80,7 @@
     <li>Demandes d'aide, sonnerie et Teams</li>
     <li>Corriger, noter et exporter (sélection d'élèves, PDF annotés groupés)</li>
     <li>Réutiliser un examen (dupliquer, vider les copies), statistiques et banque de questions</li>
-    <li>Listes de classe et temps supplémentaire</li>
+    <li>Listes de classe</li>
     <li>Questions fréquentes et dépannage</li>
   </ol>
 </section>
@@ -90,9 +90,9 @@
 <div class="grid">
   <div class="card"><h4>Un code, pas de compte élève</h4><p>Chaque examen reçoit un code à 6 caractères (ex. <span class="key">BC2PXU</span>). L'élève entre le code, son nom et, si demandé, son matricule. Aucun compte à créer.</p></div>
   <div class="card"><h4>Environnement contrôlé</h4><p>Plein écran obligatoire, sorties de l'examen détectées et comptées, copier-coller externe bloqué, applications interdites (Teams, Edge, Chrome…) fermées avant de commencer.</p></div>
-  <div class="card"><h4>Outils d'aide choisis par vous</h4><p>Antidote, WordQ, Lexibar (logiciels installés) et Usito, WordReference (en ligne) : vous cochez ceux qui sont permis ; l'élève n'a accès qu'à ceux-là.</p></div>
+  <div class="card"><h4>Outils d'aide choisis par vous</h4><p>Antidote, WordQ et Lexibar (logiciels installés) sont <strong>permis par défaut</strong> sur chaque nouvel examen ; Usito et WordReference (en ligne) s'ajoutent d'un clic. Décochez ce que vous ne voulez pas : l'élève n'a accès qu'aux outils cochés.</p></div>
   <div class="card"><h4>Sauvegarde continue</h4><p>Les réponses sont enregistrées automatiquement toutes les quelques secondes. En cas de panne ou de fermeture, l'élève se reconnecte avec le même code et le même nom et reprend où il était.</p></div>
-  <div class="card"><h4>Surveillance en direct</h4><p>Vous voyez chaque copie progresser, les signalements, les collages suspects ; vous pouvez envoyer un message, mettre en pause, bloquer, débloquer, ajouter du temps.</p></div>
+  <div class="card"><h4>Surveillance en direct</h4><p>Vous voyez chaque copie progresser, les signalements, les collages suspects ; vous pouvez envoyer un message, mettre en pause, bloquer, débloquer.</p></div>
   <div class="card"><h4>Correction intégrée</h4><p>Choix multiples corrigés automatiquement, grille de points par question, commentaires, exports PDF et Word (par copie ou toutes les copies), statistiques par question.</p></div>
 </div>
 <div class="tip"><b>Trois types d'examen</b> <strong>Formulaire</strong> (questions comme Microsoft Forms), <strong>Rédaction</strong> (un sujet + un éditeur de texte de type Word) et <strong>Document téléversé</strong> (votre PDF ou Word affiché à l'élève avec une zone de réponse ou des questions).</div>
@@ -116,7 +116,7 @@
   <tr><th style="width:30%">Élément</th><th>À quoi ça sert</th></tr>
   <tr><td>Compteurs</td><td>Nombre d'examens, d'examens ouverts et d'élèves en cours.</td></tr>
   <tr><td>Bandeau « En pause »</td><td>Apparaît si un de vos examens est en pause, avec un bouton pour reprendre.</td></tr>
-  <tr><td>Liste « Mes examens »</td><td>Une carte par examen : titre, matière, code, statut (<em>Brouillon</em>, <em>Ouvert</em>, <em>Fermé</em>), durée, outils permis.</td></tr>
+  <tr><td>Liste « Mes examens »</td><td>Une carte par examen : titre, matière, code, statut (<em>Brouillon</em>, <em>Ouvert</em>, <em>Fermé</em>), outils permis.</td></tr>
   <tr><td><span class="btn">Suivi</span></td><td>Ouvre la surveillance en direct et la correction (section 9 et 11).</td></tr>
   <tr><td><span class="btn">Modifier</span></td><td>Rouvre l'éditeur de l'examen.</td></tr>
   <tr><td><span class="btn">⧉ Dupliquer</span></td><td>Crée une copie de l'examen en <em>Brouillon</em> (titre « … (copie) », nouveau code, mêmes questions, réglages et document, <strong>sans les copies d'élèves</strong>) et l'ouvre dans l'éditeur. Idéal pour préparer la version de l'an prochain ou une variante pour un autre groupe.</td></tr>
@@ -129,9 +129,8 @@
 <ol class="steps">
   <li>Cliquez sur <span class="btn">Créer un examen</span>.</li>
   <li><strong>Titre</strong> (ex. « Examen de lecture — Chapitre 3 ») et <strong>Matière / groupe</strong> (ex. « Français 2e sec. »). La matière sert aussi à classer la banque de questions.</li>
-  <li><strong>Durée</strong> en minutes. <span class="key">0</span> = sans limite. Le chronomètre démarre quand l'élève clique « Commencer ».</li>
   <li><strong>Consignes pour les élèves</strong> : affichées sur l'écran d'accueil de l'examen, avant le départ.</li>
-  <li><strong>Liste de classe</strong> (facultatif) : si vous en choisissez une, seuls les élèves inscrits (nom + matricule) peuvent rejoindre et leur temps supplémentaire est appliqué automatiquement (voir section 13).</li>
+  <li><strong>Liste de classe</strong> (facultatif) : si vous en choisissez une, seuls les élèves inscrits (nom + matricule) peuvent rejoindre (voir section 13).</li>
   <li><strong>Collègues avertis quand un élève demande de l'aide</strong> : cochez les surveillant·e·s ou technicien·ne·s qui doivent recevoir les alertes « J'ai besoin d'aide » en plus de vous.</li>
   <li><strong>Gestionnaires de l'examen</strong> : cochez les collègues qui doivent pouvoir gérer cet examen <em>comme vous</em> (il apparaît dans leur tableau de bord ; ils peuvent le modifier, le surveiller, le corriger, l'exporter, vider les copies). Seul le propriétaire peut le supprimer. Pratique pour un remplaçant, un co-enseignant ou le technicien qui surveille la salle.</li>
   <li><strong>Plages de disponibilité</strong> (facultatif) : <span class="btn">Ajouter une plage</span> → date et heure de <strong>début</strong> et de <strong>fin</strong>. Vous pouvez en ajouter plusieurs (ex. groupe 201 lundi 9 h–10 h, groupe 202 mardi 13 h–14 h). L'examen doit être <em>Ouvert</em> <strong>et</strong> dans une plage pour que les élèves puissent entrer le code ; hors plage, ils voient « L'examen n'est pas disponible pour le moment » avec la prochaine plage. <strong>Sans plage</strong>, l'examen ouvert est disponible en tout temps. Un élève déjà commencé peut terminer même si la plage se ferme.</li>
@@ -160,7 +159,7 @@
 <h2>6. Créer un examen — étape 3 : outils et sécurité</h2>
 <table>
   <tr><th style="width:34%">Réglage</th><th>Explication et conseil</th></tr>
-  <tr><td>Outils d'aide autorisés</td><td>Cochez Antidote, WordQ, Lexibar (logiciels du poste) et/ou Usito, WordReference (en ligne). L'élève ne voit que ceux-là dans sa barre d'outils. Les élèves qui n'y ont pas droit n'y auront pas accès.</td></tr>
+  <tr><td>Outils d'aide autorisés</td><td><strong>Antidote, WordQ et Lexibar sont cochés par défaut</strong> (logiciels du poste). Ajoutez au besoin Usito, WordReference (en ligne) ou décochez un outil pour l'interdire. L'élève ne voit que les outils cochés dans sa barre d'outils.</td></tr>
   <tr><td>Plein écran obligatoire</td><td>Dans un navigateur, l'élève doit rester en plein écran ; chaque sortie est consignée. Dans l'application Windows, le plein écran est permanent.</td></tr>
   <tr><td>Bloquer copier / coller</td><td>Interdit copier, couper, coller, glisser-déposer et clic droit. Sous-option <em>Autoriser le copier-coller à l'intérieur de l'examen</em> : l'élève peut déplacer son propre texte, mais coller un texte venu d'ailleurs est bloqué et signalé.</td></tr>
   <tr><td>Correcteur du navigateur</td><td>Active ou non le soulignement orthographique du navigateur (désactivé par défaut pour les évaluations de français).</td></tr>
@@ -183,18 +182,19 @@
   <li>Supprimez la copie de test avec <span class="btn red">Supprimer</span> dans le détail de la copie (ou <span class="btn red">Vider les copies</span> pour tout effacer). L'examen reste intact.</li>
 </ol>
 <div class="tip"><b>Tester l'application Windows</b> Faites le même test depuis un poste élève avec l'application MonExamEnLigne pour vérifier la détection des logiciels (Antidote, WordQ, Lexibar) et la fermeture des applications interdites. Le PreCheck affiche ✓ ou ✗ pour chaque logiciel permis ; l'administrateur retrouve ces informations dans <em>Comptes → Postes</em>.</div>
+<div class="tip"><b>Verrouillage total dans l'application Windows</b> Dès que l'élève clique « Commencer », l'application passe en mode kiosque : impossible de réduire, fermer ou quitter la fenêtre ; <strong>Alt+Tab, la touche Windows, Alt+F4, Ctrl+Échap, Win+D</strong> et les autres raccourcis de bascule sont interceptés, et si la fenêtre perd malgré tout le premier plan, elle est <strong>ramenée aussitôt</strong> (sauf vers Antidote, WordQ ou Lexibar s'ils sont permis). La seule sortie est le <strong>code d'urgence</strong> (Ctrl+Alt+Shift+U). Chaque tentative de sortie bloquée est inscrite dans le journal de la copie (« Tentative de sortie bloquée ») et <strong>compte comme un signalement</strong>. Seul Ctrl+Alt+Suppr reste réservé par Windows ; votre technicien peut le désactiver par GPO sur les postes d'examen.</div>
 <div class="warn"><b>Si « Application Windows obligatoire » est coché</b> le test depuis un navigateur sera refusé — c'est normal. Décochez-le le temps du test ou testez depuis un poste équipé.</div>
 
 <h2>8. Le jour de l'examen : ce que vit l'élève</h2>
 <ol class="steps">
   <li>L'élève ouvre l'application MonExamEnLigne (icône sur le bureau) ou le site web, entre le <strong>code</strong>, son <strong>nom</strong> et au besoin son <strong>matricule</strong>.</li>
-  <li><strong>Écran d'accueil</strong> : titre, consignes, durée, règles de l'examen et outils permis. Dans l'application Windows, le <strong>PreCheck</strong> liste les applications interdites ouvertes ; un bouton les ferme toutes. Impossible de commencer tant qu'il en reste.</li>
-  <li>Il clique <span class="btn green">Commencer</span> : le chronomètre démarre, l'écran passe en plein écran verrouillé.</li>
-  <li>Barre du haut : temps restant, état « Enregistré », nombre de signalements, boutons des outils permis, bouton <span class="btn amber">J'ai besoin d'aide</span> et <span class="btn green">Remettre</span>.</li>
+  <li><strong>Écran d'accueil</strong> : titre, consignes, règles de l'examen et outils permis. Dans l'application Windows, le <strong>PreCheck</strong> liste les applications interdites ouvertes ; un bouton les ferme toutes. Impossible de commencer tant qu'il en reste.</li>
+  <li>Il clique <span class="btn green">Commencer</span> : l'écran passe en plein écran verrouillé. <strong>Il n'y a aucune limite de temps</strong> : l'élève travaille jusqu'à ce qu'il remette sa copie (ou que vous la bloquiez).</li>
+  <li>Barre du haut : état « Enregistré », nombre de signalements, boutons des outils permis, bouton <span class="btn amber">J'ai besoin d'aide</span> et <span class="btn green">Remettre</span>.</li>
   <li>Chaque sortie (changement de fenêtre, sortie du plein écran, collage externe…) affiche un avertissement et compte un signalement. Au seuil, la copie se <strong>bloque</strong> : l'élève ne peut plus écrire jusqu'à ce que vous le débloquiez.</li>
   <li>À la remise, une confirmation demande s'il reste des questions sans réponse, puis l'écran de <strong>confirmation de remise</strong> avec un numéro de confirmation s'affiche. Le bouton vert ferme l'application (ou ramène à l'accueil sur le web).</li>
 </ol>
-<div class="tip"><b>Panne, fermeture accidentelle, redémarrage</b> Rien n'est perdu : l'élève se reconnecte avec le même code, le même nom et le même matricule et reprend là où il était ; le temps continue de courir. Si la copie a été remise par erreur, vous pouvez la <strong>rouvrir</strong> (section 9).</div>
+<div class="tip"><b>Panne, fermeture accidentelle, redémarrage</b> Rien n'est perdu : l'élève se reconnecte avec le même code, le même nom et le même matricule et reprend là où il était. Si la copie a été remise par erreur, vous pouvez la <strong>rouvrir</strong> (section 9).</div>
 
 <h2 class="pb">9. Surveiller en direct (page Suivi)</h2>
 <p>Depuis le tableau de bord, cliquez <span class="btn">Suivi</span>. La page se rafraîchit toute seule toutes les 5 secondes.</p>
@@ -209,7 +209,7 @@
 <table>
   <tr><th style="width:34%">Bouton</th><th>Effet</th></tr>
   <tr><td><span class="btn">Message à tous</span></td><td>Affiche un message sur tous les écrans ; chaque élève doit confirmer sa lecture.</td></tr>
-  <tr><td><span class="btn">Mettre en pause</span> / <span class="btn green">Reprendre</span></td><td>Voile les écrans, bloque la saisie et arrête le chronomètre (alarme incendie, consigne à donner). Le temps de pause est rendu à la reprise ; aucun signalement n'est compté pendant la pause.</td></tr>
+  <tr><td><span class="btn">Mettre en pause</span> / <span class="btn green">Reprendre</span></td><td>Voile les écrans et bloque la saisie (alarme incendie, consigne à donner). Aucun signalement n'est compté pendant la pause.</td></tr>
   <tr><td><span class="btn">Débloquer tous</span></td><td>Débloque d'un coup toutes les copies bloquées.</td></tr>
   <tr><td>Outils permis en direct</td><td>Changez les outils d'aide permis pendant l'examen ; les élèves voient la barre se mettre à jour.</td></tr>
 </table>
@@ -220,7 +220,7 @@
   <tr><td><span class="btn red">Bloquer</span></td><td>L'élève ne peut plus écrire ; ses réponses sont conservées.</td></tr>
   <tr><td><span class="btn">Débloquer</span></td><td>Pour une copie bloquée (par vous ou par le seuil). Vous pouvez joindre un message que l'élève devra lire. Les signalements peuvent être remis à zéro.</td></tr>
   <tr><td><span class="btn">Pause</span> (individuelle)</td><td>Met un seul élève en pause (sortie aux toilettes, intervention).</td></tr>
-  <tr><td><span class="btn">Temps supplémentaire</span></td><td>Ajoute des minutes à cet élève ; permet aussi d'autoriser des outils pour lui seul (ex. WordQ pour un élève avec plan d'intervention).</td></tr>
+  <tr><td>Outils pour cet élève</td><td>Permet d'autoriser des outils pour lui seul (ex. Usito pour un élève avec plan d'intervention).</td></tr>
   <tr><td><span class="btn">Rouvrir la copie</span></td><td>Pour une copie remise : l'élève peut se reconnecter et continuer.</td></tr>
   <tr><td><span class="btn red">Supprimer</span></td><td>Supprime cette copie (par exemple une copie de test).</td></tr>
 </table>
@@ -266,11 +266,11 @@
 <h3>Banque de questions</h3>
 <p>Toutes les questions de vos examens enregistrés sont ajoutées automatiquement à votre banque personnelle. Dans l'éditeur, <span class="btn">Importer depuis la banque</span> permet de les rechercher et d'en insérer une copie dans le nouvel examen. Vous pouvez retirer une question de la banque (icône poubelle dans la fenêtre) sans toucher aux examens existants.</p>
 
-<h2>13. Listes de classe et temps supplémentaire</h2>
+<h2>13. Listes de classe</h2>
 <ol class="steps">
   <li>Menu <strong>Classes</strong> → <span class="btn">Nouvelle classe</span> (ex. « 2e sec. groupe 201 »).</li>
-  <li>Ajoutez les élèves un à un (nom, matricule, temps supplémentaire en minutes ou en %) ou importez-les en collant une liste.</li>
-  <li>Dans l'examen, étape 1, choisissez cette <strong>liste de classe</strong>. Seuls les élèves inscrits pourront rejoindre (nom + matricule), le nom de l'enseignant·e se remplit tout seul et le temps supplémentaire est appliqué automatiquement.</li>
+  <li>Ajoutez les élèves un à un (nom, matricule) ou importez-les en collant une liste.</li>
+  <li>Dans l'examen, étape 1, choisissez cette <strong>liste de classe</strong>. Seuls les élèves inscrits pourront rejoindre (nom + matricule), le nom de l'enseignant·e se remplit tout seul.</li>
 </ol>
 <div class="tip"><b>Sans liste de classe</b> l'examen est ouvert à toute personne ayant le code : pratique pour un test rapide, moins pour une évaluation officielle.</div>
 
@@ -285,9 +285,9 @@
   <dt>Antidote, WordQ ou Lexibar n'apparaît pas pour l'élève.</dt>
   <dd>1) L'outil est-il coché dans l'étape 3 de l'examen ? 2) L'élève est-il dans l'application Windows (les logiciels du poste ne fonctionnent pas depuis un navigateur) ? 3) Le PreCheck affiche-t-il ✗ pour cet outil ? Si oui, l'administrateur peut ajouter le chemin dans <em>Comptes → Alertes d'aide</em>. Pour Antidote, l'option « Agent Connectix » doit être activée dans les réglages d'Antidote sur le poste.</dd>
   <dt>Il faut évacuer la classe ou donner une consigne à tout le monde.</dt>
-  <dd><span class="btn">Mettre en pause</span> toute la classe : les écrans se voilent et le chronomètre s'arrête. <span class="btn green">Reprendre</span> ensuite ; le temps perdu est rendu.</dd>
-  <dt>Un élève a droit à du temps supplémentaire ou à un outil particulier.</dt>
-  <dd>Inscrivez-le dans la liste de classe avec son temps supplémentaire, ou pendant l'examen, ouvrez sa copie → <span class="btn">Temps supplémentaire</span> (vous pouvez aussi y autoriser un outil pour lui seul).</dd>
+  <dd><span class="btn">Mettre en pause</span> toute la classe : les écrans se voilent. <span class="btn green">Reprendre</span> ensuite.</dd>
+  <dt>Un élève a droit à un outil particulier.</dt>
+  <dd>Pendant l'examen, ouvrez sa copie → section « Outils pour cet élève » et cochez l'outil à lui autoriser. Il n'y a pas de limite de temps : chaque élève dispose de tout le temps nécessaire.</dd>
   <dt>Je dois sortir d'un poste verrouillé par l'application Windows.</dt>
   <dd>Appuyez sur <span class="key">Ctrl+Alt+Maj+U</span> et entrez le code de sortie d'urgence défini à l'étape 3 de l'examen. L'utilisation est consignée dans l'historique.</dd>
   <dt>Je ne reçois pas la sonnerie des demandes d'aide.</dt>

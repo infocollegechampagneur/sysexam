@@ -4,7 +4,7 @@ export const CATS = [
   { key: "copy", label: "Copier / couper", icon: ClipboardCopy, types: ["copy_attempt", "cut_attempt"] },
   { key: "paste", label: "Coller", icon: ClipboardPaste, types: ["paste_attempt"] },
   { key: "tab", label: "Autre onglet ou site web", icon: Globe, types: ["tab_hidden"] },
-  { key: "app", label: "Autre fenêtre ou application", icon: AppWindow, types: ["window_blur"] },
+  { key: "app", label: "Autre fenêtre ou application", icon: AppWindow, types: ["window_blur", "exit_attempt"] },
   { key: "fs", label: "Sortie du plein écran", icon: Minimize, types: ["fullscreen_exit"] },
   { key: "keys", label: "Raccourcis / outils dév. / capture", icon: Keyboard, types: ["shortcut", "devtools", "print_attempt"] },
   { key: "ctx", label: "Clic droit", icon: MousePointerClick, types: ["contextmenu"] },

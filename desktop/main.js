@@ -51,6 +51,7 @@ async function reclaimFocus(reason) {
     win.moveTop();
     win.focus();
     win.webContents.focus();
+    win.webContents.send("exit-attempt", reason);
   } finally { refocusing = false; }
 }
 
