@@ -115,6 +115,7 @@ function applyLock() {
     log(`verrouillage: ${n}/${EXIT_SHORTCUTS.length} raccourcis système interceptés`);
     startKeyHook();
     win.focus();
+    [80, 500, 1500].forEach((ms) => setTimeout(reassertKiosk, ms));
   } else stopKeyHook();
 }
 
