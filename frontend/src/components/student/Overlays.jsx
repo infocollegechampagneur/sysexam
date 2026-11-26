@@ -15,7 +15,7 @@ export const PausedOverlay = ({ message }) => (
     <div className="max-w-lg text-center fade-up">
       <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-amber-500/20 text-amber-300"><PauseCircle className="h-9 w-9" /></div>
       <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Examen en pause</h2>
-      <p className="mt-3 text-base text-slate-300">Votre enseignant a mis l'examen en pause. Le chronomètre est arrêté : le temps de pause vous sera redonné. Écoutez les consignes.</p>
+      <p className="mt-3 text-base text-slate-300">Votre enseignant a mis l'examen en pause. Écoutez les consignes.</p>
       {message && <p className="mt-4 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100" data-testid="paused-message">{message}</p>}
       <p className="mt-6 text-xs text-slate-500">L'examen reprendra automatiquement.</p>
     </div>

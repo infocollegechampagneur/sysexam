@@ -113,7 +113,7 @@ export default function StudentExam() {
     const iv = setInterval(() => sapi.get("/student/session").then(({ data: d }) => {
       setDeadline(d.deadline);
       showMessageIfAny(d.session);
-      setPaused((p) => { if (!p && d.paused) toast.info("Examen en pause par votre enseignant."); if (p && !d.paused) toast.success("L'examen reprend. Le temps de pause a été ajouté à votre chronomètre."); return !!d.paused; });
+      setPaused((p) => { if (!p && d.paused) toast.info("Examen en pause par votre enseignant."); if (p && !d.paused) toast.success("L'examen reprend."); return !!d.paused; });
       setPauseMsg(d.pause_message || "");
       setHelpPending((p) => { if (p && !d.help_pending) toast.success("Votre enseignant·e a pris votre demande d'aide en charge.", { duration: 8000 }); return d.help_pending || null; });
       const curTools = (data?.exam?.settings?.allowed_tools || []).join(",");

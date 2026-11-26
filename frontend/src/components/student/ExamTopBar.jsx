@@ -2,7 +2,6 @@ import { Globe, Monitor, CloudCheck, ShieldAlert, Send, Loader2 } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ExamTimer } from "@/components/student/ExamTimer";
 import { HelpButton } from "@/components/student/HelpButton";
 import { TOOLS } from "@/lib/tools";
 
@@ -37,7 +36,6 @@ export const ExamTopBar = ({ exam, session, deadline, offsetMs, savedAt, violati
         <span className="hidden items-center gap-1 text-xs text-emerald-400 sm:flex" data-testid="autosave-indicator">
           <CloudCheck className="h-4 w-4" />{savedAt ? `Sauvegardé à ${new Date(savedAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Non sauvegardé"}
         </span>
-        <ExamTimer deadline={deadline} offsetMs={offsetMs} onExpire={onExpire} paused={paused} />
         {sapi && exam.settings?.help_button !== false && <HelpButton sapi={sapi} pending={helpPending} onChange={onHelpChange} />}
         <AlertDialog>
           <AlertDialogTrigger asChild>

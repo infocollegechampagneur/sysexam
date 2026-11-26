@@ -141,7 +141,7 @@ class Question(BaseModel):
 
 
 class ExamSettings(BaseModel):
-    allowed_tools: List[str] = []
+    allowed_tools: List[str] = ["antidote", "wordq", "lexibar"]
     max_violations: int = 3
     lock_on_max: bool = True
     require_fullscreen: bool = True
@@ -161,7 +161,7 @@ class ExamIn(BaseModel):
     subject: str = ""
     instructions: str = ""
     exam_type: str = "form"  # form | redaction | document
-    duration_minutes: int = 60
+    duration_minutes: int = 0
     questions: List[Question] = []
     writing_prompt: str = ""
     settings: ExamSettings = ExamSettings()
@@ -421,14 +421,7 @@ def exam_for_session(exam: dict, s: dict) -> dict:
 
 
 def deadline_of(session: dict, exam: dict):
-    if not exam.get("duration_minutes"):
-        return None
-    minutes = exam["duration_minutes"] * (1 + (session.get("extra_time_percent") or 0) / 100) + (session.get("extra_minutes") or 0)
-    paused = session.get("paused_seconds") or 0
-    since = pause_since(session, exam)
-    if since:
-        paused += (datetime.now(timezone.utc) - since).total_seconds()
-    return datetime.fromisoformat(session["started_at"]) + timedelta(minutes=minutes, seconds=paused)
+    return None  # temps toujours illimité
 
 
 def pause_since(session: dict, exam: dict):

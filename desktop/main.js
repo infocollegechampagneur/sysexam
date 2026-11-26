@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, session, globalShortcut } = require("electron");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
@@ -19,6 +19,59 @@ const BLOCKED_KEYS = ["F5", "F11", "F12"];
 
 let win = null;
 let locked = false;
+let lockTools = [];
+const EXIT_SHORTCUTS = ["Alt+Tab", "Alt+Shift+Tab", "Alt+Escape", "Alt+Shift+Escape", "Ctrl+Escape", "Ctrl+Shift+Escape", "Alt+F4", "Super", "Super+Tab", "Super+D", "Super+M", "Super+L", "Super+E", "Super+R", "Super+S", "Super+A", "Super+I", "Super+X", "Super+Left", "Super+Right", "Super+Up", "Super+Down", "Ctrl+Alt+Tab", "Ctrl+Super+Left", "Ctrl+Super+Right", "Ctrl+Super+D", "Ctrl+Super+F4", "F11", "F1"];
+
+function foregroundProcess() {
+  if (process.platform !== "win32") return Promise.resolve("");
+  const ps = `Add-Type @'
+using System; using System.Runtime.InteropServices;
+public class F { [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid); }
+'@; $pid2=0; [F]::GetWindowThreadProcessId([F]::GetForegroundWindow(), [ref]$pid2) | Out-Null; (Get-Process -Id $pid2 -ErrorAction SilentlyContinue).ProcessName`;
+  return new Promise((resolve) => execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-Command", ps], { windowsHide: true, timeout: 5000 }, (err, out) => resolve(err ? "" : String(out || "").trim().toLowerCase())));
+}
+
+function allowedProcesses() {
+  return lockTools.flatMap((id) => toolProcesses((config.tools || {})[id] || {})).map((p) => p.replace(/\.exe$/i, ""));
+}
+
+let refocusing = false;
+async function reclaimFocus(reason) {
+  if (!locked || !win || win.isDestroyed() || refocusing) return;
+  refocusing = true;
+  try {
+    if (lockTools.length) {
+      const fg = await foregroundProcess();
+      const ok = allowedProcesses().some((p) => fg === p || fg.startsWith(p));
+      if (ok) { log(`focus laissé à ${fg} (outil permis)`); return; }
+      log(`focus perdu (${reason}) vers "${fg || "?"}" → rappel de la fenêtre d'examen`);
+    } else log(`focus perdu (${reason}) → rappel de la fenêtre d'examen`);
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.moveTop();
+    win.focus();
+    win.webContents.focus();
+  } finally { refocusing = false; }
+}
+
+function applyLock() {
+  if (!win) return;
+  const onTop = locked && !lockTools.length;
+  win.setKiosk(locked);
+  win.setAlwaysOnTop(onTop, "screen-saver");
+  win.setContentProtection(locked);
+  win.setMinimizable(!locked);
+  win.setClosable(!locked);
+  win.setSkipTaskbar(locked);
+  win.setVisibleOnAllWorkspaces(locked, { visibleOnFullScreen: true });
+  globalShortcut.unregisterAll();
+  if (locked) {
+    let n = 0;
+    for (const s of EXIT_SHORTCUTS) { try { if (globalShortcut.register(s, () => reclaimFocus(s))) n++; } catch (e) { /* non supporté */ } }
+    log(`verrouillage: ${n}/${EXIT_SHORTCUTS.length} raccourcis système interceptés`);
+    win.focus();
+  }
+}
 
 const hostOf = (url) => { try { return new URL(url).hostname; } catch (e) { return ""; } };
 
@@ -78,7 +131,7 @@ function createWindow() {
       return;
     }
     const k = (input.key || "").toLowerCase();
-    if (BLOCKED_KEYS.includes(input.key) || (input.alt && input.key === "F4") ||
+    if (BLOCKED_KEYS.includes(input.key) || input.meta || (input.alt && ["F4", "Tab", "Escape", " "].includes(input.key)) || input.key === "Escape" ||
         (input.control && input.shift && ["i", "j", "c"].includes(k)) ||
         (input.control && ["r", "w", "n", "t", "p", "s", "u"].includes(k))) e.preventDefault();
   });
@@ -88,6 +141,10 @@ function createWindow() {
     e.preventDefault();
     dialog.showMessageBox(win, { type: "warning", title: "Examen en cours", message: "Vous devez remettre votre examen avant de fermer l'application." });
   });
+  win.on("blur", () => { if (locked) setTimeout(() => reclaimFocus("blur"), 150); });
+  win.on("minimize", () => { if (locked) { win.restore(); reclaimFocus("minimize"); } });
+  win.on("hide", () => { if (locked) { win.show(); reclaimFocus("hide"); } });
+  win.on("leave-full-screen", () => { if (locked) win.setKiosk(true); });
 
   win.webContents.on("did-fail-load", () => {
     dialog.showErrorBox("Connexion impossible", `Impossible de joindre ${APP_URL}. Vérifiez votre connexion Internet.`);
@@ -96,12 +153,9 @@ function createWindow() {
 
 ipcMain.handle("set-lockdown", (_e, on, opts = {}) => {
   locked = !!on;
-  const onTop = locked && !(opts.desktopTools || []).length;
-  win.setKiosk(locked);
-  win.setAlwaysOnTop(onTop, "screen-saver");
-  win.setContentProtection(locked);
+  lockTools = locked ? (opts.desktopTools || []) : [];
+  applyLock();
   BrowserWindow.getAllWindows().filter((w) => w !== win).forEach((w) => { w.setAlwaysOnTop(locked, "screen-saver"); w.setContentProtection(locked); });
-  if (locked) win.focus();
   return locked;
 });
 
@@ -310,7 +364,7 @@ ipcMain.handle("focus-tool", async (_e, id) => {
 
 ipcMain.handle("machine-info", () => ({ hostname: os.hostname(), user: (os.userInfo().username || ""), app_version: app.getVersion(), os: `${os.type()} ${os.release()}` }));
 
-ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; setTimeout(() => app.quit(), 200); return true; });
+ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; lockTools = []; globalShortcut.unregisterAll(); setTimeout(() => app.quit(), 200); return true; });
 
 function setupAutoUpdate() {
   if (!app.isPackaged || config.autoUpdate === false) return;
@@ -332,4 +386,5 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(() => { createWindow(); setupAutoUpdate(); });
   app.on("window-all-closed", () => app.quit());
+  app.on("will-quit", () => globalShortcut.unregisterAll());
 }

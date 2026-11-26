@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, FileType2, Unlock, Lock, Save, Loader2, Clock, FilePen, Wrench, PauseCircle } from "lucide-react";
+import { FileDown, FileType2, Unlock, Lock, Save, Loader2, FilePen, Wrench, PauseCircle } from "lucide-react";
 import { SessionPauseControl } from "@/components/PauseControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,22 +75,6 @@ const AutoBadge = ({ q, v, i, partial }) => {
       {a.ok ? "✓ Bonne réponse" : a.partial ? "◐ Partiellement correct" : "✗ Mauvaise réponse"} · auto : {a.points} / {q.points} pts
       {!a.ok && <span className="font-normal text-slate-600"> — attendu : {a.good.join(", ")}</span>}
     </p>
-  );
-};
-
-const ExtraTime = ({ session, onChanged }) => {
-  const [min, setMin] = useState(session.extra_minutes || 0);
-  useEffect(() => setMin(session.extra_minutes || 0), [session.id, session.extra_minutes]);
-  const apply = (value) => api.put(`/sessions/${session.id}/extra-time`, { extra_minutes: Math.max(0, Number(value) || 0) }).then(() => { toast.success(`Temps supplémentaire : ${Math.max(0, Number(value) || 0)} min (visible chez l'élève dans quelques secondes)`); onChanged(); }).catch((e) => toast.error(formatErr(e)));
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="extra-time-panel">
-      <Clock className="h-4 w-4 text-blue-900" />
-      <span className="text-slate-700">Temps supp. du plan d'intervention : <strong data-testid="extra-time-percent">{session.extra_time_percent || 0} %</strong></span>
-      <span className="ml-auto text-slate-500">+ minutes accordées</span>
-      {[5, 10, 15].map((n) => <Button key={n} size="sm" variant="outline" onClick={() => apply((Number(min) || 0) + n)} data-testid={`add-extra-${n}-btn`}>+{n}</Button>)}
-      <Input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} className="h-9 w-20" data-testid="extra-minutes-input" />
-      <Button size="sm" variant="outline" onClick={() => apply(min)} data-testid="save-extra-minutes-btn">Appliquer</Button>
-    </div>
   );
 };
 
@@ -185,7 +169,6 @@ export const SessionDetail = ({ exam, session, onChanged }) => {
 
       {session.status === "locked" && <LockedBanner session={session} onUnlock={unlock} />}
       <UnlockDialog open={unlockOpen} onOpenChange={setUnlockOpen} session={session} maxViolations={exam.settings.max_violations} onDone={onChanged} />
-      {exam.duration_minutes > 0 && <ExtraTime key={session.id} session={session} onChanged={onChanged} />}
       {session.status === "in_progress" && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm" data-testid="session-pause-panel">
           <PauseCircle className="h-4 w-4 text-amber-600" />

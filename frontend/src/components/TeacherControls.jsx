@@ -65,7 +65,7 @@ export const ClassControls = ({ examId, exam, sessions, onDone }) => {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Message à toute la classe</DialogTitle><DialogDescription>Envoyé aux {active + locked} élève(s) en cours ou bloqués. Chacun doit confirmer sa lecture.</DialogDescription></DialogHeader>
           <div className="flex flex-wrap gap-2">
-            {["Il reste 10 minutes.", "Il reste 5 minutes. Pensez à relire et à remettre votre copie.", "Rappel : restez sur la page de l'examen."].map((p, i) => (
+            {["Pensez à relire votre copie avant de la remettre.", "Terminez votre réponse en cours et remettez votre copie.", "Rappel : restez sur la page de l'examen."].map((p, i) => (
               <button key={p} type="button" onClick={() => setText(p)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:border-blue-300 hover:bg-blue-50" data-testid={`broadcast-preset-${i}`}>{p}</button>
             ))}
           </div>

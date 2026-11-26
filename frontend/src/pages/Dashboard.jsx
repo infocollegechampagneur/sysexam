@@ -65,7 +65,6 @@ const ExamCard = ({ exam, onDelete }) => {
         <span>{exam.session_count} copie(s)</span>
         {exam.flagged_count > 0 && <span className="text-amber-700">{exam.flagged_count} avec infraction(s)</span>}
         {exam.locked_count > 0 && <span className="font-semibold text-rose-700" data-testid={`exam-locked-count-${exam.code}`}>{exam.locked_count} bloquée(s)</span>}
-        <span>{exam.duration_minutes ? `${exam.duration_minutes} min` : "Sans limite"}</span>
       </div>
       <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
         <Button size="sm" variant="outline" className="flex-1" onClick={() => nav(`/enseignant/examens/${exam.id}`)} data-testid={`edit-exam-${exam.code}`}><Pencil className="mr-1.5 h-3.5 w-3.5" />Modifier</Button>

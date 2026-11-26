@@ -20,8 +20,8 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
-  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 60, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [], managers: [], windows: [],
-  settings: { allowed_tools: [], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false,     partial_credit: false, shuffle_options: false, help_button: true, clipboard_internal: true },
+  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 0, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [], managers: [], windows: [],
+  settings: { allowed_tools: ["antidote", "wordq", "lexibar"], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false,     partial_credit: false, shuffle_options: false, help_button: true, clipboard_internal: true },
 };
 const FIELDS = Object.keys(EMPTY);
 
@@ -112,8 +112,7 @@ export default function ExamBuilder() {
         <TabsContent value="info" className="mt-6">
           <div className="grid gap-5 rounded-xl border border-slate-200 bg-white p-6 md:grid-cols-2">
             <div className="md:col-span-2"><Label>Titre *</Label><Input value={form.title} onChange={(e) => set("title", e.target.value)} className="mt-1.5" data-testid="exam-title-input" /></div>
-            <div><Label>Matière / groupe</Label><Input value={form.subject} onChange={(e) => set("subject", e.target.value)} className="mt-1.5" data-testid="exam-subject-input" /></div>
-            <div><Label>Durée (minutes, 0 = sans limite)</Label><Input type="number" min={0} value={form.duration_minutes} onChange={(e) => set("duration_minutes", Math.max(0, Number(e.target.value)))} className="mt-1.5" data-testid="exam-duration-input" /></div>
+            <div className="md:col-span-2"><Label>Matière / groupe</Label><Input value={form.subject} onChange={(e) => set("subject", e.target.value)} className="mt-1.5" data-testid="exam-subject-input" /></div>
             <div className="md:col-span-2"><Label>Consignes pour les élèves</Label><Textarea rows={4} value={form.instructions} onChange={(e) => set("instructions", e.target.value)} className="mt-1.5" data-testid="exam-instructions-input" /></div>
             <div className="md:col-span-2">
               <Label>Liste de classe</Label>
@@ -124,7 +123,7 @@ export default function ExamBuilder() {
                   {classes.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.students.length} élèves)</SelectItem>)}
                 </SelectContent>
               </Select>
-              <p className="mt-1.5 text-xs text-slate-500">Avec une classe, seuls les élèves inscrits peuvent rejoindre, et leur temps supplémentaire est appliqué. Gérez vos listes dans l'onglet « Classes ».</p>
+              <p className="mt-1.5 text-xs text-slate-500">Avec une classe, seuls les élèves inscrits peuvent rejoindre. Gérez vos listes dans l'onglet « Classes ».</p>
             </div>
             <div className="md:col-span-2" data-testid="managers-section">
               <Label className="flex items-center gap-1.5"><Users className="h-4 w-4 text-blue-900" />Gestionnaires de l'examen</Label>

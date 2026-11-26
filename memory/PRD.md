@@ -195,3 +195,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - 2026-11: Couche texte PDF refaite avec pdf.js renderTextLayer (polices/ascent réels, --scale-factor), items remis en ordre de lecture (readingOrder), sélection pilotée (caretRangeFromPoint + mot le plus proche, Range programmatique, pointer capture). Bug corrigé : tâche renderTextLayer précédente non annulée au resize → spans dupliqués en désordre → sélection éparpillée. Testé sur PDF réel HIS1_CH2.
 - 2026-11: Marques (surligner/souligner la sélection) calculées depuis la géométrie PDF des mots (itemRect via Util.transform, fractions de caractères pour les bouts), spans tagués data-i → alignement exact au texte imprimé.
 - 2026-11: Couche texte : échelle mesurée sur la largeur réelle du calque (ResizeObserver) au lieu de width-32 → plus de dérive verticale/horizontale (sélection bleue = texte imprimé à 1 px près).
+
+## 2026-06 — Outils par défaut, verrouillage total, suppression du temps (desktop 1.3.0)
+- Antidote/WordQ/Lexibar cochés par défaut (backend `ExamSettings` + `ExamBuilder`).
+- Temps supprimé partout : `deadline_of` retourne toujours None, champ durée retiré, `ExamTimer` plus affiché, panneau « temps supp. », colonne % temps du roster, textes « Il reste X minutes » retirés. Backend accepte encore `duration_minutes` (ignoré).
+- Electron : `applyLock()` — kiosk + alwaysOnTop + non minimisable/fermable + skipTaskbar, `globalShortcut` sur Alt+Tab/Win/Ctrl+Esc/Alt+F4…, `blur/minimize/hide` → `reclaimFocus()` qui ramène la fenêtre sauf si l'avant-plan est un outil permis (WordQ/Lexibar/Antidote). Sortie uniquement par code d'urgence (Ctrl+Alt+Shift+U). Limite : Ctrl+Alt+Suppr reste géré par Windows (GPO).
