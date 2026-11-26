@@ -36,6 +36,35 @@ function allowedProcesses() {
 }
 
 let refocusing = false;
+let keyHook = null;
+
+function startKeyHook() {
+  if (process.platform !== "win32" || keyHook) return;
+  const { spawn } = require("child_process");
+  let src;
+  try { src = fs.readFileSync(path.join(__dirname, "verrou-clavier.ps1"), "utf8"); } catch (e) { log(`verrou clavier: script introuvable (${e.message})`); return; }
+  const encoded = Buffer.from(src, "utf16le").toString("base64");
+  const child = spawn(PS_EXE, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-STA", "-EncodedCommand", encoded], { windowsHide: true, env: { ...process.env, MONEXAM_PARENT_PID: String(process.pid) }, stdio: ["ignore", "pipe", "pipe"] });
+  keyHook = child;
+  let buf = "";
+  child.stdout.on("data", (d) => {
+    buf += d.toString();
+    const lines = buf.split(/\r?\n/); buf = lines.pop();
+    for (const l of lines) {
+      if (l.startsWith("BLOCK ")) { const why = l.slice(6).trim(); log(`verrou clavier: ${why} bloqué`); if (locked && win && !win.isDestroyed()) win.webContents.send("exit-attempt", why); }
+      else if (l.trim()) log(`verrou clavier: ${l.trim()}`);
+    }
+  });
+  child.stderr.on("data", (d) => log(`verrou clavier (err): ${String(d).slice(0, 300)}`));
+  child.on("exit", (code) => { log(`verrou clavier terminé (${code})`); if (keyHook === child) keyHook = null; if (locked) setTimeout(startKeyHook, 1500); });
+}
+
+function stopKeyHook() {
+  if (!keyHook) return;
+  const c = keyHook; keyHook = null;
+  try { c.kill(); } catch (e) { /* déjà fermé */ }
+}
+
 async function reclaimFocus(reason) {
   if (!locked || !win || win.isDestroyed() || refocusing) return;
   refocusing = true;
@@ -47,10 +76,13 @@ async function reclaimFocus(reason) {
       log(`focus perdu (${reason}) vers "${fg || "?"}" → rappel de la fenêtre d'examen`);
     } else log(`focus perdu (${reason}) → rappel de la fenêtre d'examen`);
     if (win.isMinimized()) win.restore();
+    const wasOnTop = win.isAlwaysOnTop();
+    win.setAlwaysOnTop(true, "screen-saver");
     win.show();
     win.moveTop();
     win.focus();
     win.webContents.focus();
+    if (!wasOnTop) setTimeout(() => { if (win && !win.isDestroyed() && locked && lockTools.length) win.setAlwaysOnTop(false); }, 400);
     win.webContents.send("exit-attempt", reason);
   } finally { refocusing = false; }
 }
@@ -70,8 +102,9 @@ function applyLock() {
     let n = 0;
     for (const s of EXIT_SHORTCUTS) { try { if (globalShortcut.register(s, () => reclaimFocus(s))) n++; } catch (e) { /* non supporté */ } }
     log(`verrouillage: ${n}/${EXIT_SHORTCUTS.length} raccourcis système interceptés`);
+    startKeyHook();
     win.focus();
-  }
+  } else stopKeyHook();
 }
 
 const hostOf = (url) => { try { return new URL(url).hostname; } catch (e) { return ""; } };
@@ -365,7 +398,7 @@ ipcMain.handle("focus-tool", async (_e, id) => {
 
 ipcMain.handle("machine-info", () => ({ hostname: os.hostname(), user: (os.userInfo().username || ""), app_version: app.getVersion(), os: `${os.type()} ${os.release()}` }));
 
-ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; lockTools = []; globalShortcut.unregisterAll(); setTimeout(() => app.quit(), 200); return true; });
+ipcMain.handle("quit-app", () => { log("quit-app demandé après remise"); locked = false; lockTools = []; globalShortcut.unregisterAll(); stopKeyHook(); setTimeout(() => app.quit(), 200); return true; });
 
 function setupAutoUpdate() {
   if (!app.isPackaged || config.autoUpdate === false) return;
@@ -387,5 +420,5 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(() => { createWindow(); setupAutoUpdate(); });
   app.on("window-all-closed", () => app.quit());
-  app.on("will-quit", () => globalShortcut.unregisterAll());
+  app.on("will-quit", () => { globalShortcut.unregisterAll(); stopKeyHook(); });
 }

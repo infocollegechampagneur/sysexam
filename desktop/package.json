@@ -1,7 +1,7 @@
 {
   "name": "monexamenligne-desktop",
   "productName": "MonExamEnLigne",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "MonExamEnLigne — Collège Champagneur (examen verrouillé)",
   "main": "main.js",
   "author": "Collège Champagneur",
@@ -20,7 +20,7 @@
   "build": {
     "appId": "com.monexamenligne.desktop",
     "productName": "MonExamEnLigne",
-    "files": ["main.js", "preload.js", "config.json"],
+    "files": ["main.js", "preload.js", "config.json", "verrou-clavier.ps1"],
     "publish": { "provider": "github", "owner": "infocollegechampagneur", "repo": "sysexam", "releaseType": "release" },
     "win": { "target": ["nsis", "msi"], "icon": "build/icon.ico" },
     "nsis": { "oneClick": false, "perMachine": true, "allowToChangeInstallationDirectory": true, "shortcutName": "MonExamEnLigne" },
