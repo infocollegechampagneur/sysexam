@@ -14,6 +14,15 @@ public class Verrou {
   [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hk, int code, IntPtr wParam, IntPtr lParam);
   [DllImport("user32.dll")] static extern short GetAsyncKeyState(int vk);
   [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string name);
+  [DllImport("user32.dll")] static extern IntPtr FindWindow(string cls, string title);
+  [DllImport("user32.dll")] static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
+  [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+  static void Taskbar(bool show) {
+    int cmd = show ? 5 : 0;
+    IntPtr t = FindWindow("Shell_TrayWnd", null); if (t != IntPtr.Zero) ShowWindow(t, cmd);
+    IntPtr s = IntPtr.Zero;
+    while ((s = FindWindowEx(IntPtr.Zero, s, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero) ShowWindow(s, cmd);
+  }
   static Proc keep; static IntPtr hook = IntPtr.Zero;
   static ConcurrentQueue<string> q = new ConcurrentQueue<string>();
   static long hooked = 0, blocked = 0;
@@ -70,6 +79,7 @@ public class Verrou {
     keep = new Proc(Cb);
     Warm();
     Install();
+    Taskbar(false);
     Console.Out.WriteLine(hook == IntPtr.Zero ? "FAIL" : "READY"); Console.Out.Flush();
     var t = new System.Windows.Forms.Timer(); t.Interval = 250;
     int tick = 0;
@@ -77,12 +87,13 @@ public class Verrou {
       string s; while (q.TryDequeue(out s)) Console.Out.WriteLine(s);
       Console.Out.Flush();
       tick++;
-      if (tick % 8 == 0) Install();
+      if (tick % 8 == 0) { Install(); Taskbar(false); }
       if (tick % 240 == 0) { Console.Out.WriteLine("ALIVE hooks=" + hooked + " blocked=" + blocked); Console.Out.Flush(); }
       if (tick % 4 == 0) { try { Process.GetProcessById(parent); } catch { System.Windows.Forms.Application.Exit(); } }
     };
     t.Start();
     System.Windows.Forms.Application.Run();
+    Taskbar(true);
     if (hook != IntPtr.Zero) UnhookWindowsHookEx(hook);
   }
 }

@@ -60,10 +60,21 @@ function startKeyHook() {
   child.on("exit", (code) => { log(`verrou clavier terminé (${code})`); if (keyHook === child) keyHook = null; if (locked) setTimeout(startKeyHook, 1500); });
 }
 
+function restoreTaskbar() {
+  if (process.platform !== "win32") return;
+  const ps = `Add-Type @'
+using System; using System.Runtime.InteropServices;
+public class T { [DllImport("user32.dll")] public static extern IntPtr FindWindow(string c, string t); [DllImport("user32.dll")] public static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string c, string t); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n); }
+'@; $t=[T]::FindWindow('Shell_TrayWnd',$null); if($t -ne [IntPtr]::Zero){[T]::ShowWindow($t,5)|Out-Null}; $s=[IntPtr]::Zero; while(($s=[T]::FindWindowEx([IntPtr]::Zero,$s,'Shell_SecondaryTrayWnd',$null)) -ne [IntPtr]::Zero){[T]::ShowWindow($s,5)|Out-Null}`;
+  execFile(PS_EXE, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", ps], { windowsHide: true, timeout: 10000 }, (err) => log(`barre des tâches restaurée${err ? ` (erreur: ${(err.message || "").split("\n")[0]})` : ""}`));
+}
+
 function stopKeyHook() {
-  if (!keyHook) return;
-  const c = keyHook; keyHook = null;
-  try { c.kill(); } catch (e) { /* déjà fermé */ }
+  if (keyHook) {
+    const c = keyHook; keyHook = null;
+    try { c.kill(); } catch (e) { /* déjà fermé */ }
+  }
+  restoreTaskbar();
 }
 
 function reassertKiosk() {
@@ -397,7 +408,7 @@ ipcMain.handle("launch-tool", async (_e, id) => {
   if (err) return { ok: false, reason: err };
   const wasOnTop = win.isAlwaysOnTop();
   if (wasOnTop) win.setAlwaysOnTop(false);
-  bringToFront(exe).then(() => { if (wasOnTop && locked) setTimeout(() => win.setAlwaysOnTop(false), 0); });
+  bringToFront(exe).then(() => { if (wasOnTop && locked) setTimeout(() => win.setAlwaysOnTop(false), 0); if (locked && ["wordq", "lexibar"].includes(id)) [1200, 2500].forEach((ms) => setTimeout(reassertKiosk, ms)); });
   return { ok: true, path: exe };
 });
 
