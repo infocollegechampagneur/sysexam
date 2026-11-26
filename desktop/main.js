@@ -44,6 +44,7 @@ function startKeyHook() {
   let src;
   try { src = fs.readFileSync(path.join(__dirname, "verrou-clavier.ps1"), "utf8"); } catch (e) { log(`verrou clavier: script introuvable (${e.message})`); return; }
   const encoded = Buffer.from(src, "utf16le").toString("base64");
+  execFile("reg", ["add", "HKCU\\Control Panel\\Desktop", "/v", "LowLevelHooksTimeout", "/t", "REG_DWORD", "/d", "5000", "/f"], { windowsHide: true }, () => {});
   const child = spawn(PS_EXE, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-STA", "-EncodedCommand", encoded], { windowsHide: true, env: { ...process.env, MONEXAM_PARENT_PID: String(process.pid) }, stdio: ["ignore", "pipe", "pipe"] });
   keyHook = child;
   let buf = "";

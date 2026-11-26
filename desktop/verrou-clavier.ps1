@@ -2,7 +2,9 @@ $ErrorActionPreference = "SilentlyContinue"
 $parent = [int]$env:MONEXAM_PARENT_PID
 Add-Type -ReferencedAssemblies System.Windows.Forms @"
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 public class Verrou {
@@ -13,39 +15,75 @@ public class Verrou {
   [DllImport("user32.dll")] static extern short GetAsyncKeyState(int vk);
   [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string name);
   static Proc keep; static IntPtr hook = IntPtr.Zero;
+  static ConcurrentQueue<string> q = new ConcurrentQueue<string>();
+  static long hooked = 0, blocked = 0;
   static bool Down(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+  static string Why(int vk, int flags) {
+    bool alt = (flags & 0x20) != 0 || Down(0x12);
+    bool ctrl = Down(0x11);
+    bool win = Down(0x5B) || Down(0x5C);
+    if (vk == 0x5B || vk == 0x5C) return "Windows";
+    if (vk == 0x09 && alt) return "Alt+Tab";
+    if (vk == 0x09 && ctrl) return "Ctrl+Tab";
+    if (vk == 0x09 && win) return "Win+Tab";
+    if (vk == 0x1B && alt) return "Alt+Echap";
+    if (vk == 0x1B && ctrl) return "Ctrl+Echap";
+    if (vk == 0x73 && alt) return "Alt+F4";
+    if (vk == 0x20 && alt) return "Alt+Espace";
+    if (win) return "Win+touche";
+    return null;
+  }
   static IntPtr Cb(int code, IntPtr wParam, IntPtr lParam) {
     if (code >= 0) {
       int vk = Marshal.ReadInt32(lParam);
       int flags = Marshal.ReadInt32(lParam, 8);
-      bool alt = (flags & 0x20) != 0 || Down(0x12);
-      bool ctrl = Down(0x11);
-      bool win = Down(0x5B) || Down(0x5C);
-      string why = null;
-      if (vk == 0x5B || vk == 0x5C) why = "Windows";
-      else if (vk == 0x09 && alt) why = "Alt+Tab";
-      else if (vk == 0x09 && (ctrl || win)) why = ctrl ? "Ctrl+Tab" : "Win+Tab";
-      else if (vk == 0x1B && (alt || ctrl)) why = alt ? "Alt+Echap" : "Ctrl+Echap";
-      else if (vk == 0x73 && alt) why = "Alt+F4";
-      else if (vk == 0x20 && alt) why = "Alt+Espace";
-      else if (win) why = "Win+touche";
+      string why = Why(vk, flags);
       if (why != null) {
-        int msg = wParam.ToInt32();
-        if (msg == 0x100 || msg == 0x104) { Console.Out.WriteLine("BLOCK " + why); Console.Out.Flush(); }
+        int msg = (int)wParam.ToInt64();
+        if (msg == 0x100 || msg == 0x104) { Interlocked.Increment(ref blocked); q.Enqueue("BLOCK " + why); }
         return (IntPtr)1;
       }
     }
     return CallNextHookEx(hook, code, wParam, lParam);
   }
-  public static void Run(int parent) {
-    keep = new Proc(Cb);
+  static void Warm() {
+    RuntimeHelpers.PrepareMethod(typeof(Verrou).GetMethod("Cb", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).MethodHandle);
+    RuntimeHelpers.PrepareMethod(typeof(Verrou).GetMethod("Why", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).MethodHandle);
+    IntPtr buf = Marshal.AllocHGlobal(24);
+    try {
+      int[] keys = { 0x41, 0x09, 0x5B, 0x1B, 0x73, 0x20 };
+      foreach (int k in keys) { Marshal.WriteInt32(buf, k); Marshal.WriteInt32(buf, 8, 0x20); Why(k, 0x20); Why(k, 0); }
+      Marshal.WriteInt32(buf, 0x41); Marshal.WriteInt32(buf, 8, 0);
+      Cb(-1, (IntPtr)0x100, buf);
+      string dummy; while (q.TryDequeue(out dummy)) {}
+    } finally { Marshal.FreeHGlobal(buf); }
+    Down(0x12); GetAsyncKeyState(0x11);
+  }
+  static void Install() {
+    if (hook != IntPtr.Zero) { UnhookWindowsHookEx(hook); hook = IntPtr.Zero; }
     hook = SetWindowsHookEx(13, keep, GetModuleHandle(null), 0);
+    hooked++;
+  }
+  public static void Run(int parent) {
+    Thread.CurrentThread.Priority = ThreadPriority.Highest;
+    try { Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High; } catch {}
+    keep = new Proc(Cb);
+    Warm();
+    Install();
     Console.Out.WriteLine(hook == IntPtr.Zero ? "FAIL" : "READY"); Console.Out.Flush();
-    var t = new System.Windows.Forms.Timer(); t.Interval = 1000;
-    t.Tick += delegate { try { Process.GetProcessById(parent); } catch { System.Windows.Forms.Application.Exit(); } };
+    var t = new System.Windows.Forms.Timer(); t.Interval = 250;
+    int tick = 0;
+    t.Tick += delegate {
+      string s; while (q.TryDequeue(out s)) Console.Out.WriteLine(s);
+      Console.Out.Flush();
+      tick++;
+      if (tick % 8 == 0) Install();
+      if (tick % 240 == 0) { Console.Out.WriteLine("ALIVE hooks=" + hooked + " blocked=" + blocked); Console.Out.Flush(); }
+      if (tick % 4 == 0) { try { Process.GetProcessById(parent); } catch { System.Windows.Forms.Application.Exit(); } }
+    };
     t.Start();
     System.Windows.Forms.Application.Run();
-    UnhookWindowsHookEx(hook);
+    if (hook != IntPtr.Zero) UnhookWindowsHookEx(hook);
   }
 }
 "@
