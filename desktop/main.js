@@ -66,6 +66,18 @@ function stopKeyHook() {
   try { c.kill(); } catch (e) { /* déjà fermé */ }
 }
 
+function reassertKiosk() {
+  if (!locked || !win || win.isDestroyed()) return;
+  const wasOnTop = win.isAlwaysOnTop();
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setKiosk(false);
+  win.setFullScreen(true);
+  win.setKiosk(true);
+  win.moveTop();
+  win.focus();
+  if (!wasOnTop) setTimeout(() => { if (win && !win.isDestroyed() && locked && lockTools.length) win.setAlwaysOnTop(false); }, 500);
+}
+
 async function reclaimFocus(reason) {
   if (!locked || !win || win.isDestroyed() || refocusing) return;
   refocusing = true;
@@ -77,13 +89,11 @@ async function reclaimFocus(reason) {
       log(`focus perdu (${reason}) vers "${fg || "?"}" → rappel de la fenêtre d'examen`);
     } else log(`focus perdu (${reason}) → rappel de la fenêtre d'examen`);
     if (win.isMinimized()) win.restore();
-    const wasOnTop = win.isAlwaysOnTop();
-    win.setAlwaysOnTop(true, "screen-saver");
+    reassertKiosk();
     win.show();
     win.moveTop();
     win.focus();
     win.webContents.focus();
-    if (!wasOnTop) setTimeout(() => { if (win && !win.isDestroyed() && locked && lockTools.length) win.setAlwaysOnTop(false); }, 400);
     win.webContents.send("exit-attempt", reason);
   } finally { refocusing = false; }
 }
@@ -177,6 +187,7 @@ function createWindow() {
     dialog.showMessageBox(win, { type: "warning", title: "Examen en cours", message: "Vous devez remettre votre examen avant de fermer l'application." });
   });
   win.on("blur", () => { if (locked) setTimeout(() => reclaimFocus("blur"), 150); });
+  win.on("focus", () => { if (locked) { log("focus retrouvé → réaffirmation du mode kiosque"); setTimeout(reassertKiosk, 50); setTimeout(reassertKiosk, 600); } });
   win.on("minimize", () => { if (locked) { win.restore(); reclaimFocus("minimize"); } });
   win.on("hide", () => { if (locked) { win.show(); reclaimFocus("hide"); } });
   win.on("leave-full-screen", () => { if (locked) win.setKiosk(true); });
@@ -419,7 +430,14 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
-  app.whenReady().then(() => { createWindow(); setupAutoUpdate(); });
+  app.whenReady().then(() => {
+    createWindow(); setupAutoUpdate();
+    const { powerMonitor } = require("electron");
+    const back = (ev) => { if (locked) { log(`${ev} → retour à l'examen`); setTimeout(() => reclaimFocus(ev), 200); setTimeout(reassertKiosk, 1200); } };
+    powerMonitor.on("unlock-screen", () => back("unlock-screen"));
+    powerMonitor.on("resume", () => back("resume"));
+    powerMonitor.on("user-did-become-active", () => { if (locked && win && !win.isDestroyed() && !win.isFullScreen()) reassertKiosk(); });
+  });
   app.on("window-all-closed", () => app.quit());
   app.on("will-quit", () => { globalShortcut.unregisterAll(); stopKeyHook(); });
 }
