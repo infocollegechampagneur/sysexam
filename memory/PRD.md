@@ -207,3 +207,8 @@ FastAPI (server.py, auth.py, storage.py, seed.py) + MongoDB + React (Tiptap edit
 - 1.3.3 : `reassertKiosk()` (toggle kiosk/fullscreen + moveTop, alwaysOnTop temporaire) appelé sur `focus`, dans `reclaimFocus`, et via `powerMonitor` (unlock-screen/resume) → la barre des tâches disparaît d'elle-même au retour de Ctrl+Alt+Suppr/Annuler.
 - 1.3.4 : reassertKiosk() aussi à l'entrée en verrouillage (80/500/1500 ms) → barre des tâches masquée dès le « Commencer » sans clic.
 - 1.3.5 : barre des tâches (Shell_TrayWnd + secondaires) masquée par le processus verrou pendant l'examen (re-masquée toutes les 2 s), restaurée à la sortie (Taskbar(true) côté PS si fin propre + restoreTaskbar() côté Electron à l'arrêt/quit). Après lancement WordQ/Lexibar, reassertKiosk à 1,2 s et 2,5 s.
+
+## 2026-06 — Teams simplifié (Workflows webhook)
+- Méthode principale = lien « flux de travail » Teams (Power Automate Workflows, canal OU clavardage de groupe), payload Adaptive Card enveloppe `type:message`. Courriel de canal relégué en « autre méthode ».
+- Nouveau champ `Exam.teams_webhook` (validé https) + `POST /exams/{id}/teams-test` (propriétaire/gestionnaire). `notify_help_teams` publie aussi sur le lien de l'examen. Toute personne membre du canal/clavardage voit l'alerte.
+- `TeamsLinkField.jsx` (étapes), `TeamsSettings.jsx` refondu, section Teams dans ExamBuilder (onglet général). Erreurs de test renvoyées en 400 (l'ingress remplace les 502 par du HTML).

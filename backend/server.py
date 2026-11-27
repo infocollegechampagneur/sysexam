@@ -31,7 +31,7 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from auth import (hash_password, verify_password, create_access_token, create_refresh_token,
                   decode_token, set_auth_cookies, extract_token)
@@ -169,7 +169,16 @@ class ExamIn(BaseModel):
     class_id: Optional[str] = None
     doc_answer_mode: str = "separate"  # separate | inline
     help_recipients: List[str] = []
+    teams_webhook: Optional[str] = None
     managers: List[str] = []
+
+    @field_validator("teams_webhook")
+    @classmethod
+    def _check_webhook(cls, v):
+        v = (v or "").strip()
+        if v and not (v.startswith("https://") and len(v) > 30):
+            raise ValueError("Le lien Teams doit commencer par https://")
+        return v or None
     windows: List[Dict[str, str]] = []
 
 
@@ -332,6 +341,10 @@ async def notify_help_teams(req: dict, exam: dict):
     hooks = [u for u in users if u.get("teams_webhook")]
     results = await asyncio.gather(*[send_teams(u["teams_webhook"], f"🙋 {req['student_name']} a besoin d'aide", facts) for u in hooks])
     sent = [u["id"] for u, (ok, _) in zip(hooks, results) if ok]
+    if exam.get("teams_webhook"):
+        ok, _ = await send_teams(exam["teams_webhook"], f"🙋 {req['student_name']} a besoin d'aide", facts)
+        if ok:
+            sent.append("exam")
     addresses = {u["teams_email"] for u in users if u.get("teams_email")} | {u["email"] for u in users if u.get("notify_email")}
     mailed = await asyncio.gather(*[asyncio.to_thread(send_help_alert, a, req["student_name"], exam.get("title") or "", req.get("reason") or "", when) for a in addresses])
     await db.help_requests.update_one({"id": req["id"]}, {"$set": {"teams_sent": sent, "emails_sent": [a for a, ok in zip(addresses, mailed) if ok]}})
@@ -673,18 +686,31 @@ async def teams_test(user: dict = Depends(current_teacher)):
     if u.get("teams_webhook"):
         ok, err = await send_teams(u["teams_webhook"], "Test MonExamEnLigne", [("Destinataire", user["name"]), ("Message", "Si vous voyez cette carte, les alertes d'aide fonctionneront.")])
         if not ok:
-            raise HTTPException(status_code=502, detail=f"Teams a refusé le message : {err}")
+            raise HTTPException(status_code=400, detail=f"Teams a refusé le message : {err}")
         done.append("webhook")
     targets = [a for a in (u.get("teams_email"), u["email"] if u.get("notify_email") else None) if a]
     if targets and not mail_configured():
         raise HTTPException(status_code=503, detail="L'envoi de courriels n'est pas configuré sur le serveur (SMTP)")
     for a in targets:
         if not await asyncio.to_thread(send_help_alert, a, "Élève test", "Test MonExamEnLigne", "Ceci est un test : les alertes d'aide fonctionnent.", when):
-            raise HTTPException(status_code=502, detail=f"Échec de l'envoi du courriel à {a}")
+            raise HTTPException(status_code=400, detail=f"Échec de l'envoi du courriel à {a}")
         done.append(a)
     if not done:
         raise HTTPException(status_code=400, detail="Aucun moyen de notification configuré (courriel du canal Teams, courriel personnel ou webhook)")
     return {"ok": True, "sent": done}
+
+
+@api.post("/exams/{exam_id}/teams-test")
+async def exam_teams_test(exam_id: str, user: dict = Depends(current_teacher)):
+    exam = await db.exams.find_one({"id": exam_id, **exam_access(user)}, {"_id": 0, "teams_webhook": 1, "title": 1})
+    if not exam:
+        raise HTTPException(status_code=404, detail="Examen introuvable")
+    if not exam.get("teams_webhook"):
+        raise HTTPException(status_code=400, detail="Aucun lien Teams enregistré pour cet examen (enregistrez l'examen d'abord)")
+    ok, err = await send_teams(exam["teams_webhook"], "Test MonExamEnLigne", [("Examen", exam.get("title") or ""), ("Message", "Si vous voyez cette carte, les demandes d'aide de cet examen arriveront ici.")])
+    if not ok:
+        raise HTTPException(status_code=400, detail=f"Teams a refusé le message : {err}")
+    return {"ok": True}
 
 
 @api.get("/teachers")

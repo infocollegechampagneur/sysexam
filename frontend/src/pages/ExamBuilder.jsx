@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check, HandHelping, Users } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ListChecks, PenLine, FileText, Check, HandHelping, Users, MessageSquare, Send } from "lucide-react";
 import { RecipientsPicker } from "@/components/RecipientsPicker";
+import { TeamsHelpSteps } from "@/components/TeamsLinkField";
 import { WindowsEditor } from "@/components/WindowsEditor";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -20,7 +21,7 @@ import { EXAM_TYPES, STATUS_LABELS } from "@/lib/tools";
 
 const ICONS = { form: ListChecks, redaction: PenLine, document: FileText };
 const EMPTY = {
-  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 0, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [], managers: [], windows: [],
+  title: "", subject: "", instructions: "", exam_type: "form", duration_minutes: 0, questions: [], writing_prompt: "", status: "draft", class_id: null, doc_answer_mode: "separate", help_recipients: [], teams_webhook: "", managers: [], windows: [],
   settings: { allowed_tools: ["antidote", "wordq", "lexibar"], max_violations: 3, lock_on_max: true, require_fullscreen: true, block_clipboard: true, browser_spellcheck: false,     partial_credit: false, shuffle_options: false, help_button: true, clipboard_internal: true },
 };
 const FIELDS = Object.keys(EMPTY);
@@ -51,6 +52,11 @@ export default function ExamBuilder() {
   const [meta, setMeta] = useState({ id: null, code: null, file: null });
   const [saving, setSaving] = useState(false);
   const [classes, setClasses] = useState([]);
+  const [teamsBusy, setTeamsBusy] = useState(false);
+  const testExamTeams = async () => {
+    setTeamsBusy(true);
+    try { await api.post(`/exams/${meta.id}/teams-test`); toast.success("Carte de test envoyée : vérifiez Teams."); } catch (e) { toast.error(formatErr(e)); } finally { setTeamsBusy(false); }
+  };
 
   useEffect(() => { api.get("/classes").then((r) => setClasses(r.data)).catch(() => {}); }, []);
   useEffect(() => {
@@ -135,6 +141,16 @@ export default function ExamBuilder() {
               <Label className="flex items-center gap-1.5"><HandHelping className="h-4 w-4 text-amber-600" />Collègues avertis quand un élève demande de l'aide</Label>
               <p className="mb-2 mt-1 text-xs text-slate-500">Vous recevez toujours les demandes « J'ai besoin d'aide ». Cochez les collègues (surveillants, techniciens) qui doivent aussi les recevoir — dans l'application et dans Teams s'ils l'ont configuré.</p>
               <RecipientsPicker value={form.help_recipients} onChange={(v) => set("help_recipients", v)} excludeId={user?.id} testId="help-recipient" />
+            </div>
+            <div className="md:col-span-2 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4" data-testid="exam-teams-section">
+              <Label className="flex items-center gap-1.5"><MessageSquare className="h-4 w-4 text-indigo-700" />Lien Teams de l'examen (canal ou clavardage de groupe)</Label>
+              <p className="mb-2 mt-1 text-xs text-slate-500">Les demandes d'aide de cet examen sont publiées dans ce canal ou clavardage Teams : toutes les personnes qui en sont membres (vous, gestionnaires, surveillants) les voient au même endroit, sans configuration individuelle.</p>
+              <div className="flex gap-2">
+                <Input value={form.teams_webhook || ""} onChange={(e) => set("teams_webhook", e.target.value)} placeholder="https://….logic.azure.com/… ou https://….powerautomate.com/…" autoComplete="off" className="bg-white" data-testid="exam-teams-link-input" />
+                <Button type="button" variant="outline" disabled={!meta.id || !form.teams_webhook || teamsBusy} onClick={testExamTeams} data-testid="exam-teams-test-btn">{teamsBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1 h-3.5 w-3.5" />Tester</>}</Button>
+              </div>
+              {!meta.id && form.teams_webhook && <p className="mt-1 text-xs text-slate-500">Enregistrez l'examen une première fois pour pouvoir tester le lien.</p>}
+              <TeamsHelpSteps testId="exam-teams-help" />
             </div>
           </div>
         </TabsContent>
